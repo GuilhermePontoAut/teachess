@@ -1,0 +1,2 @@
+import { Info } from "lucide-react";
+export function MockNotice({ children = "Esta área é apenas uma demonstração visual nesta versão do TeaChess." }: { children?: React.ReactNode }) { return <div role="note" className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950"><Info className="mt-0.5 shrink-0 text-amber-600" size={19} aria-hidden="true"/><p>{children}</p></div>; }
