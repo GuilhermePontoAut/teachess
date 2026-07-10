@@ -82,3 +82,10 @@ As funções `hydrate` referenciavam a própria store enquanto ela ainda estava 
 O Codex identificou o problema após executar `npm run build` e reorganizou as funções de hidratação para que fossem exportadas somente depois da criação das stores.
 
 Após a alteração, o lint e o build foram executados novamente para validar a correção.
+
+
+### Dashboard funcional
+
+O Dashboard calcula métricas a partir das partidas mockadas e apresenta evolução de rating, distribuição de resultados, padrões de erro e aberturas mais utilizadas.
+
+![Dashboard funcional do TeaChess](docs/screenshots/dashboard-functional.png)
