@@ -71,3 +71,14 @@ A imagem abaixo mostra a primeira tentativa de iniciar o servidor, o bloqueio da
 A identidade visual foi reformulada para utilizar predominantemente preto, branco e tons de cinza, fazendo referência às casas de um tabuleiro de xadrez.
 
 ![Interface inicial do TeaChess](docs/screenshots/teachess-interface-theme.png)
+
+
+### Erro de inferência circular nas stores Zustand
+
+Durante a criação da camada de persistência local, o primeiro código gerado pelo Codex não passou no build de produção.
+
+As funções `hydrate` referenciavam a própria store enquanto ela ainda estava sendo inicializada. Isso provocou uma inferência circular no TypeScript e fez o retorno ser interpretado como `any`.
+
+O Codex identificou o problema após executar `npm run build` e reorganizou as funções de hidratação para que fossem exportadas somente depois da criação das stores.
+
+Após a alteração, o lint e o build foram executados novamente para validar a correção.
