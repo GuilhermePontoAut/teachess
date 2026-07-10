@@ -1,0 +1,12 @@
+import type { CoachRecommendation } from "@/lib/types/chess";
+
+export const mockRecommendations: CoachRecommendation[] = [
+  { id:"recommendation-01", title:"Calcule antes de romper", description:"Liste respostas forçadas antes de alterar a estrutura central.", category:"calculation", priority:"high", relatedGameIds:["game-03"], actionLabel:"Treinar cálculo", completed:false, createdAt:"2026-06-09T10:00:00.000Z" },
+  { id:"recommendation-02", title:"Proteja o rei primeiro", description:"Complete o desenvolvimento antes de iniciar operações com a dama.", category:"opening", priority:"high", relatedGameIds:["game-06"], actionLabel:"Revisar abertura", completed:false, createdAt:"2026-05-21T10:00:00.000Z" },
+  { id:"recommendation-03", title:"Ative o rei no final", description:"Aproxime o rei quando damas e peças menores saírem do tabuleiro.", category:"endgame", priority:"medium", relatedGameIds:["game-04","game-07"], actionLabel:"Praticar finais", completed:false, createdAt:"2026-06-02T10:00:00.000Z" },
+  { id:"recommendation-04", title:"Defina marcos no relógio", description:"Reserve ao menos um terço do tempo para os lances finais.", category:"time_management", priority:"medium", relatedGameIds:["game-02","game-03"], actionLabel:"Iniciar treino", completed:true, createdAt:"2026-06-12T10:00:00.000Z" },
+  { id:"recommendation-05", title:"Revise a Índia do Rei", description:"Compare ataques na ala com contrajogo imediato no centro.", category:"strategy", priority:"high", relatedGameIds:["game-08"], actionLabel:"Ver tema", completed:false, createdAt:"2026-05-05T10:00:00.000Z" },
+  { id:"recommendation-06", title:"Mantenha peças ativas", description:"Evite simplificar quando suas peças têm mais espaço.", category:"strategy", priority:"low", relatedGameIds:["game-12"], actionLabel:"Rever partida", completed:false, createdAt:"2026-03-30T10:00:00.000Z" },
+  { id:"recommendation-07", title:"Reconheça peças sobrecarregadas", description:"Procure defensores com mais de uma responsabilidade tática.", category:"tactics", priority:"medium", relatedGameIds:["game-10"], actionLabel:"Resolver exercícios", completed:false, createdAt:"2026-04-20T10:00:00.000Z" },
+  { id:"recommendation-08", title:"Estude peões isolados", description:"Posicione peças ativas antes de avançar o peão isolado.", category:"strategy", priority:"medium", relatedGameIds:["game-11"], actionLabel:"Abrir estudo", completed:false, createdAt:"2026-04-11T10:00:00.000Z" },
+];
