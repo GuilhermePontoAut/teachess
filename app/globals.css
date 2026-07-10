@@ -1,11 +1,43 @@
 @import "tailwindcss";
 
-:root { --background: #f6f8f7; --foreground: #17201d; }
-@theme inline { --color-background: var(--background); --color-foreground: var(--foreground); --font-sans: Inter, ui-sans-serif, system-ui, sans-serif; }
+:root {
+  --background: #f5f5f5;
+  --foreground: #111111;
+  --surface: #ffffff;
+  --surface-subtle: #fafafa;
+  --sidebar: #111111;
+  --sidebar-muted: #a3a3a3;
+  --text-muted: #737373;
+  --border: #d4d4d4;
+  --border-strong: #737373;
+  --focus: #404040;
+  --checker: rgba(17, 17, 17, 0.035);
+  --warning-bg: #fffbeb;
+  --warning-border: #fde68a;
+  --warning-text: #422006;
+  --warning-icon: #a16207;
+}
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-muted: var(--text-muted);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-focus: var(--focus);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-border: var(--warning-border);
+  --color-warning-text: var(--warning-text);
+  --color-warning-icon: var(--warning-icon);
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+}
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body { margin: 0; background: var(--background); color: var(--foreground); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 button, a { -webkit-tap-highlight-color: transparent; }
-.section-kicker { margin-bottom: .25rem; color: #047857; font-size: .7rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-.chess-grid { background-image: linear-gradient(45deg,rgba(16,185,129,.045) 25%,transparent 25%),linear-gradient(-45deg,rgba(16,185,129,.045) 25%,transparent 25%),linear-gradient(45deg,transparent 75%,rgba(16,185,129,.045) 75%),linear-gradient(-45deg,transparent 75%,rgba(16,185,129,.045) 75%); background-position: 0 0,0 12px,12px -12px,-12px 0; background-size:24px 24px; }
+.section-kicker { margin-bottom: .25rem; color: var(--text-muted); font-size: .7rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.chess-grid { background-color: var(--background); background-image: linear-gradient(45deg,var(--checker) 25%,transparent 25%),linear-gradient(-45deg,var(--checker) 25%,transparent 25%),linear-gradient(45deg,transparent 75%,var(--checker) 75%),linear-gradient(-45deg,transparent 75%,var(--checker) 75%); background-position: 0 0,0 12px,12px -12px,-12px 0; background-size:24px 24px; }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition-duration:.01ms!important; animation-duration:.01ms!important; animation-iteration-count:1!important; } }
