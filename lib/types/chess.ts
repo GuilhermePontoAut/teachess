@@ -129,16 +129,36 @@ export interface RankingPlayer {
   isCurrentUser: boolean;
 }
 
+export type UploadType = "physical_board" | "online_screenshot" | "study_position" | "game_sequence" | "other";
+export type UploadSource = "presencial" | "chess.com" | "lichess" | "outro";
+export type UploadMimeType = "image/jpeg" | "image/png" | "image/webp";
+
+export interface UploadedFileMetadata {
+  name: string;
+  mimeType: UploadMimeType;
+  sizeInBytes: number;
+}
+
 export interface UploadedPosition {
   id: string;
-  fileName: string;
-  mimeType: "image/jpeg" | "image/png" | "image/webp";
-  sizeInBytes: number;
-  previewUrl: string | null;
-  status: "ready" | "processing" | "failed";
-  extractedFen: string | null;
+  ownerUserId: string;
+  visibility: "private";
+  title: string;
+  uploadType: UploadType;
+  uploadTypeDetails: string;
+  date: string;
+  source: UploadSource;
+  sourceDetails: string;
+  description: string;
+  manualFen: string | null;
+  linkedGameId: string | null;
+  tags: string[];
+  files: UploadedFileMetadata[];
+  imageCount: number;
+  status: "metadata_saved";
   notes: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface CoachRecommendation {

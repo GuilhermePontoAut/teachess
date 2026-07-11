@@ -31,3 +31,11 @@ A store de partidas usa persistência Zustand versão 3 mantendo a chave anterio
 ## Limitações do protótipo
 
 Não há autenticação, backend, banco de dados, multiplayer real, Stockfish, IA, LLM, OCR ou visão computacional. Os dados permanecem no navegador. Não existe painel administrativo nem proteção real de servidor.
+
+## Envios de imagens
+
+Todo upload pertence ao usuário atual, é privado e não afeta ranking, rating ou estatísticas públicas. O protótipo não cria links públicos e permite ao usuário consultar e excluir somente seus próprios registros.
+
+As imagens reais não são persistidas: `File`, `Blob`, base64 e object URLs permanecem fora da store. Apenas metadados (nomes, tipos MIME, tamanhos, quantidade e informações do formulário) ficam no `localStorage`. Os previews usam object URLs temporários, revogados ao remover arquivos ou desmontar o componente, e ficam indisponíveis após recarregar a página.
+
+Não há OCR, reconhecimento de peças ou visão computacional. O FEN, quando presente, é informado manualmente pelo usuário e validado localmente com `chess.js`; ele nunca é extraído da imagem. A prévia de análise é inteiramente simulada e não executa IA, motor de xadrez, geração de PGN ou análise real.
