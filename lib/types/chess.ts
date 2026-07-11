@@ -25,9 +25,8 @@ export interface User {
   createdAt: string;
 }
 
-export interface ChessGame {
+interface BaseChessGame {
   id: string;
-  origin: GameOrigin;
   visibility: GameVisibility;
   ownerUserId: string;
   playerUserId: string;
@@ -39,13 +38,9 @@ export interface ChessGame {
   event: string;
   date: string;
   opponent: string;
-  playerRatingAtGame: number;
-  opponentRatingAtGame: number;
   playerColor: PlayerColor;
   result: GameResult;
   status: GameStatus;
-  opening: string;
-  moveCount: number;
   pgn: string;
   fen: string;
   onlineLink: string | null;
@@ -56,6 +51,24 @@ export interface ChessGame {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface PlatformGame extends BaseChessGame {
+  origin: "platform";
+  playerRatingAtGame: number;
+  opponentRatingAtGame: number;
+  opening: string;
+  moveCount: number;
+}
+
+export interface ExternalGame extends BaseChessGame {
+  origin: "external";
+  playerRatingAtGame?: number;
+  opponentRatingAtGame?: number;
+  opening?: string;
+  moveCount?: number;
+}
+
+export type ChessGame = PlatformGame | ExternalGame;
 
 export interface EvaluationPoint {
   move: number;

@@ -1,7 +1,7 @@
-import type { ChessGame, User } from "@/lib/types/chess";
+import type { ChessGame, ExternalGame, PlatformGame, User } from "@/lib/types/chess";
 
-export const isPlatformGame = (game: ChessGame): boolean => game.origin === "platform";
-export const isExternalGame = (game: ChessGame): boolean => game.origin === "external";
+export const isPlatformGame = (game: ChessGame): game is PlatformGame => game.origin === "platform";
+export const isExternalGame = (game: ChessGame): game is ExternalGame => game.origin === "external";
 export const countsForOfficialStats = isPlatformGame;
 export const countsForRanking = isPlatformGame;
 

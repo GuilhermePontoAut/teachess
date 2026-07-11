@@ -72,15 +72,15 @@ export function GameForm({ mode, initialValues, onSubmit, onCancel }: GameFormPr
 
       <GameFormSection title="Jogadores e resultado" description="Registre o adversário, os ratings e o resultado sob sua perspectiva.">
         {textField("opponent", "Adversário", { required: true, placeholder: "Nome do adversário" })}
-        {textField("playerRatingAtGame", "Rating do jogador na partida", { required: true, type: "number", min: 100, max: 3500, help: "Valor histórico no momento da partida." })}
-        {textField("opponentRatingAtGame", "Rating do adversário na partida", { required: true, type: "number", min: 100, max: 3500, help: "Valor informado para esta partida externa." })}
+        {textField("playerRatingAtGame", "Rating do jogador na partida", { type: "number", min: 100, max: 3500, help: "Opcional. Se informado, use um valor entre 100 e 3500." })}
+        {textField("opponentRatingAtGame", "Rating do adversário na partida", { type: "number", min: 100, max: 3500, help: "Opcional. Se informado, use um valor entre 100 e 3500." })}
         <div><label htmlFor="playerColor" className="block text-sm font-semibold text-neutral-900">Cor jogada<RequiredMark /></label><select id="playerColor" value={values.playerColor} onChange={(event) => update("playerColor", event.target.value as GameFormValues["playerColor"])} onBlur={() => validateField("playerColor")} required aria-invalid={Boolean(errors.playerColor)} aria-describedby={errors.playerColor ? "playerColor-error" : undefined} className={inputClass}><option value="">Selecione</option><option value="white">Brancas</option><option value="black">Pretas</option></select><FormFieldError id="playerColor-error" message={errors.playerColor} /></div>
         <div><label htmlFor="result" className="block text-sm font-semibold text-neutral-900">Resultado<RequiredMark /></label><select id="result" value={values.result} onChange={(event) => update("result", event.target.value as GameFormValues["result"])} onBlur={() => validateField("result")} required aria-invalid={Boolean(errors.result)} aria-describedby={errors.result ? "result-error" : undefined} className={inputClass}><option value="">Selecione</option><option value="win">Vitória</option><option value="loss">Derrota</option><option value="draw">Empate</option></select><FormFieldError id="result-error" message={errors.result} /></div>
       </GameFormSection>
 
       <GameFormSection title="Dados técnicos da partida" description="Informe a abertura, a duração e os indicadores simulados desta versão.">
-        {textField("opening", "Abertura", { required: true, placeholder: "Ex.: Defesa Siciliana" })}
-        {textField("moveCount", "Quantidade de lances", { required: true, type: "number", min: 1, step: 1 })}
+        {textField("opening", "Abertura", { placeholder: "Ex.: Defesa Siciliana" })}
+        {textField("moveCount", "Quantidade de lances", { type: "number", min: 1, step: 1, help: "Opcional. Se informada, deve ser um número inteiro maior que zero." })}
         {textField("accuracy", "Precisão simulada", { type: "number", min: 0, max: 100, step: 0.1, help: "Opcional. Use um valor entre 0 e 100." })}
         <div><label htmlFor="analysisStatus" className="block text-sm font-semibold text-neutral-900">Status da análise</label><p id="analysisStatus-help" className="mt-1 text-sm text-muted">Este status é apenas simulado.</p><select id="analysisStatus" value={values.analysisStatus} onChange={(event) => update("analysisStatus", event.target.value as GameFormValues["analysisStatus"])} aria-describedby="analysisStatus-help" className={inputClass}><option value="analyzed">Analisada</option><option value="pending">Pendente</option><option value="not_analyzed">Não analisada</option></select></div>
       </GameFormSection>

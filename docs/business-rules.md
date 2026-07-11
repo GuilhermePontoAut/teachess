@@ -20,13 +20,13 @@ Análises, precisão, erros e recomendações continuam simulados. Na visão com
 
 ## Rating histórico e atual
 
-`playerRatingAtGame` e `opponentRatingAtGame` guardam o valor histórico no momento da partida. O rating atual nunca é copiado para a partida: ele vem de `User.currentPlatformRating`. Quando um adversário externo não possui usuário TeaChess, seu rating atual é indisponível.
+`playerRatingAtGame` e `opponentRatingAtGame` guardam o valor histórico no momento da partida quando ele é conhecido. Em partidas externas, ambos os ratings, a abertura e a quantidade de lances podem não ser informados; a interface preserva essa ausência sem criar valores fictícios. Em partidas da plataforma, esses quatro dados continuam obrigatórios e registrados pelo sistema. O rating atual nunca é copiado para a partida: ele vem de `User.currentPlatformRating`. Quando um adversário externo não possui usuário TeaChess, seu rating atual é indisponível.
 
-Uma partida externa pode comparar o rating histórico do jogador ao rating oficial atual, mas essa diferença é apenas informativa e não significa que a partida alterou o rating.
+Uma partida externa pode comparar o rating histórico do jogador ao rating oficial atual, mas essa diferença é apenas informativa e não significa que a partida alterou o rating. Sem rating histórico, nenhuma diferença, alta ou queda é calculada.
 
 ## Persistência e migração
 
-A store de partidas usa persistência Zustand versão 2 mantendo a chave anterior do `localStorage`. A migração converte `playerRating` e `opponentRating`, remove as chaves legadas, preserva campos técnicos e pessoais e preenche propriedade, origem e visibilidade. IDs dos mocks oficiais recebem classificação determinística; registros antigos sem correspondência com mocks são tratados como partidas externas privadas pertencentes ao usuário atual.
+A store de partidas usa persistência Zustand versão 3 mantendo a chave anterior do `localStorage`. A migração converte `playerRating` e `opponentRating`, remove as chaves legadas, preserva campos técnicos e pessoais e preenche propriedade, origem e visibilidade. IDs dos mocks oficiais recebem classificação determinística; registros antigos sem correspondência com mocks são tratados como partidas externas privadas pertencentes ao usuário atual. Campos opcionais ausentes nessas partidas permanecem ausentes.
 
 ## Limitações do protótipo
 

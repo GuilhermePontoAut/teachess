@@ -3,7 +3,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { mockGames } from "@/lib/data/games";
 import { currentUser } from "@/lib/data/users";
 import { getSafeStorage, STORAGE_KEYS } from "@/lib/storage/storage";
-import type { AnalysisStatus, ChessGame } from "@/lib/types/chess";
+import type { AnalysisStatus, ChessGame, ExternalGame, GameOrigin, PlatformGame } from "@/lib/types/chess";
 import { canDeleteGame, canEditGameDetails, canEditGameNotes } from "@/lib/utils/gameRules";
 
 interface GameStore {
@@ -17,7 +17,8 @@ interface GameStore {
   changeAnalysisStatus: (id: string, status: AnalysisStatus) => void;
 }
 
-type LegacyGame = Partial<ChessGame> & {
+type LegacyGame = Partial<Omit<PlatformGame, "origin">> & {
+  origin?: GameOrigin;
   id?: string;
   playerRating?: number;
   opponentRating?: number;
@@ -32,11 +33,10 @@ export function migrateGame(game: LegacyGame): ChessGame {
   const origin = game.origin ?? officialMock?.origin ?? "external";
   const now = new Date().toISOString();
 
-  return {
+  const base = {
     ...(officialMock ?? mockGames[0]),
     ...gameWithoutLegacyRatings,
     id: game.id ?? crypto.randomUUID(),
-    origin,
     visibility: origin === "platform" ? "public" : "private",
     ownerUserId: game.ownerUserId ?? currentUser.id,
     playerUserId: game.playerUserId ?? currentUser.id,
@@ -44,11 +44,29 @@ export function migrateGame(game: LegacyGame): ChessGame {
     addedManually: origin === "external" ? true : game.addedManually ?? false,
     externalSource: origin === "external" ? game.externalSource ?? officialMock?.externalSource ?? "outro" : undefined,
     externalSourceDetails: origin === "external" ? game.externalSourceDetails ?? officialMock?.externalSourceDetails : undefined,
-    playerRatingAtGame: game.playerRatingAtGame ?? playerRating ?? officialMock?.playerRatingAtGame ?? currentUser.currentPlatformRating,
-    opponentRatingAtGame: game.opponentRatingAtGame ?? opponentRating ?? officialMock?.opponentRatingAtGame ?? currentUser.currentPlatformRating,
     createdAt: game.createdAt ?? now,
     updatedAt: game.updatedAt ?? game.createdAt ?? now,
   };
+
+  if (origin === "platform") {
+    return {
+      ...base,
+      origin: "platform",
+      playerRatingAtGame: game.playerRatingAtGame ?? playerRating ?? officialMock?.playerRatingAtGame ?? currentUser.currentPlatformRating,
+      opponentRatingAtGame: game.opponentRatingAtGame ?? opponentRating ?? officialMock?.opponentRatingAtGame ?? currentUser.currentPlatformRating,
+      opening: game.opening ?? officialMock?.opening ?? mockGames[0].opening,
+      moveCount: game.moveCount ?? officialMock?.moveCount ?? mockGames[0].moveCount,
+    } as PlatformGame;
+  }
+
+  return {
+    ...base,
+    origin: "external",
+    playerRatingAtGame: game.playerRatingAtGame ?? playerRating,
+    opponentRatingAtGame: game.opponentRatingAtGame ?? opponentRating,
+    opening: game.opening,
+    moveCount: game.moveCount,
+  } as ExternalGame;
 }
 
 export function migratePersistedGameState(persistedState: unknown): { games: ChessGame[] } {
@@ -95,7 +113,7 @@ export const useGameStore = create<GameStore>()(persist((set, get) => ({
   changeAnalysisStatus: (id, status) => set((state) => ({ games: state.games.map((game) => game.id === id ? { ...game, analysisStatus: status, updatedAt: new Date().toISOString() } : game) })),
 }), {
   name: STORAGE_KEYS.games,
-  version: 2,
+  version: 3,
   migrate: migratePersistedGameState,
   storage: createJSONStorage(getSafeStorage),
   skipHydration: true,

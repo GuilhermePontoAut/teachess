@@ -18,6 +18,12 @@ import { GamesSummary } from "./GamesSummary";
 import { initialGameFilters, type GameFilterState } from "./games";
 
 const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR");
+const compareOptionalNumbers = (a: number | null | undefined, b: number | null | undefined, direction: "asc" | "desc") => {
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  return direction === "asc" ? a - b : b - a;
+};
 
 export function GamesContent({ initialMessage = "" }: { initialMessage?: string }) {
   const games = useGameStore((state) => state.games);
@@ -30,19 +36,21 @@ export function GamesContent({ initialMessage = "" }: { initialMessage?: string 
   const [message, setMessage] = useState(initialMessage);
 
   useEffect(() => { let active = true; void hydrateGameStore().finally(() => { if (active) setHydrated(true); }); return () => { active = false; }; }, []);
-  const openings = useMemo(() => [...new Set(games.map((game) => game.opening))].sort((a, b) => a.localeCompare(b, "pt-BR")), [games]);
+  const openings = useMemo(() => [...new Set(games.map((game) => game.opening).filter((opening): opening is string => Boolean(opening)))].sort((a, b) => a.localeCompare(b, "pt-BR")), [games]);
   const visibleGames = useMemo(() => {
     const query = normalize(filters.query.trim());
     const filtered = games.filter((game) => {
-      const searchable = [game.opponent, game.title, game.event, game.opening, ...game.tags].map(normalize);
+      const searchable = [game.opponent, game.title, game.event, game.opening ?? "", ...game.tags].map(normalize);
       return (!query || searchable.some((value) => value.includes(query))) && (filters.origin === "all" || game.origin === filters.origin) && (filters.result === "all" || game.result === filters.result) && (filters.color === "all" || game.playerColor === filters.color) && (filters.analysis === "all" || game.analysisStatus === filters.analysis) && (filters.opening === "all" || game.opening === filters.opening);
     });
     return filtered.sort((a, b) => {
       if (filters.sort === "oldest") return a.date.localeCompare(b.date);
-      if (filters.sort === "rating-desc") return b.opponentRatingAtGame - a.opponentRatingAtGame;
-      if (filters.sort === "rating-asc") return a.opponentRatingAtGame - b.opponentRatingAtGame;
-      if (filters.sort === "accuracy-desc") return (b.accuracy ?? -1) - (a.accuracy ?? -1);
-      if (filters.sort === "accuracy-asc") return (a.accuracy ?? Number.POSITIVE_INFINITY) - (b.accuracy ?? Number.POSITIVE_INFINITY);
+      if (filters.sort === "rating-desc") return compareOptionalNumbers(a.opponentRatingAtGame, b.opponentRatingAtGame, "desc");
+      if (filters.sort === "rating-asc") return compareOptionalNumbers(a.opponentRatingAtGame, b.opponentRatingAtGame, "asc");
+      if (filters.sort === "moves-desc") return compareOptionalNumbers(a.moveCount, b.moveCount, "desc");
+      if (filters.sort === "moves-asc") return compareOptionalNumbers(a.moveCount, b.moveCount, "asc");
+      if (filters.sort === "accuracy-desc") return compareOptionalNumbers(a.accuracy, b.accuracy, "desc");
+      if (filters.sort === "accuracy-asc") return compareOptionalNumbers(a.accuracy, b.accuracy, "asc");
       return b.date.localeCompare(a.date);
     });
   }, [filters, games]);

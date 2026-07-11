@@ -36,7 +36,7 @@ export function DashboardContent() {
     const wins = visibleGames.filter((game) => game.result === "win").length;
     const losses = visibleGames.filter((game) => game.result === "loss").length;
     const draws = visibleGames.filter((game) => game.result === "draw").length;
-    const openingCounts = visibleGames.reduce<Map<string, number>>((counts, game) => counts.set(game.opening, (counts.get(game.opening) ?? 0) + 1), new Map());
+    const openingCounts = visibleGames.reduce<Map<string, number>>((counts, game) => game.opening ? counts.set(game.opening, (counts.get(game.opening) ?? 0) + 1) : counts, new Map());
     const openings: CountItem[] = [...openingCounts].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "pt-BR")).slice(0, 5);
     const visibleIds = new Set(visibleGames.map((game) => game.id));
     const categoryCounts = mockAnalyses.filter((analysis) => visibleIds.has(analysis.gameId)).flatMap((analysis) => analysis.errorCategories).reduce<Map<ErrorCategory, number>>((counts, category) => counts.set(category, (counts.get(category) ?? 0) + 1), new Map());
