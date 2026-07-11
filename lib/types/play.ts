@@ -54,6 +54,10 @@ export interface DemoMatchConfig {
   userColor: PlayerColor;
 }
 
+export type StartMatchResult =
+  | { success: true }
+  | { success: false; reason: "active-match-exists" | "not-hydrated" };
+
 export interface PersistedDemoMatch extends DemoMatchConfig {
   sessionId: string; orientation: PlayerColor; fen: string; pgn: string; moves: DemoMove[];
   turn: PlayerColor; lastMove: DemoMove | null; whiteMilliseconds: number; blackMilliseconds: number;

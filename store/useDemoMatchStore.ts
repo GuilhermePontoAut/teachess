@@ -2,25 +2,23 @@ import { Chess } from "chess.js";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { getSafeStorage, STORAGE_KEYS } from "@/lib/storage/storage";
-import type { ChatMessage, ChatSender, DemoMatchConfig, DemoMatchResultSummary, DemoMove, MatchResult, PersistedDemoMatch } from "@/lib/types/play";
+import type { ChatMessage, ChatSender, DemoMatchConfig, DemoMatchResultSummary, DemoMove, MatchResult, PersistedDemoMatch, StartMatchResult } from "@/lib/types/play";
 import type { PlayerColor } from "@/lib/types/chess";
 
 interface DemoMatchStore {
   activeMatch: PersistedDemoMatch | null;
   lastDemoResult: DemoMatchResultSummary | null;
   hydrated: boolean;
-  startMatch: (config: DemoMatchConfig) => void;
+  startMatch: (config: DemoMatchConfig) => StartMatchResult;
   updatePosition: (game: Chess, moves: DemoMove[], whiteMilliseconds: number, blackMilliseconds: number) => void;
   tickClock: (now?: number) => void;
   flipBoard: () => void;
   finishMatch: (result: MatchResult, now?: number) => void;
   restartMatch: () => void;
   addChatMessage: (text: string, sender?: ChatSender) => void;
-  clearChat: () => void;
   setDrawOfferPending: (pending: boolean) => void;
   deleteMatch: () => void;
   dismissResult: () => void;
-  startNewFromResult: () => void;
   markHydrated: () => void;
 }
 
@@ -32,6 +30,19 @@ const newSession = (config: DemoMatchConfig, now = Date.now()): PersistedDemoMat
 };
 
 export const isPlayableMatch = (match: PersistedDemoMatch | null): match is PersistedDemoMatch => Boolean(match && match.status === "playing" && !match.result);
+export const hasActiveMatch = (state: Pick<DemoMatchStore, "activeMatch">): boolean => isPlayableMatch(state.activeMatch);
+
+function persistedActiveMatch(): PersistedDemoMatch | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEYS.demoMatch);
+    if (!raw) return null;
+    const stored = JSON.parse(raw) as { state?: { activeMatch?: PersistedDemoMatch | null } };
+    return isPlayableMatch(stored.state?.activeMatch ?? null) ? stored.state?.activeMatch ?? null : null;
+  } catch {
+    return null;
+  }
+}
 
 function elapsedMatch(match: PersistedDemoMatch, now: number): PersistedDemoMatch {
   if (!isPlayableMatch(match)) return match;
@@ -44,7 +55,17 @@ function elapsedMatch(match: PersistedDemoMatch, now: number): PersistedDemoMatc
 
 export const useDemoMatchStore = create<DemoMatchStore>()(persist((set, get) => ({
   activeMatch: null, lastDemoResult: null, hydrated: false,
-  startMatch: (config) => set({ activeMatch: newSession(config), lastDemoResult: null }),
+  startMatch: (config) => {
+    const state = get();
+    if (!state.hydrated) return { success: false, reason: "not-hydrated" };
+    const storedMatch = persistedActiveMatch();
+    if (isPlayableMatch(state.activeMatch) || storedMatch) {
+      if (!isPlayableMatch(state.activeMatch) && storedMatch) set({ activeMatch: storedMatch });
+      return { success: false, reason: "active-match-exists" };
+    }
+    set({ activeMatch: newSession(config), lastDemoResult: null });
+    return { success: true };
+  },
   updatePosition: (game, moves, whiteMilliseconds, blackMilliseconds) => set((state) => state.activeMatch ? { activeMatch: { ...state.activeMatch, fen: game.fen(), pgn: game.pgn(), moves, lastMove: moves.at(-1) ?? null, turn: turnColor(game), whiteMilliseconds, blackMilliseconds, lastClockUpdateAt: Date.now() } } : state),
   tickClock: (now = Date.now()) => {
     const match = get().activeMatch;
@@ -60,7 +81,7 @@ export const useDemoMatchStore = create<DemoMatchStore>()(persist((set, get) => 
     const match = elapsedMatch(state.activeMatch, now);
     return { activeMatch: null, lastDemoResult: { opponent: match.opponent, timeControl: match.timeControl, userColor: match.userColor, result, moveCount: Math.ceil(match.moves.length / 2), durationSeconds: Math.max(0, Math.floor((now - match.startedAt) / 1000)), finishedAt: now } };
   }),
-  restartMatch: () => { const match = get().activeMatch; if (match) set({ activeMatch: newSession({ opponent: match.opponent, timeControl: match.timeControl, userColor: match.userColor }) }); },
+  restartMatch: () => { const match = get().activeMatch; if (isPlayableMatch(match)) set({ activeMatch: newSession({ opponent: match.opponent, timeControl: match.timeControl, userColor: match.userColor }) }); },
   addChatMessage: (text, sender = "self") => set((state) => {
     const clean = text.trim().slice(0, 160);
     if (!state.activeMatch || !clean) return state;
@@ -68,11 +89,9 @@ export const useDemoMatchStore = create<DemoMatchStore>()(persist((set, get) => 
     const message: ChatMessage = { id: `local-${createdAt}-${state.activeMatch.chatMessages.length}`, sender, text: clean, createdAt };
     return { activeMatch: { ...state.activeMatch, chatMessages: [...state.activeMatch.chatMessages, message] } };
   }),
-  clearChat: () => set((state) => state.activeMatch ? { activeMatch: { ...state.activeMatch, chatMessages: [] } } : state),
   setDrawOfferPending: (pending) => set((state) => state.activeMatch ? { activeMatch: { ...state.activeMatch, drawOfferPending: pending } } : state),
   deleteMatch: () => set({ activeMatch: null, lastDemoResult: null }),
   dismissResult: () => set({ lastDemoResult: null }),
-  startNewFromResult: () => { const summary = get().lastDemoResult; if (summary) set({ activeMatch: newSession({ opponent: summary.opponent, timeControl: summary.timeControl, userColor: summary.userColor }), lastDemoResult: null }); },
   markHydrated: () => {
     const match = get().activeMatch;
     if (!isPlayableMatch(match)) { set({ hydrated: true, activeMatch: null }); return; }
@@ -102,4 +121,15 @@ export async function hydrateDemoMatchStore(): Promise<void> {
   await useDemoMatchStore.persist.rehydrate();
   const state = useDemoMatchStore.getState();
   if (!state.hydrated) state.markHydrated();
+}
+
+// A garantia real de uma única partida ativa deverá ser validada pelo backend. A sincronização local serve apenas ao protótipo.
+export function subscribeToDemoMatchStorage(onSync?: () => void): () => void {
+  if (typeof window === "undefined") return () => undefined;
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key !== STORAGE_KEYS.demoMatch) return;
+    void Promise.resolve(useDemoMatchStore.persist.rehydrate()).then(onSync);
+  };
+  window.addEventListener("storage", handleStorage);
+  return () => window.removeEventListener("storage", handleStorage);
 }

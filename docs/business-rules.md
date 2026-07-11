@@ -44,6 +44,12 @@ As salas abertas são mocks determinísticos. Uma sala própria pode ser criada 
 
 Matchmaking e partidas reais futuras dependerão de backend, autenticação, websocket ou outra comunicação em tempo real, validação de movimentos e relógios autoritativos no servidor, persistência e sistema de rating. Elas contarão para o ranking somente após validação do servidor.
 
+As mensagens do chat permanecem até o fim da partida e não podem ser apagadas manualmente durante a sessão. Exemplos e sugestões são apenas elementos da interface do chat vazio, desaparecem após a primeira mensagem e não são persistidos como mensagens reais.
+
+Cada usuário pode manter somente uma partida demonstrativa ativa. Seleção direta, matchmaking, salas abertas e demais entradas usam a mesma validação central da store e não podem substituir posição, relógios, lances ou chat de uma sessão jogável. Após abandono, empate, xeque-mate ou término por tempo, `activeMatch` é limpa e o resumo terminal permanece apenas para o diálogo de resultado; “Nova demonstração” retorna à preparação.
+
+A store sincroniza alterações entre abas do mesmo navegador pelo evento `storage` e consulta o estado persistido antes de criar uma sessão. Essa coordenação via `localStorage` serve somente ao protótipo, não é garantia de concorrência e não substitui validação de servidor. A regra real de uma única partida ativa dependerá de backend e autenticação.
+
 ## Treinamento pessoal
 
 O plano de treinamento é privado. Por padrão, recomendações e indicadores usam somente partidas da plataforma. A preferência “Incluir partidas externas” permite que partidas próprias externas participem apenas da visão pessoal combinada; elas nunca alteram ranking, rating ou estatísticas oficiais e seus dados não são expostos publicamente. A proteção real desta separação dependerá de autenticação e autorização em backend.
