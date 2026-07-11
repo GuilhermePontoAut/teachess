@@ -17,7 +17,7 @@ import { initialGameFilters, type GameFilterState } from "./games";
 
 const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR");
 
-export function GamesContent() {
+export function GamesContent({ initialMessage = "" }: { initialMessage?: string }) {
   const games = useGameStore((state) => state.games);
   const deleteGame = useGameStore((state) => state.deleteGame);
   const resetGames = useGameStore((state) => state.resetGames);
@@ -25,7 +25,7 @@ export function GamesContent() {
   const [filters, setFilters] = useState<GameFilterState>(initialGameFilters);
   const [gameToDelete, setGameToDelete] = useState<ChessGame | null>(null);
   const [restoreOpen, setRestoreOpen] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(initialMessage);
 
   useEffect(() => { let active = true; void hydrateGameStore().finally(() => { if (active) setHydrated(true); }); return () => { active = false; }; }, []);
   const openings = useMemo(() => [...new Set(games.map((game) => game.opening))].sort((a, b) => a.localeCompare(b, "pt-BR")), [games]);
