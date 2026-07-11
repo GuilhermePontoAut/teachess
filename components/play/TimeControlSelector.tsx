@@ -1,0 +1,5 @@
+import type { TimeControl } from "@/lib/types/play";
+
+export function TimeControlSelector({ controls, selectedId, onSelect }: { controls: TimeControl[]; selectedId: string | null; onSelect: (control: TimeControl) => void }) {
+  return <fieldset><legend className="text-lg font-semibold">Controle de tempo</legend><p className="mt-1 text-sm text-muted">Escolha uma opção fixa para a demonstração.</p><div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">{controls.map((control) => <button key={control.id} type="button" role="radio" aria-checked={selectedId === control.id} onClick={() => onSelect(control)} className={`rounded-xl border p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${selectedId === control.id ? "border-neutral-950 bg-neutral-950 text-white" : "border-line bg-white hover:bg-neutral-50"}`}><span className="block text-lg font-bold">{control.minutes} + {control.increment}</span><span className={`text-xs ${selectedId === control.id ? "text-neutral-300" : "text-muted"}`}>{control.category} · +{control.increment}s/lance</span></button>)}</div></fieldset>;
+}

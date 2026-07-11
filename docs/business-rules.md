@@ -32,6 +32,14 @@ A store de partidas usa persistência Zustand versão 3 mantendo a chave anterio
 
 Não há autenticação, backend, banco de dados, multiplayer real, Stockfish, IA, LLM, OCR ou visão computacional. Os dados permanecem no navegador. Não existe painel administrativo nem proteção real de servidor.
 
+## Demonstração local da página Jogar
+
+A página Jogar demonstra localmente a futura experiência multiplayer, mas não conecta jogadores reais. O usuário controla legalmente os dois lados do tabuleiro para testar o fluxo; não existe bot, IA, motor ou escolha automática de lances. A presença dos adversários é mockada e não representa pessoas online.
+
+As sessões não criam `ChessGame`, não entram na store de partidas e não alteram rating, ranking, estatísticas, treinamento ou análises. Resultados, histórico de lances e relógios se perdem ao atualizar a página. Os relógios são locais e não autoritativos. O chat existe somente na memória da sessão e nenhuma mensagem é enviada a outro usuário.
+
+Partidas reais futuras dependerão de backend, autenticação, websocket ou serviço em tempo real, validação de movimentos e relógios autoritativos no servidor, persistência e sistema de rating. Elas contarão para o ranking somente após validação do servidor.
+
 ## Treinamento pessoal
 
 O plano de treinamento é privado. Por padrão, recomendações e indicadores usam somente partidas da plataforma. A preferência “Incluir partidas externas” permite que partidas próprias externas participem apenas da visão pessoal combinada; elas nunca alteram ranking, rating ou estatísticas oficiais e seus dados não são expostos publicamente. A proteção real desta separação dependerá de autenticação e autorização em backend.
