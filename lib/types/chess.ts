@@ -119,14 +119,20 @@ export interface RankingPlayer {
   position: number;
   name: string;
   username: string;
-  rating: number;
-  previousRating: number;
-  gamesPlayed: number;
+  currentPlatformRating: number;
+  platformGames: number;
   wins: number;
   draws: number;
   losses: number;
-  country: string;
+  winRate: number;
+  currentStreak: number;
+  region: string;
+  level: UserLevel | "expert" | "master";
+  memberSince: string;
+  previousPosition?: number;
   isCurrentUser: boolean;
+  favoriteOpenings?: string[];
+  ratingHistory?: Array<{ date: string; rating: number }>;
 }
 
 export type ImageOrigin = "physical_board_photo" | "online_game_screenshot";

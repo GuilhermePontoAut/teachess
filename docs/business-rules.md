@@ -53,3 +53,11 @@ No produto futuro, visão computacional poderá reconhecer as peças e gerar o F
 Os controles de professor IA e professor humano são recursos futuros desabilitados. Não existe modelo de IA, compartilhamento público, revisão humana ou agendamento real nesta versão.
 
 A persistência de uploads usa Zustand versão 3 na mesma chave do `localStorage`. A migração preserva registros anteriores, converte sua origem e contexto para o modelo atual e, quando encontra múltiplos arquivos, guarda somente os metadados do primeiro e registra uma observação de migração sem exigir limpeza do navegador.
+
+## Ranking da comunidade
+
+O ranking oficial usa exclusivamente partidas com `origin === "platform"`. Partidas externas são privadas e ficam integralmente excluídas das partidas jogadas, vitórias, derrotas, empates, taxa de vitória, rating, posição e perfil público. O perfil público demonstrativo mostra somente identidade comunitária e estatísticas oficiais da plataforma; nunca expõe partidas externas, uploads, posições e notas privadas, tags privadas, análises, plano de treinamento ou dados de contato.
+
+O rating atual vem do perfil oficial mockado. A classificação ordena por maior rating, depois maior número de vitórias, maior taxa de vitória e nome em ordem alfabética. Rating, histórico de posição e critérios de desempate são simulados nesta versão; não existe cálculo Elo nem competição real.
+
+Treinamentos, uploads de imagens e análises simuladas não interferem na classificação. Segurança, autorização, cálculo competitivo e validação reais dependerão de autenticação e backend futuros.
