@@ -27,7 +27,14 @@ export interface OpenMatchRoom {
   createdAt: string; status: OpenRoomStatus; isDemo: true; isOwn?: boolean;
 }
 
-export interface ChatMessage { id: string; author: string; text: string }
+export type ChatSender = "self" | "opponent" | "system";
+
+export interface ChatMessage {
+  id: string;
+  sender: ChatSender;
+  text: string;
+  createdAt: number;
+}
 
 export interface DemoMove {
   san: string;
@@ -52,4 +59,11 @@ export interface PersistedDemoMatch extends DemoMatchConfig {
   turn: PlayerColor; lastMove: DemoMove | null; whiteMilliseconds: number; blackMilliseconds: number;
   increment: number; startedAt: number; lastClockUpdateAt: number; status: MatchPhase;
   result: MatchResult | null; chatMessages: ChatMessage[]; drawOfferPending: boolean;
+}
+
+export interface DemoMatchResultSummary extends DemoMatchConfig {
+  result: MatchResult;
+  moveCount: number;
+  durationSeconds: number;
+  finishedAt: number;
 }
