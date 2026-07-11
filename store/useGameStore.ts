@@ -4,11 +4,12 @@ import { mockGames } from "@/lib/data/games";
 import { currentUser } from "@/lib/data/users";
 import { getSafeStorage, STORAGE_KEYS } from "@/lib/storage/storage";
 import type { AnalysisStatus, ChessGame } from "@/lib/types/chess";
-import { canDeleteGame, canEditGameNotes } from "@/lib/utils/gameRules";
+import { canDeleteGame, canEditGameDetails, canEditGameNotes } from "@/lib/utils/gameRules";
 
 interface GameStore {
   games: ChessGame[];
   addGame: (game: ChessGame) => void;
+  updateGame: (game: ChessGame) => boolean;
   updateGameNotes: (id: string, notes: string, tags: string[]) => boolean;
   deleteGame: (id: string) => boolean;
   getGameById: (id: string) => ChessGame | undefined;
@@ -58,6 +59,25 @@ export function migratePersistedGameState(persistedState: unknown): { games: Che
 export const useGameStore = create<GameStore>()(persist((set, get) => ({
   games: mockGames,
   addGame: (game) => set((state) => ({ games: [game, ...state.games] })),
+  updateGame: (updatedGame) => {
+    const game = get().games.find((item) => item.id === updatedGame.id);
+    if (!game || !canEditGameDetails(currentUser, game)) return false;
+
+    // A autorização real também deverá validar estes campos imutáveis no backend.
+    const safeGame: ChessGame = currentUser.role === "admin" ? updatedGame : {
+      ...updatedGame,
+      id: game.id,
+      ownerUserId: game.ownerUserId,
+      playerUserId: game.playerUserId,
+      origin: "external",
+      visibility: "private",
+      addedManually: true,
+      createdAt: game.createdAt,
+      updatedAt: new Date().toISOString(),
+    };
+    set((state) => ({ games: state.games.map((item) => item.id === game.id ? safeGame : item) }));
+    return true;
+  },
   updateGameNotes: (id, notes, tags) => {
     const game = get().games.find((item) => item.id === id);
     if (!game || !canEditGameNotes(currentUser, game)) return false;

@@ -5,13 +5,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { PageTitle } from "@/components/PageTitle";
+import { MockNotice } from "@/components/MockNotice";
 import { currentUser, getUserById } from "@/lib/data/users";
 import type { ChessGame } from "@/lib/types/chess";
 import { colorLabels, resultLabels } from "@/lib/utils/chess";
-import { canEditGameNotes } from "@/lib/utils/gameRules";
+import { canEditGameDetails, canEditGameNotes, isExternalGame } from "@/lib/utils/gameRules";
 import { hydrateGameStore, useGameStore } from "@/store/useGameStore";
 import { DeleteGameDialog } from "./DeleteGameDialog";
+import { GameForm } from "./GameForm";
 import { GameFormLoading } from "./NewGameContent";
+import { formValuesToGameData, gameToFormValues, type GameFormValues } from "./gameForm";
 import { OriginBadge } from "./OriginBadge";
 import { RatingComparison } from "./RatingComparison";
 import { TagInput } from "./TagInput";
@@ -19,6 +22,7 @@ import { TagInput } from "./TagInput";
 export function EditGameContent({ id }: { id: string }) {
   const router = useRouter();
   const getGameById = useGameStore((state) => state.getGameById);
+  const updateGame = useGameStore((state) => state.updateGame);
   const updateGameNotes = useGameStore((state) => state.updateGameNotes);
   const [game, setGame] = useState<ChessGame | null | undefined>(undefined);
   const [notes, setNotes] = useState("");
@@ -27,7 +31,31 @@ export function EditGameContent({ id }: { id: string }) {
   useEffect(() => { let active = true; void hydrateGameStore().then(() => { const found = getGameById(id) ?? null; if (active) { setGame(found); setNotes(found?.notes ?? ""); setTags(found?.tags ?? []); } }); return () => { active = false; }; }, [getGameById, id]);
   const dirty = useMemo(() => game ? notes !== game.notes || JSON.stringify(tags) !== JSON.stringify(game.tags) : false, [game, notes, tags]);
   if (game === undefined) return <GameFormLoading title="Editar observações" description="Carregando os dados armazenados neste navegador." />;
-  if (game === null || !canEditGameNotes(currentUser, game)) return <NotFound />;
+  if (game === null) return <NotFound />;
+  const canEditDetails = isExternalGame(game) && canEditGameDetails(currentUser, game);
+  const canEditNotes = canEditGameNotes(currentUser, game);
+  if (!canEditDetails && !canEditNotes) return <NotFound />;
+
+  if (canEditDetails) {
+    const submitFullGame = (values: GameFormValues) => {
+      const saved = updateGame({
+        ...game,
+        ...formValuesToGameData(values),
+        id: game.id,
+        ownerUserId: game.ownerUserId,
+        playerUserId: game.playerUserId,
+        origin: "external",
+        visibility: "private",
+        addedManually: true,
+        createdAt: game.createdAt,
+        updatedAt: new Date().toISOString(),
+      });
+      if (saved) router.push("/partidas?success=game-updated");
+    };
+
+    return <div className="space-y-6"><PageTitle eyebrow="Histórico privado" title="Editar partida" description={`Atualize os dados informados manualmente para a partida contra ${game.opponent}.`} /><MockNotice>Esta partida externa continuará privada, não contará para o ranking e não alterará o rating oficial.</MockNotice><GameForm mode="edit" initialValues={gameToFormValues(game)} onCancel={() => router.push(`/partidas/${game.id}`)} onSubmit={submitFullGame} /></div>;
+  }
+
   const opponentUser = getUserById(game.opponentUserId);
   const cancel = () => dirty ? setCancelOpen(true) : router.push(`/partidas/${game.id}`);
   const submit = (event: FormEvent) => { event.preventDefault(); if (updateGameNotes(game.id, notes.trim(), tags.map((tag) => tag.trim()))) router.push("/partidas?success=updated"); };

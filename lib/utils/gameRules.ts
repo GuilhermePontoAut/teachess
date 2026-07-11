@@ -9,9 +9,10 @@ export const canViewGame = (user: User, game: ChessGame): boolean =>
   user.role === "admin" || game.visibility === "public" || game.ownerUserId === user.id;
 
 export const canEditGameNotes = (user: User, game: ChessGame): boolean =>
-  user.role === "admin" || game.ownerUserId === user.id;
+  user.role === "admin" || (isPlatformGame(game) && game.ownerUserId === user.id);
 
-export const canEditGameDetails = (user: User): boolean => user.role === "admin";
+export const canEditGameDetails = (user: User, game: ChessGame): boolean =>
+  user.role === "admin" || (isExternalGame(game) && game.addedManually && game.ownerUserId === user.id);
 
 export const canDeleteGame = (user: User, game: ChessGame): boolean =>
   user.role === "admin" || (isExternalGame(game) && game.addedManually && game.ownerUserId === user.id);
