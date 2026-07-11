@@ -107,7 +107,7 @@ export const useDemoMatchStore = create<DemoMatchStore>()(persist((set, get) => 
     const previous = persisted as { match?: PersistedDemoMatch | null; activeMatch?: PersistedDemoMatch | null; lastDemoResult?: DemoMatchResultSummary | null };
     const candidate = version < 2 ? previous.match : previous.activeMatch;
     if (!candidate || !isPlayableMatch(candidate)) return { activeMatch: null, lastDemoResult: null };
-    const chatMessages = candidate.chatMessages.flatMap((message) => {
+    const chatMessages = (Array.isArray(candidate.chatMessages) ? candidate.chatMessages : []).flatMap((message) => {
       const legacy = message as ChatMessage & { author?: string; createdAt?: number };
       if (legacy.id.startsWith("example-") || legacy.author === "Exemplo") return [];
       return [{ id: legacy.id, sender: legacy.sender ?? (legacy.author === "Você" ? "self" : "system"), text: legacy.text, createdAt: legacy.createdAt ?? candidate.startedAt } satisfies ChatMessage];

@@ -8,7 +8,7 @@ import { PageTitle } from "@/components/PageTitle";
 import { currentUser, getUserById } from "@/lib/data/users";
 import type { ChessGame, ExternalGameSource } from "@/lib/types/chess";
 import { colorLabels, resultLabels } from "@/lib/utils/chess";
-import { canDeleteGame, canEditGameNotes, canViewGame } from "@/lib/utils/gameRules";
+import { canDeleteGame, canEditGameDetails, canEditGameNotes, canViewGame } from "@/lib/utils/gameRules";
 import { hydrateGameStore, useGameStore } from "@/store/useGameStore";
 import { AnalysisStatusBadge } from "./AnalysisStatusBadge";
 import { DeleteGameDialog } from "./DeleteGameDialog";
@@ -39,7 +39,7 @@ export function GameDetailsContent({ id }: { id: string }) {
       <div className="mt-5"><p className="text-xs font-semibold text-muted">Tags</p>{game.tags.length ? <ul className="mt-2 flex flex-wrap gap-2">{game.tags.map((tag) => <li key={tag} className="rounded-full bg-neutral-900 px-3 py-1 text-xs text-white">{tag}</li>)}</ul> : <p className="mt-1 text-sm text-muted">Nenhuma tag.</p>}</div>
     </section>
     <div className="grid gap-4 lg:grid-cols-2"><RatingComparison label={currentUser.name} ratingAtGame={game.playerRatingAtGame} currentRating={currentUser.currentPlatformRating} externalContext={game.origin === "external"} /><RatingComparison label={game.opponent} ratingAtGame={game.opponentRatingAtGame} currentRating={opponentUser?.currentPlatformRating} externalContext={game.origin === "external"} /></div>
-    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">{canEditGameNotes(currentUser, game) && <Link href={`/partidas/${game.id}/editar`} className={actionClass}><Pencil size={17} />Editar observações</Link>}<Link href={`/partidas/${game.id}/analise`} className={actionClass}><BarChart3 size={17} />Abrir análise</Link><Link href="/partidas" className={actionClass}><ArrowLeft size={17} />Voltar para Minhas Partidas</Link>{deletable && <button type="button" onClick={() => setDeleteOpen(true)} className={`${actionClass} text-red-700`}><Trash2 size={17} />Excluir</button>}</div>
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">{canEditGameDetails(currentUser, game) ? <Link href={`/partidas/${game.id}/editar`} className={actionClass}><Pencil size={17} />Editar partida</Link> : canEditGameNotes(currentUser, game) ? <Link href={`/partidas/${game.id}/editar`} className={actionClass}><Pencil size={17} />Editar observações</Link> : null}<Link href={`/partidas/${game.id}/analise`} className={actionClass}><BarChart3 size={17} />Abrir análise</Link><Link href="/partidas" className={actionClass}><ArrowLeft size={17} />Voltar para Minhas Partidas</Link>{deletable && <button type="button" onClick={() => setDeleteOpen(true)} className={`${actionClass} text-red-700`}><Trash2 size={17} />Excluir</button>}</div>
     <DeleteGameDialog open={deleteOpen} title="Excluir partida externa?" description="Esta partida privada será removida deste navegador. A ação não pode ser desfeita." confirmLabel="Excluir partida" destructive onCancel={() => setDeleteOpen(false)} onConfirm={() => { if (deleteGame(game.id)) router.push("/partidas"); }} />
   </div>;
 }

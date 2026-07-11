@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import { GamesContent } from "@/components/games/GamesContent";
+
+export const metadata: Metadata = { title: "Minhas Partidas" };
 
 export default async function GamesPage({ searchParams }: { searchParams: Promise<{ success?: string }> }) {
   const { success } = await searchParams;
