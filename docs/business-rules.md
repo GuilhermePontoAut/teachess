@@ -44,6 +44,8 @@ O histórico da demonstração é privado, limitado às 30 interações mais rec
 
 A área Professor humano é exclusivamente um catálogo e fluxo de agendamento simulados. Professores, títulos, avaliações, horários e valores são fictícios; não representam pessoas reais. Confirmar uma aula cria apenas um registro versionado no `localStorage`, sem contato, pagamento, reserva, mensagem ou aula real.
 
+Todas as aulas desta demonstração são exclusivamente online, sem seleção de modalidade ou atendimento presencial. Nenhuma videochamada real é gerada; isso dependerá de backend e integração futura. A versão 2 da store converte agendamentos antigos presenciais, mistos ou equivalentes para online, preservando professor, data, horário, duração, preço, observações e status.
+
 Partidas externas, posições e observações permanecem privadas. Nenhum dado é compartilhado nesta versão. Um compartilhamento futuro deverá exigir escolha e autorização explícitas do aluno, autenticação, controle de acesso e backend seguro. Professores verão somente conteúdo conscientemente autorizado.
 
 Uma IA futura não poderá alterar rating ou ranking fora das regras oficiais. Partidas externas continuam privadas e não entram em estatísticas públicas. Respostas futuras deverão identificar fontes, separar conteúdo técnico de explicação, sinalizar incerteza e permitir rastreabilidade e revisão humana.
