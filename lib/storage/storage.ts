@@ -19,4 +19,5 @@ export const STORAGE_KEYS = {
   training: "teachess-training-v1",
   demoMatch: "teachess-demo-match-v1",
   futureAiDemo: "teachess-future-ai-demo-v1",
+  lessonBookings: "teachess-lesson-bookings-v1",
 } as const;

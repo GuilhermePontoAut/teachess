@@ -32,13 +32,19 @@ A store de partidas usa persistência Zustand versão 3 mantendo a chave anterio
 
 Não há autenticação, backend, banco de dados, multiplayer real, Stockfish, IA, LLM, OCR ou visão computacional. Os dados permanecem no navegador. Não existe painel administrativo nem proteção real de servidor.
 
-## Futura IA
+## Professor IA
 
-A página Futura IA contém somente demonstrações locais. Nenhuma resposta é produzida por modelo: perguntas sugeridas e livres selecionam templates determinísticos que combinam apenas dados mockados ou registros do usuário atual que ele pode visualizar. A interface sempre identifica respostas e reconhecimento de posições como simulados e preserva explicitamente a ausência de análise ou FEN, sem inventar avaliações, melhores lances ou variantes.
+A página Professor IA contém somente demonstrações locais e inicialmente aceita apenas análise de partida e posição específica privada. Partida isolada, tema de treinamento e contexto geral foram removidos das opções de novas conversas. Nenhuma resposta é produzida por modelo: perguntas sugeridas e livres selecionam templates determinísticos que combinam apenas dados mockados ou registros do usuário atual que ele pode visualizar. A interface sempre identifica respostas e reconhecimento de posições como simulados e preserva explicitamente a ausência de análise ou FEN, sem inventar avaliações, melhores lances ou variantes.
 
 Motor de xadrez, visão computacional e modelo de linguagem possuem responsabilidades diferentes. Um motor futuro deverá fornecer avaliações e alternativas técnicas; visão computacional deverá reconhecer e preparar uma posição para confirmação; um modelo de linguagem futuro poderá explicar dados validados e adaptar a linguagem, mas não deverá criar avaliações de tabuleiro. Backend futuro deverá aplicar autenticação, permissões, persistência, auditoria e segurança.
 
-O histórico da demonstração é privado, limitado às 30 interações mais recentes e persistido somente no `localStorage`. “Nova conversa” limpa apenas esse histórico e preserva partidas, análises, posições e treinamento. Segurança real dependerá de validação no backend; ocultar dados ou controles no cliente não constitui autorização.
+O histórico da demonstração é privado, limitado às 30 interações mais recentes, ordenado deterministicamente da mais recente para a mais antiga e persistido somente no `localStorage`. A migração preserva conversas de contextos antigos como leitura, sem oferecê-los para novas perguntas. “Nova conversa” limpa apenas esse histórico e preserva partidas, análises, posições e treinamento. Segurança real dependerá de validação no backend; ocultar dados ou controles no cliente não constitui autorização.
+
+## Professor humano
+
+A área Professor humano é exclusivamente um catálogo e fluxo de agendamento simulados. Professores, títulos, avaliações, horários e valores são fictícios; não representam pessoas reais. Confirmar uma aula cria apenas um registro versionado no `localStorage`, sem contato, pagamento, reserva, mensagem ou aula real.
+
+Partidas externas, posições e observações permanecem privadas. Nenhum dado é compartilhado nesta versão. Um compartilhamento futuro deverá exigir escolha e autorização explícitas do aluno, autenticação, controle de acesso e backend seguro. Professores verão somente conteúdo conscientemente autorizado.
 
 Uma IA futura não poderá alterar rating ou ranking fora das regras oficiais. Partidas externas continuam privadas e não entram em estatísticas públicas. Respostas futuras deverão identificar fontes, separar conteúdo técnico de explicação, sinalizar incerteza e permitir rastreabilidade e revisão humana.
 
@@ -78,7 +84,7 @@ As imagens reais não são persistidas: `File`, `Blob`, base64 e object URLs per
 
 No produto futuro, visão computacional poderá reconhecer as peças e gerar o FEN automaticamente. Nesta versão não há OCR, reconhecimento de peças, extração nem geração real de FEN: todo FEN, lado a jogar e confiança apresentados são dados mockados determinísticos, rotulados como demonstração simulada. O tabuleiro permite apenas estudo local com movimentos legais via `chess.js`, sem Stockfish, avaliação ou sugestão automática.
 
-Os controles de professor IA e professor humano são recursos futuros desabilitados. Não existe modelo de IA, compartilhamento público, revisão humana ou agendamento real nesta versão.
+Os controles dentro do estudo da posição continuam desabilitados. As páginas de Professor IA e Professor humano oferecem fluxos demonstrativos separados, mas não existe modelo de IA, compartilhamento público, revisão humana ou agendamento real nesta versão.
 
 A persistência de uploads usa Zustand versão 3 na mesma chave do `localStorage`. A migração preserva registros anteriores, converte sua origem e contexto para o modelo atual e, quando encontra múltiplos arquivos, guarda somente os metadados do primeiro e registra uma observação de migração sem exigir limpeza do navegador.
 
