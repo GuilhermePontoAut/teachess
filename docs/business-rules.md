@@ -32,6 +32,16 @@ A store de partidas usa persistência Zustand versão 3 mantendo a chave anterio
 
 Não há autenticação, backend, banco de dados, multiplayer real, Stockfish, IA, LLM, OCR ou visão computacional. Os dados permanecem no navegador. Não existe painel administrativo nem proteção real de servidor.
 
+## Futura IA
+
+A página Futura IA contém somente demonstrações locais. Nenhuma resposta é produzida por modelo: perguntas sugeridas e livres selecionam templates determinísticos que combinam apenas dados mockados ou registros do usuário atual que ele pode visualizar. A interface sempre identifica respostas e reconhecimento de posições como simulados e preserva explicitamente a ausência de análise ou FEN, sem inventar avaliações, melhores lances ou variantes.
+
+Motor de xadrez, visão computacional e modelo de linguagem possuem responsabilidades diferentes. Um motor futuro deverá fornecer avaliações e alternativas técnicas; visão computacional deverá reconhecer e preparar uma posição para confirmação; um modelo de linguagem futuro poderá explicar dados validados e adaptar a linguagem, mas não deverá criar avaliações de tabuleiro. Backend futuro deverá aplicar autenticação, permissões, persistência, auditoria e segurança.
+
+O histórico da demonstração é privado, limitado às 30 interações mais recentes e persistido somente no `localStorage`. “Nova conversa” limpa apenas esse histórico e preserva partidas, análises, posições e treinamento. Segurança real dependerá de validação no backend; ocultar dados ou controles no cliente não constitui autorização.
+
+Uma IA futura não poderá alterar rating ou ranking fora das regras oficiais. Partidas externas continuam privadas e não entram em estatísticas públicas. Respostas futuras deverão identificar fontes, separar conteúdo técnico de explicação, sinalizar incerteza e permitir rastreabilidade e revisão humana.
+
 ## Demonstração local da página Jogar
 
 A página Jogar demonstra localmente a futura experiência multiplayer, mas não conecta jogadores reais. O usuário controla legalmente os dois lados do tabuleiro para testar o fluxo; não existe bot, IA, motor ou escolha automática de lances. A presença dos adversários é mockada e não representa pessoas online.

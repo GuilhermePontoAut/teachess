@@ -1,2 +1,5 @@
-import { Bot } from "lucide-react"; import { PlaceholderPage } from "@/components/PlaceholderPage";
-export default function Page(){return <PlaceholderPage eyebrow="Visão de futuro" title="Futura IA" description="Uma prévia do espaço reservado para recursos inteligentes do TeaChess." icon={Bot} notice="Recurso indisponível. Não há IA, LLM, motor de xadrez, OCR ou serviço externo integrado."/>}
+import type { Metadata } from "next";
+import { FutureAiContent } from "@/components/future-ai/FutureAiContent";
+
+export const metadata: Metadata = { title: "Futura IA", description: "Demonstração local e simulada do futuro professor digital do TeaChess." };
+export default function Page() { return <FutureAiContent />; }
