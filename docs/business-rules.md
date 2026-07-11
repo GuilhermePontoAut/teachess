@@ -32,6 +32,14 @@ A store de partidas usa persistência Zustand versão 3 mantendo a chave anterio
 
 Não há autenticação, backend, banco de dados, multiplayer real, Stockfish, IA, LLM, OCR ou visão computacional. Os dados permanecem no navegador. Não existe painel administrativo nem proteção real de servidor.
 
+## Treinamento pessoal
+
+O plano de treinamento é privado. Por padrão, recomendações e indicadores usam somente partidas da plataforma. A preferência “Incluir partidas externas” permite que partidas próprias externas participem apenas da visão pessoal combinada; elas nunca alteram ranking, rating ou estatísticas oficiais e seus dados não são expostos publicamente. A proteção real desta separação dependerá de autenticação e autorização em backend.
+
+Temas, exercícios, prioridades e plano semanal são simulações determinísticas derivadas dos mocks de `TrainingTopic`, análises, categorias de erro, pontos fortes, pontos a melhorar, aberturas, resultados e `CoachRecommendation`. Quando não há análises suficientes, a interface identifica o uso do catálogo mockado como fallback. Não há geração real de exercícios, análise automática, Stockfish, IA ou LLM.
+
+Conclusões de atividades, progresso de exercícios, histórico e temas adicionados são persistidos somente no `localStorage` por uma store Zustand versionada. Restaurar o plano substitui esses dados pelo estado demonstrativo inicial. Nenhuma atividade de treinamento influencia o ranking ou o rating oficial. Futuramente, IA generativa poderá explicar erros e adaptar planos, desde que seja integrada de forma explícita e com regras adequadas de privacidade.
+
 ## Envios de imagens
 
 Cada upload representa exclusivamente uma posição de estudo e aceita uma única imagem PNG, JPEG ou WebP de até 10 MB. A imagem pode ser uma foto de tabuleiro físico ou um print de partida online, com plataforma ou contexto compatível com a origem escolhida. Não há suporte a sequências nem reconstrução de partidas.

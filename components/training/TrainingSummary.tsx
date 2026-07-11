@@ -1,0 +1,7 @@
+import { BookOpenCheck, CheckCircle2, Clock3, Dumbbell, Target, TrendingUp } from "lucide-react";
+
+export function TrainingSummary({ planned, completed, priorityTopics, exercisesCompleted, minutes }: { planned: number; completed: number; priorityTopics: number; exercisesCompleted: number; minutes: number }) {
+  const progress = planned ? Math.round(completed / planned * 100) : 0;
+  const cards = [{ label: "Atividades planejadas", value: planned, icon: BookOpenCheck }, { label: "Atividades concluídas", value: completed, icon: CheckCircle2 }, { label: "Progresso semanal", value: `${progress}%`, icon: TrendingUp }, { label: "Temas prioritários", value: priorityTopics, icon: Target }, { label: "Exercícios concluídos", value: exercisesCompleted, icon: Dumbbell }, { label: "Tempo estimado", value: `${minutes} min`, icon: Clock3 }];
+  return <section aria-label="Resumo do treinamento" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{cards.map(({ label, value, icon: Icon }) => <article key={label} className="rounded-2xl border border-line bg-surface p-4 shadow-sm"><div className="flex items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</p><p className="mt-1 text-2xl font-bold">{value}</p></div><span className="rounded-xl bg-neutral-100 p-2.5"><Icon size={20} aria-hidden="true" /></span></div></article>)}</section>;
+}
