@@ -36,9 +36,13 @@ Não há autenticação, backend, banco de dados, multiplayer real, Stockfish, I
 
 A página Jogar demonstra localmente a futura experiência multiplayer, mas não conecta jogadores reais. O usuário controla legalmente os dois lados do tabuleiro para testar o fluxo; não existe bot, IA, motor ou escolha automática de lances. A presença dos adversários é mockada e não representa pessoas online.
 
-As sessões não criam `ChessGame`, não entram na store de partidas e não alteram rating, ranking, estatísticas, treinamento ou análises. Resultados, histórico de lances e relógios se perdem ao atualizar a página. Os relógios são locais e não autoritativos. O chat existe somente na memória da sessão e nenhuma mensagem é enviada a outro usuário.
+As sessões não criam `ChessGame`, não entram na store de partidas e não alteram rating, ranking, estatísticas, treinamento ou análises. A partida em andamento ou finalizada, seu histórico, relógios, orientação e chat são persistidos somente no `localStorage` por uma store Zustand versionada. Ao restaurar, o tempo decorrido é descontado do jogador da vez, mas esses relógios do navegador não são autoritativos nem seguros para competição. A demonstração só é removida pela ação explícita de encerramento. Nenhuma mensagem do chat é enviada a outro usuário.
 
-Partidas reais futuras dependerão de backend, autenticação, websocket ou serviço em tempo real, validação de movimentos e relógios autoritativos no servidor, persistência e sistema de rating. Elas contarão para o ranking somente após validação do servidor.
+A procura de partida é simulada e usa por padrão a faixa de rating ±200. Busca e salas aceitam faixas configuráveis (±100, ±200, ±400 ou sem limite), aplicadas deterministicamente aos mocks disponíveis. Desafios diretos também respeitam a faixa de adversários aceita por cada jogador simulado. Nenhuma dessas ações cria presença, convite ou conexão real.
+
+As salas abertas são mocks determinísticos. Uma sala própria pode ser criada e cancelada apenas na sessão atual do navegador; nenhum outro usuário pode vê-la. Entrar em uma sala compatível apenas configura a mesma demonstração local de partida.
+
+Matchmaking e partidas reais futuras dependerão de backend, autenticação, websocket ou outra comunicação em tempo real, validação de movimentos e relógios autoritativos no servidor, persistência e sistema de rating. Elas contarão para o ranking somente após validação do servidor.
 
 ## Treinamento pessoal
 

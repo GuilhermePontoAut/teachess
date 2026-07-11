@@ -1,5 +1,5 @@
 import { mockRankingPlayers } from "@/lib/data/rankings";
-import type { AvailablePlayer, DemoPresence, TimeControl } from "@/lib/types/play";
+import type { AvailablePlayer, DemoPresence, OpenMatchRoom, TimeControl } from "@/lib/types/play";
 
 export const timeControls: TimeControl[] = [
   { id: "1-0", minutes: 1, increment: 0, category: "Bullet" },
@@ -22,4 +22,19 @@ export const availablePlayers: AvailablePlayer[] = mockRankingPlayers
     ...player,
     presence: presenceCycle[index % presenceCycle.length],
     preferredTime: preferences[index % preferences.length],
+    incomingChallengeRange: index % 5 === 0 ? { minDelta: -100, maxDelta: 100 } : index % 3 === 0 ? { minDelta: -400, maxDelta: 400 } : { minDelta: -200, maxDelta: 200 },
   }));
+
+const roomSpecs = [
+  [0, "10-0", "random", -200, 200, "open"], [1, "3-2", "white", -100, 200, "open"],
+  [2, "5-0", "black", -400, 400, "occupied"], [3, "15-10", "random", -100, 100, "open"],
+  [4, "1-0", "white", -200, 400, "open"], [5, "10-5", "black", -400, 100, "cancelled"],
+  [6, "3-0", "random", -200, 200, "open"], [7, "5-0", "white", -100, 100, "open"],
+  [8, "10-0", "black", -400, 400, "open"], [9, "3-2", "random", -200, 200, "open"],
+] as const;
+
+export const openMatchRooms: OpenMatchRoom[] = roomSpecs.map(([playerIndex, controlId, colorPreference, minDelta, maxDelta, status], index) => {
+  const player = availablePlayers[playerIndex];
+  const timeControl = timeControls.find((control) => control.id === controlId) ?? timeControls[0];
+  return { id: `demo-room-${index + 1}`, creatorPlayerId: player.id, creatorName: player.name, creatorRating: player.currentPlatformRating, region: player.region, timeControl, category: timeControl.category, colorPreference, minRating: player.currentPlatformRating + minDelta, maxRating: player.currentPlatformRating + maxDelta, createdAt: new Date(Date.UTC(2026, 6, 11, 14, 30 - index)).toISOString(), status, isDemo: true };
+});

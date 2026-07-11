@@ -17,4 +17,5 @@ export const STORAGE_KEYS = {
   ranking: "teachess-ranking-v1",
   preferences: "teachess-preferences-v1",
   training: "teachess-training-v1",
+  demoMatch: "teachess-demo-match-v1",
 } as const;

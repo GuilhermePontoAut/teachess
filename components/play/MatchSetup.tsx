@@ -2,13 +2,17 @@ import type { AvailablePlayer, DemoColorChoice, DemoMatchConfig, TimeControl } f
 import { AvailablePlayers } from "./AvailablePlayers";
 import { TimeControlSelector } from "./TimeControlSelector";
 import { assignedColor, buttonBase } from "./play";
+import { MatchSearch } from "./MatchSearch";
+import { currentUser } from "@/lib/data/users";
+import { acceptsDirectChallenge } from "@/lib/utils/matchmaking";
 
 export function MatchSetup({ players, controls, opponent, timeControl, colorChoice, randomIndex, onOpponent, onTimeControl, onColorChoice, onStart }: { players: AvailablePlayer[]; controls: TimeControl[]; opponent: AvailablePlayer | null; timeControl: TimeControl | null; colorChoice: DemoColorChoice | null; randomIndex: number; onOpponent: (player: AvailablePlayer) => void; onTimeControl: (control: TimeControl) => void; onColorChoice: (choice: DemoColorChoice) => void; onStart: (config: DemoMatchConfig) => void }) {
-  const ready = Boolean(opponent && timeControl && colorChoice);
+  const ready = Boolean(opponent && opponent.presence === "available" && acceptsDirectChallenge(opponent, currentUser.currentPlatformRating) && timeControl && colorChoice);
   const resolvedColor = colorChoice ? assignedColor(colorChoice, randomIndex) : null;
   const start = () => { if (opponent && timeControl && resolvedColor) onStart({ opponent, timeControl, userColor: resolvedColor }); };
   return <div className="space-y-6"><section className="rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6"><AvailablePlayers players={players} selectedId={opponent?.id ?? null} onSelect={onOpponent}/></section>
     <section className="rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6"><TimeControlSelector controls={controls} selectedId={timeControl?.id ?? null} onSelect={onTimeControl}/><fieldset className="mt-7 border-t border-line pt-6"><legend className="text-lg font-semibold">Sua cor</legend><div className="mt-3 grid grid-cols-3 gap-3">{(["white", "black", "random"] as DemoColorChoice[]).map((choice) => <button key={choice} type="button" role="radio" aria-checked={colorChoice === choice} onClick={() => onColorChoice(choice)} className={`rounded-xl border px-3 py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${colorChoice === choice ? "border-neutral-950 bg-neutral-950 text-white" : "border-line bg-white hover:bg-neutral-50"}`}>{choice === "white" ? "Brancas" : choice === "black" ? "Pretas" : "Aleatória"}</button>)}</div>{resolvedColor && <p role="status" className="mt-3 text-sm text-neutral-700">Cor atribuída: <strong>{resolvedColor === "white" ? "Brancas" : "Pretas"}</strong>{colorChoice === "random" ? " (alternância previsível nesta sessão)" : ""}.</p>}</fieldset></section>
+    <MatchSearch players={players} timeControl={timeControl} colorChoice={colorChoice} randomIndex={randomIndex} onStart={onStart}/>
     <section className="flex flex-col gap-4 rounded-2xl border border-line bg-neutral-100 p-5 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-semibold">{ready ? "Partida pronta" : "Complete a preparação"}</h2><p className="mt-1 text-sm text-muted">{opponent ? opponent.name : "Nenhum adversário selecionado"} · {timeControl ? `${timeControl.minutes} + ${timeControl.increment}` : "Nenhum controle selecionado"} · {resolvedColor ? (resolvedColor === "white" ? "Brancas" : "Pretas") : "Nenhuma cor selecionada"}</p></div><button type="button" disabled={!ready} onClick={start} className={`${buttonBase} bg-neutral-950 text-white hover:bg-neutral-800 sm:min-w-52`}>Iniciar demonstração</button></section>
   </div>;
 }

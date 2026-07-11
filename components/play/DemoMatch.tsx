@@ -1,114 +1,27 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Chess, type Color, type Square } from "chess.js";
+import { useEffect, useMemo, useState } from "react";
+import { Chess, type Square } from "chess.js";
 import { currentUser } from "@/lib/data/users";
-import type { PlayerColor } from "@/lib/types/chess";
-import type { DemoMatchConfig, DemoMove, MatchReason, MatchResult } from "@/lib/types/play";
-import { MatchBoard } from "./MatchBoard";
-import { MatchControls } from "./MatchControls";
-import { MatchDialog } from "./MatchDialog";
-import { MatchResultDialog } from "./MatchResultDialog";
-import { MatchStatus } from "./MatchStatus";
-import { MoveHistory } from "./MoveHistory";
-import { PlayerClock } from "./PlayerClock";
-import { SimulatedChat } from "./SimulatedChat";
+import type { DemoMove, MatchReason, MatchResult } from "@/lib/types/play";
+import { useDemoMatchStore } from "@/store/useDemoMatchStore";
+import { MatchBoard } from "./MatchBoard"; import { MatchControls } from "./MatchControls"; import { MatchDialog } from "./MatchDialog"; import { MatchResultDialog } from "./MatchResultDialog"; import { MatchStatus } from "./MatchStatus"; import { MoveHistory } from "./MoveHistory"; import { PlayerClock } from "./PlayerClock"; import { SimulatedChat } from "./SimulatedChat";
 
-type PendingDialog = "draw" | "resign" | "restart" | "back" | null;
+type PendingDialog = "draw" | "resign" | "restart" | "delete" | null;
+function boardResult(game: Chess): MatchResult | null { if (game.isCheckmate()) return { winner: game.turn() === "w" ? "black" : "white", reason: "checkmate" }; const draws: Array<[boolean, MatchReason]> = [[game.isStalemate(), "stalemate"], [game.isInsufficientMaterial(), "insufficient"], [game.isThreefoldRepetition(), "repetition"], [game.isDrawByFiftyMoves(), "fifty-move"]]; const draw = draws.find(([matches]) => matches); return draw ? { winner: null, reason: draw[1] } : null; }
+function restoreGame(pgn: string, fen: string): Chess { try { const game = new Chess(); if (pgn) game.loadPgn(pgn); else game.load(fen); return game; } catch { try { return new Chess(fen); } catch { return new Chess(); } } }
 
-function getBoardResult(game: Chess): MatchResult | null {
-  if (game.isCheckmate()) return { winner: game.turn() === "w" ? "black" : "white", reason: "checkmate" };
-  const draws: Array<[boolean, MatchReason]> = [[game.isStalemate(), "stalemate"], [game.isInsufficientMaterial(), "insufficient"], [game.isThreefoldRepetition(), "repetition"], [game.isDrawByFiftyMoves(), "fifty-move"]];
-  const draw = draws.find(([matches]) => matches);
-  return draw ? { winner: null, reason: draw[1] } : null;
-}
-
-function colorFromTurn(turn: Color): PlayerColor { return turn === "w" ? "white" : "black"; }
-
-export function DemoMatch({ config, onBack }: { config: DemoMatchConfig; onBack: () => void }) {
-  const initialMilliseconds = config.timeControl.minutes * 60_000;
-  const [game, setGame] = useState(() => new Chess());
-  const [moves, setMoves] = useState<DemoMove[]>([]);
-  const [whiteMilliseconds, setWhiteMilliseconds] = useState(initialMilliseconds);
-  const [blackMilliseconds, setBlackMilliseconds] = useState(initialMilliseconds);
-  const [orientation, setOrientation] = useState<PlayerColor>(config.userColor);
-  const [result, setResult] = useState<MatchResult | null>(null);
+export function DemoMatch({ onBack }: { onBack: () => void }) {
+  const match = useDemoMatchStore((state) => state.match); const tickClock = useDemoMatchStore((state) => state.tickClock); const updatePosition = useDemoMatchStore((state) => state.updatePosition); const finishMatch = useDemoMatchStore((state) => state.finishMatch); const flipBoard = useDemoMatchStore((state) => state.flipBoard); const restartMatch = useDemoMatchStore((state) => state.restartMatch); const deleteMatch = useDemoMatchStore((state) => state.deleteMatch); const addChatMessage = useDemoMatchStore((state) => state.addChatMessage); const clearChat = useDemoMatchStore((state) => state.clearChat); const setDrawOfferPending = useDemoMatchStore((state) => state.setDrawOfferPending);
   const [dialog, setDialog] = useState<PendingDialog>(null);
-  const [startedAt, setStartedAt] = useState(() => Date.now());
-  const [durationSeconds, setDurationSeconds] = useState(0);
-  const resultRef = useRef<MatchResult | null>(null);
-
-  const finish = useCallback((nextResult: MatchResult) => {
-    if (resultRef.current) return;
-    resultRef.current = nextResult;
-    setDurationSeconds(Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
-    setResult(nextResult);
-  }, [startedAt]);
-
-  useEffect(() => {
-    if (result) return;
-    let lastTick = performance.now();
-    const interval = window.setInterval(() => {
-      const now = performance.now();
-      const elapsed = now - lastTick;
-      lastTick = now;
-      const turn = game.turn();
-      const update = (current: number) => {
-        const next = Math.max(0, current - elapsed);
-        if (next === 0) finish({ winner: turn === "w" ? "black" : "white", reason: "timeout" });
-        return next;
-      };
-      if (turn === "w") setWhiteMilliseconds(update); else setBlackMilliseconds(update);
-    }, 250);
-    return () => window.clearInterval(interval);
-  }, [finish, game, result]);
-
-  const reset = useCallback(() => {
-    resultRef.current = null;
-    setGame(new Chess());
-    setMoves([]);
-    setWhiteMilliseconds(initialMilliseconds);
-    setBlackMilliseconds(initialMilliseconds);
-    setOrientation(config.userColor);
-    setResult(null);
-    setDialog(null);
-    setStartedAt(Date.now());
-    setDurationSeconds(0);
-  }, [config.userColor, initialMilliseconds]);
-
-  const onDrop = (source: string, target: string | null): boolean => {
-    if (!target || result) return false;
-    const next = new Chess(game.fen());
-    try {
-      const move = next.move({ from: source, to: target, promotion: "q" });
-      const demoMove: DemoMove = { san: move.san, from: move.from, to: move.to, color: move.color };
-      setGame(next);
-      setMoves((current) => [...current, demoMove]);
-      const increment = config.timeControl.increment * 1000;
-      if (move.color === "w") setWhiteMilliseconds((current) => current + increment); else setBlackMilliseconds((current) => current + increment);
-      const boardResult = getBoardResult(next);
-      if (boardResult) finish(boardResult);
-      return true;
-    } catch { return false; }
-  };
-
-  const whitePlayer = config.userColor === "white" ? currentUser : config.opponent;
-  const blackPlayer = config.userColor === "black" ? currentUser : config.opponent;
-  const inCheck = game.isCheck();
-  const kingSquare = useMemo(() => inCheck ? game.board().flat().find((piece) => piece?.type === "k" && piece.color === game.turn())?.square : undefined, [game, inCheck]);
-  const activeColor = colorFromTurn(game.turn());
-  const confirmDialog = () => {
-    if (dialog === "draw") finish({ winner: null, reason: "draw-agreement" });
-    if (dialog === "resign") finish({ winner: activeColor === "white" ? "black" : "white", reason: "resignation" });
-    if (dialog === "restart") reset();
-    if (dialog === "back") onBack();
-    setDialog(null);
-  };
-  const dialogCopy = dialog === "draw" ? { title: "Oferecer empate", description: "Nenhum jogador real recebeu esta oferta. Ao aceitar, a demonstração termina empatada.", label: "Aceitar empate na demonstração", destructive: false } : dialog === "resign" ? { title: "Abandonar partida?", description: `A demonstração será encerrada e as ${activeColor === "white" ? "pretas" : "brancas"} vencerão por abandono.`, label: "Confirmar abandono", destructive: true } : dialog === "restart" ? { title: "Reiniciar demonstração?", description: "A posição, os lances e os relógios serão restaurados. Adversário, cor e controle de tempo serão mantidos.", label: "Reiniciar demonstração", destructive: false } : { title: "Voltar à preparação?", description: "A sessão local atual será descartada e nenhum resultado será registrado.", label: "Voltar à preparação", destructive: true };
-
-  return <div className="space-y-5"><div role="note" className="rounded-2xl border border-line bg-neutral-950 p-4 text-sm leading-6 text-white"><strong>Neste protótipo, você movimenta as peças dos dois jogadores para testar o fluxo completo da partida.</strong> O TeaChess não escolhe lances e não há adversário conectado.</div>
-    <MatchControls finished={Boolean(result)} onFlip={() => setOrientation((current) => current === "white" ? "black" : "white")} onDraw={() => setDialog("draw")} onResign={() => setDialog("resign")} onRestart={() => setDialog("restart")} onBack={() => result ? onBack() : setDialog("back")}/>
-    <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(310px,.75fr)]"><section aria-label="Mesa da partida" className="min-w-0 space-y-3"><PlayerClock name={blackPlayer.name} rating={blackPlayer.currentPlatformRating} milliseconds={blackMilliseconds} active={!result && activeColor === "black"} color="black"/><MatchBoard fen={game.fen()} orientation={orientation} lastMove={moves.at(-1)} checkSquare={kingSquare as Square | undefined} disabled={Boolean(result)} onDrop={onDrop}/><PlayerClock name={whitePlayer.name} rating={whitePlayer.currentPlatformRating} milliseconds={whiteMilliseconds} active={!result && activeColor === "white"} color="white"/></section><aside className="min-w-0 space-y-5"><MatchStatus config={config} moves={moves} inCheck={inCheck} result={result}/><MoveHistory moves={moves}/><SimulatedChat/></aside></div>
-    <MatchDialog open={Boolean(dialog)} title={dialogCopy.title} description={dialogCopy.description} confirmLabel={dialogCopy.label} destructive={dialogCopy.destructive} onCancel={() => setDialog(null)} onConfirm={confirmDialog}/>
-    <MatchResultDialog result={result} moveCount={Math.ceil(moves.length / 2)} durationSeconds={durationSeconds} onNew={reset} onBack={onBack}/>
-  </div>;
+  const sessionId = match?.sessionId; const status = match?.status; const pgn = match?.pgn; const fen = match?.fen;
+  useEffect(() => { if (!sessionId || status === "finished") return; const interval = window.setInterval(() => tickClock(), 250); return () => window.clearInterval(interval); }, [sessionId, status, tickClock]);
+  const game = useMemo(() => pgn !== undefined && fen !== undefined ? restoreGame(pgn, fen) : new Chess(), [fen, pgn]);
+  if (!match) return null;
+  const config = { opponent: match.opponent, timeControl: match.timeControl, userColor: match.userColor };
+  const whitePlayer = match.userColor === "white" ? currentUser : match.opponent; const blackPlayer = match.userColor === "black" ? currentUser : match.opponent; const inCheck = game.isCheck(); const activeColor = game.turn() === "w" ? "white" : "black"; const kingSquare = inCheck ? game.board().flat().find((piece) => piece?.type === "k" && piece.color === game.turn())?.square : undefined;
+  const onDrop = (source: string, target: string | null) => { if (!target || match.result) return false; tickClock(); const latest = useDemoMatchStore.getState().match; if (!latest || latest.result) return false; const next = restoreGame(latest.pgn, latest.fen); try { const move = next.move({ from: source, to: target, promotion: "q" }); const demoMove: DemoMove = { san: move.san, from: move.from, to: move.to, color: move.color }; const white = latest.whiteMilliseconds + (move.color === "w" ? latest.increment : 0); const black = latest.blackMilliseconds + (move.color === "b" ? latest.increment : 0); updatePosition(next, [...latest.moves, demoMove], white, black); const result = boardResult(next); if (result) finishMatch(result); return true; } catch { return false; } };
+  const confirmDialog = () => { if (dialog === "draw") finishMatch({ winner: null, reason: "draw-agreement" }); if (dialog === "resign") finishMatch({ winner: match.userColor === "white" ? "black" : "white", reason: "resignation" }); if (dialog === "restart") restartMatch(); if (dialog === "delete") { deleteMatch(); onBack(); } setDrawOfferPending(false); setDialog(null); };
+  const openDialog = (value: PendingDialog) => { setDialog(value); setDrawOfferPending(value === "draw"); };
+  const copy = dialog === "draw" ? { title: "Oferecer empate", description: "Nenhum jogador real receberá esta oferta. Confirmar encerra a demonstração empatada.", label: "Aceitar empate na demonstração", destructive: false } : dialog === "resign" ? { title: "Abandonar partida?", description: "A demonstração será encerrada por abandono.", label: "Confirmar abandono", destructive: true } : dialog === "restart" ? { title: "Reiniciar demonstração?", description: "Posição, lances e relógios serão restaurados.", label: "Reiniciar demonstração", destructive: false } : { title: "Encerrar e apagar demonstração?", description: "A partida salva, seus lances, relógios e chat serão removidos deste navegador.", label: "Encerrar e apagar", destructive: true };
+  return <div className="space-y-5"><div role="note" className="rounded-2xl border border-line bg-neutral-950 p-4 text-sm leading-6 text-white"><strong>Você movimenta as peças dos dois jogadores.</strong> A persistência é apenas local, não autoritativa e não é segura para competição real.</div><MatchControls finished={Boolean(match.result)} onFlip={flipBoard} onDraw={() => openDialog("draw")} onResign={() => openDialog("resign")} onRestart={() => openDialog("restart")} onBack={onBack} onDelete={() => openDialog("delete")}/><div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(310px,.75fr)]"><section aria-label="Mesa da partida" className="min-w-0 space-y-3"><PlayerClock name={blackPlayer.name} rating={blackPlayer.currentPlatformRating} milliseconds={match.blackMilliseconds} active={!match.result && activeColor === "black"} color="black"/><MatchBoard fen={game.fen()} orientation={match.orientation} lastMove={match.lastMove ?? undefined} checkSquare={kingSquare as Square | undefined} disabled={Boolean(match.result)} onDrop={onDrop}/><PlayerClock name={whitePlayer.name} rating={whitePlayer.currentPlatformRating} milliseconds={match.whiteMilliseconds} active={!match.result && activeColor === "white"} color="white"/></section><aside className="min-w-0 space-y-5"><MatchStatus config={config} moves={match.moves} inCheck={inCheck} result={match.result}/><MoveHistory moves={match.moves}/><SimulatedChat messages={match.chatMessages} onSend={addChatMessage} onClear={clearChat}/></aside></div><MatchDialog open={Boolean(dialog)} title={copy.title} description={copy.description} confirmLabel={copy.label} destructive={copy.destructive} onCancel={() => { setDialog(null); setDrawOfferPending(false); }} onConfirm={confirmDialog}/><MatchResultDialog result={match.result} moveCount={Math.ceil(match.moves.length / 2)} durationSeconds={Math.max(0, Math.floor((match.lastClockUpdateAt-match.startedAt)/1000))} onNew={restartMatch} onBack={onBack}/></div>;
 }
