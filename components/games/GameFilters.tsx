@@ -7,7 +7,8 @@ export function GameFilters({ filters, openings, onChange, onClear }: { filters:
   return <section aria-labelledby="game-filters-title" className="rounded-2xl border border-line bg-surface p-4 shadow-sm sm:p-5">
     <div className="mb-4 flex items-center gap-2"><SlidersHorizontal size={18} aria-hidden="true" /><h2 id="game-filters-title" className="font-semibold text-neutral-950">Pesquisar e filtrar</h2></div>
     <label className="relative block"><span className="sr-only">Pesquisar partidas</span><Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" aria-hidden="true" /><input type="search" value={filters.query} onChange={(event) => onChange({ query: event.target.value })} placeholder="Adversário, título, evento, abertura ou tag" className={`${inputClass} pl-10`} /></label>
-    <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <Select label="Origem" value={filters.origin} onChange={(value) => onChange({ origin: value as GameFilterState["origin"] })} options={[["all","Todas"],["platform","Plataforma"],["external","Externas"]]} />
       <Select label="Resultado" value={filters.result} onChange={(value) => onChange({ result: value as GameFilterState["result"] })} options={[["all","Todos"],["win","Vitória"],["loss","Derrota"],["draw","Empate"]]} />
       <Select label="Cor" value={filters.color} onChange={(value) => onChange({ color: value as GameFilterState["color"] })} options={[["all","Todas"],["white","Brancas"],["black","Pretas"]]} />
       <Select label="Status da análise" value={filters.analysis} onChange={(value) => onChange({ analysis: value as GameFilterState["analysis"] })} options={[["all","Todos"],["analyzed","Analisada"],["pending","Pendente"],["not_analyzed","Não analisada"]]} />

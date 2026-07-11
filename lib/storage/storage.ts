@@ -15,4 +15,5 @@ export const STORAGE_KEYS = {
   games: "teachess-games-v1",
   uploads: "teachess-uploads-v1",
   ranking: "teachess-ranking-v1",
+  preferences: "teachess-preferences-v1",
 } as const;

@@ -2,6 +2,11 @@ export type GameResult = "win" | "loss" | "draw";
 export type GameStatus = "scheduled" | "in_progress" | "finished" | "abandoned";
 export type PlayerColor = "white" | "black";
 export type AnalysisStatus = "analyzed" | "pending" | "not_analyzed";
+export type UserRole = "player" | "admin";
+export type UserLevel = "beginner" | "intermediate" | "advanced";
+export type GameOrigin = "platform" | "external";
+export type GameVisibility = "public" | "private";
+export type ExternalGameSource = "presencial" | "chess.com" | "lichess" | "outro";
 export type ErrorCategory =
   | "opening"
   | "tactics"
@@ -13,20 +18,29 @@ export type ErrorCategory =
 export interface User {
   id: string;
   name: string;
-  email: string;
-  rating: number;
+  role: UserRole;
+  currentPlatformRating: number;
+  level: UserLevel;
   avatarUrl?: string;
   createdAt: string;
 }
 
 export interface ChessGame {
   id: string;
+  origin: GameOrigin;
+  visibility: GameVisibility;
+  ownerUserId: string;
+  playerUserId: string;
+  opponentUserId?: string;
+  addedManually: boolean;
+  externalSource?: ExternalGameSource;
+  externalSourceDetails?: string;
   title: string;
   event: string;
   date: string;
   opponent: string;
-  playerRating: number;
-  opponentRating: number;
+  playerRatingAtGame: number;
+  opponentRatingAtGame: number;
   playerColor: PlayerColor;
   result: GameResult;
   status: GameStatus;

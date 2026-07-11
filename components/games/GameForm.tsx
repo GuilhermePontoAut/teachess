@@ -10,7 +10,7 @@ import { type GameFormErrors, type GameFormValues, emptyGameFormValues, validate
 import { PgnField } from "./PgnField";
 import { TagInput } from "./TagInput";
 
-type TextFieldName = Exclude<keyof GameFormValues, "tags" | "playerColor" | "result" | "analysisStatus" | "pgn" | "fen">;
+type TextFieldName = Exclude<keyof GameFormValues, "tags" | "playerColor" | "result" | "analysisStatus" | "externalSource" | "pgn" | "fen">;
 
 interface GameFormProps {
   mode: "create" | "edit";
@@ -63,6 +63,8 @@ export function GameForm({ mode, initialValues, onSubmit, onCancel }: GameFormPr
     <form noValidate onSubmit={handleSubmit} className="space-y-5">
       <p className="text-sm text-muted"><span className="font-semibold text-red-700">*</span> Campos obrigatórios</p>
       <GameFormSection title="Informações gerais" description="Identifique quando e em qual contexto a partida foi disputada.">
+        <div><label htmlFor="externalSource" className="block text-sm font-semibold text-neutral-900">Origem externa<RequiredMark /></label><select id="externalSource" value={values.externalSource} onChange={(event) => update("externalSource", event.target.value as GameFormValues["externalSource"])} onBlur={() => validateField("externalSource")} required aria-invalid={Boolean(errors.externalSource)} aria-describedby={errors.externalSource ? "externalSource-error" : undefined} className={inputClass}><option value="">Selecione</option><option value="presencial">Presencial</option><option value="chess.com">Chess.com</option><option value="lichess">Lichess</option><option value="outro">Outro</option></select><FormFieldError id="externalSource-error" message={errors.externalSource} /></div>
+        {values.externalSource === "outro" && textField("externalSourceDetails", "Detalhes da origem", { required: true, placeholder: "Ex.: clube, torneio ou site" })}
         {textField("title", "Título ou nome da partida", { required: true, placeholder: "Ex.: Ataque no roque curto" })}
         {textField("event", "Evento", { placeholder: "Ex.: Clube TeaChess" })}
         {textField("date", "Data", { required: true, type: "date" })}
@@ -70,8 +72,8 @@ export function GameForm({ mode, initialValues, onSubmit, onCancel }: GameFormPr
 
       <GameFormSection title="Jogadores e resultado" description="Registre o adversário, os ratings e o resultado sob sua perspectiva.">
         {textField("opponent", "Adversário", { required: true, placeholder: "Nome do adversário" })}
-        {textField("playerRating", "Rating do jogador", { required: true, type: "number", min: 100, max: 3500, help: "Valor entre 100 e 3500." })}
-        {textField("opponentRating", "Rating do adversário", { required: true, type: "number", min: 100, max: 3500, help: "Valor entre 100 e 3500." })}
+        {textField("playerRatingAtGame", "Rating do jogador na partida", { required: true, type: "number", min: 100, max: 3500, help: "Valor histórico no momento da partida." })}
+        {textField("opponentRatingAtGame", "Rating do adversário na partida", { required: true, type: "number", min: 100, max: 3500, help: "Valor informado para esta partida externa." })}
         <div><label htmlFor="playerColor" className="block text-sm font-semibold text-neutral-900">Cor jogada<RequiredMark /></label><select id="playerColor" value={values.playerColor} onChange={(event) => update("playerColor", event.target.value as GameFormValues["playerColor"])} onBlur={() => validateField("playerColor")} required aria-invalid={Boolean(errors.playerColor)} aria-describedby={errors.playerColor ? "playerColor-error" : undefined} className={inputClass}><option value="">Selecione</option><option value="white">Brancas</option><option value="black">Pretas</option></select><FormFieldError id="playerColor-error" message={errors.playerColor} /></div>
         <div><label htmlFor="result" className="block text-sm font-semibold text-neutral-900">Resultado<RequiredMark /></label><select id="result" value={values.result} onChange={(event) => update("result", event.target.value as GameFormValues["result"])} onBlur={() => validateField("result")} required aria-invalid={Boolean(errors.result)} aria-describedby={errors.result ? "result-error" : undefined} className={inputClass}><option value="">Selecione</option><option value="win">Vitória</option><option value="loss">Derrota</option><option value="draw">Empate</option></select><FormFieldError id="result-error" message={errors.result} /></div>
       </GameFormSection>
@@ -96,7 +98,7 @@ export function GameForm({ mode, initialValues, onSubmit, onCancel }: GameFormPr
 
       <div className="sticky bottom-3 z-10 flex flex-col-reverse gap-3 rounded-2xl border border-line bg-white/95 p-4 shadow-lg backdrop-blur sm:static sm:flex-row sm:justify-between sm:shadow-sm">
         <div>{mode === "create" && <button type="button" onClick={() => dirty ? setDialog("clear") : undefined} disabled={!dirty || submitting} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-semibold text-neutral-800 hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"><Eraser size={17} aria-hidden="true" />Limpar formulário</button>}</div>
-        <div className="flex flex-col-reverse gap-2 sm:flex-row"><button type="button" onClick={handleCancel} disabled={submitting} className="inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-white px-5 py-2.5 text-sm font-semibold text-neutral-800 hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-50"><X size={17} aria-hidden="true" />Cancelar</button><button type="submit" disabled={submitting} className="inline-flex items-center justify-center gap-2 rounded-xl bg-neutral-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-60"><Save size={17} aria-hidden="true" />{submitting ? "Salvando..." : mode === "create" ? "Salvar partida" : "Salvar alterações"}</button></div>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row"><button type="button" onClick={handleCancel} disabled={submitting} className="inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-white px-5 py-2.5 text-sm font-semibold text-neutral-800 hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:opacity-50"><X size={17} aria-hidden="true" />Cancelar</button><button type="submit" disabled={submitting} className="inline-flex items-center justify-center gap-2 rounded-xl bg-neutral-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-60"><Save size={17} aria-hidden="true" />{submitting ? "Salvando..." : mode === "create" ? "Adicionar partida externa" : "Salvar alterações"}</button></div>
       </div>
     </form>
     <DeleteGameDialog open={dialog === "cancel"} title="Descartar alterações?" description="As alterações feitas neste formulário serão perdidas." confirmLabel="Descartar alterações" destructive onCancel={() => setDialog(null)} onConfirm={() => { setDialog(null); onCancel(); }} />

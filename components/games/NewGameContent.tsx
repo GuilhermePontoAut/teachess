@@ -13,8 +13,8 @@ export function NewGameContent() {
   const addGame = useGameStore((state) => state.addGame);
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => { let active = true; void hydrateGameStore().finally(() => { if (active) setHydrated(true); }); return () => { active = false; }; }, []);
-  if (!hydrated) return <GameFormLoading title="Nova partida" description="Cadastre uma nova partida no seu histórico." />;
-  return <div className="space-y-6"><PageTitle eyebrow="Histórico" title="Nova partida" description="Cadastre manualmente os dados e organize seu histórico local." /><MockNotice>Os dados desta partida são armazenados somente neste navegador. A precisão e o status da análise são simulados nesta versão.</MockNotice><GameForm mode="create" initialValues={emptyGameFormValues} onCancel={() => router.push("/partidas")} onSubmit={(values) => { const now = new Date().toISOString(); addGame({ id: crypto.randomUUID(), ...formValuesToGameData(values), status: "finished", createdAt: now, updatedAt: now }); router.push("/partidas?success=created"); }} /></div>;
+  if (!hydrated) return <GameFormLoading title="Adicionar partida externa" description="Cadastre uma partida jogada fora do TeaChess." />;
+  return <div className="space-y-6"><PageTitle eyebrow="Histórico privado" title="Adicionar partida externa" description="Cadastre manualmente uma partida jogada fora do TeaChess." /><MockNotice>Esta partida foi jogada fora do TeaChess e será adicionada manualmente. Ela será privada, não contará para o ranking e não alterará as estatísticas públicas da plataforma.</MockNotice><GameForm mode="create" initialValues={emptyGameFormValues} onCancel={() => router.push("/partidas")} onSubmit={(values) => { const now = new Date().toISOString(); addGame({ id: crypto.randomUUID(), ...formValuesToGameData(values), status: "finished", createdAt: now, updatedAt: now }); router.push("/partidas?success=created"); }} /></div>;
 }
 
 export function GameFormLoading({ title, description }: { title: string; description: string }) {

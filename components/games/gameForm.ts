@@ -1,13 +1,15 @@
 import { Chess, validateFen } from "chess.js";
-import type { AnalysisStatus, ChessGame, GameResult, PlayerColor } from "@/lib/types/chess";
+import type { AnalysisStatus, ChessGame, ExternalGameSource, GameResult, PlayerColor } from "@/lib/types/chess";
 
 export interface GameFormValues {
   title: string;
   event: string;
   date: string;
   opponent: string;
-  playerRating: string;
-  opponentRating: string;
+  playerRatingAtGame: string;
+  opponentRatingAtGame: string;
+  externalSource: ExternalGameSource | "";
+  externalSourceDetails: string;
   playerColor: PlayerColor | "";
   result: GameResult | "";
   opening: string;
@@ -24,7 +26,7 @@ export interface GameFormValues {
 export type GameFormErrors = Partial<Record<keyof GameFormValues, string>>;
 
 export const emptyGameFormValues: GameFormValues = {
-  title: "", event: "", date: "", opponent: "", playerRating: "", opponentRating: "",
+  title: "", event: "", date: "", opponent: "", playerRatingAtGame: "", opponentRatingAtGame: "", externalSource: "", externalSourceDetails: "",
   playerColor: "", result: "", opening: "", moveCount: "", accuracy: "",
   analysisStatus: "not_analyzed", pgn: "", fen: "", onlineLink: "", notes: "", tags: [],
 };
@@ -32,7 +34,7 @@ export const emptyGameFormValues: GameFormValues = {
 export function gameToFormValues(game: ChessGame): GameFormValues {
   return {
     title: game.title, event: game.event, date: game.date, opponent: game.opponent,
-    playerRating: String(game.playerRating), opponentRating: String(game.opponentRating),
+    playerRatingAtGame: String(game.playerRatingAtGame), opponentRatingAtGame: String(game.opponentRatingAtGame), externalSource: game.externalSource ?? "", externalSourceDetails: game.externalSourceDetails ?? "",
     playerColor: game.playerColor, result: game.result, opening: game.opening,
     moveCount: String(game.moveCount), accuracy: game.accuracy === null ? "" : String(game.accuracy),
     analysisStatus: game.analysisStatus, pgn: game.pgn, fen: game.fen,
@@ -53,16 +55,18 @@ export function validateGameForm(values: GameFormValues): GameFormErrors {
     ["title", "Informe um título para a partida."], ["date", "Informe a data da partida."],
     ["opponent", "Informe o adversário."], ["playerColor", "Selecione a cor jogada."],
     ["result", "Selecione o resultado."], ["opening", "Informe a abertura."],
+    ["externalSource", "Selecione a origem externa."],
   ];
   required.forEach(([field, message]) => { if (typeof values[field] === "string" && !values[field].trim()) errors[field] = message; });
   if (values.date && !isValidDate(values.date)) errors.date = "Informe uma data válida.";
 
-  const validateRating = (field: "playerRating" | "opponentRating", label: string) => {
+  const validateRating = (field: "playerRatingAtGame" | "opponentRatingAtGame", label: string) => {
     const number = Number(values[field]);
     if (!values[field].trim() || !Number.isFinite(number) || number < 100 || number > 3500) errors[field] = `${label} deve ser um número entre 100 e 3500.`;
   };
-  validateRating("playerRating", "O rating do jogador");
-  validateRating("opponentRating", "O rating do adversário");
+  validateRating("playerRatingAtGame", "O rating do jogador");
+  validateRating("opponentRatingAtGame", "O rating do adversário");
+  if (values.externalSource === "outro" && !values.externalSourceDetails.trim()) errors.externalSourceDetails = "Descreva a origem externa.";
 
   const moveCount = Number(values.moveCount);
   if (!values.moveCount.trim() || !Number.isInteger(moveCount) || moveCount <= 0) errors.moveCount = "Informe um número inteiro de lances maior que zero.";
@@ -86,8 +90,11 @@ export function validateGameForm(values: GameFormValues): GameFormErrors {
 export function formValuesToGameData(values: GameFormValues): Omit<ChessGame, "id" | "createdAt" | "updatedAt" | "status"> {
   return {
     title: values.title.trim(), event: values.event.trim(), date: values.date,
-    opponent: values.opponent.trim(), playerRating: Number(values.playerRating),
-    opponentRating: Number(values.opponentRating), playerColor: values.playerColor as PlayerColor,
+    opponent: values.opponent.trim(), playerRatingAtGame: Number(values.playerRatingAtGame),
+    opponentRatingAtGame: Number(values.opponentRatingAtGame), playerColor: values.playerColor as PlayerColor,
+    origin: "external", visibility: "private", ownerUserId: "user-current", playerUserId: "user-current",
+    opponentUserId: undefined, addedManually: true, externalSource: values.externalSource as ExternalGameSource,
+    externalSourceDetails: values.externalSource === "outro" ? values.externalSourceDetails.trim() : undefined,
     result: values.result as GameResult, opening: values.opening.trim(), moveCount: Number(values.moveCount),
     accuracy: values.accuracy.trim() ? Number(values.accuracy) : null, analysisStatus: values.analysisStatus,
     pgn: values.pgn.trim(), fen: values.fen.trim(), onlineLink: values.onlineLink.trim() || null,

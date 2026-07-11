@@ -10,7 +10,7 @@ export function RatingChart({ data }: { data: RatingPoint[] }) {
     <section aria-labelledby="rating-chart-title" className="rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6">
       <p className="section-kicker">Desempenho</p>
       <h2 id="rating-chart-title" className="text-lg font-semibold text-neutral-950">Evolução do rating</h2>
-      <p className="mt-1 text-sm text-muted">Rating registrado em cada partida, em ordem cronológica.</p>
+      <p className="mt-1 text-sm text-muted">Evolução oficial: somente partidas da plataforma.</p>
       <div className="mt-6 h-72 w-full" role="img" aria-label="Gráfico de linha da evolução do rating por data">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 8, right: 8, bottom: 4, left: 0 }}>

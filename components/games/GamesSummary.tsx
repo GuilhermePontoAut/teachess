@@ -1,4 +1,4 @@
-import { CircleEqual, Clock3, SearchCheck, Swords, Trophy, XCircle, type LucideIcon } from "lucide-react";
+import { CircleEqual, Clock3, ExternalLink, Monitor, SearchCheck, Swords, Trophy, XCircle, type LucideIcon } from "lucide-react";
 import type { ChessGame } from "@/lib/types/chess";
 
 function SummaryItem({ label, value, icon: Icon }: { label: string; value: number; icon: LucideIcon }) {
@@ -6,12 +6,6 @@ function SummaryItem({ label, value, icon: Icon }: { label: string; value: numbe
 }
 
 export function GamesSummary({ games }: { games: ChessGame[] }) {
-  const summary = {
-    wins: games.filter((game) => game.result === "win").length,
-    losses: games.filter((game) => game.result === "loss").length,
-    draws: games.filter((game) => game.result === "draw").length,
-    analyzed: games.filter((game) => game.analysisStatus === "analyzed").length,
-    pending: games.filter((game) => game.analysisStatus === "pending").length,
-  };
-  return <section aria-label="Resumo das partidas" className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6"><SummaryItem label="Total" value={games.length} icon={Swords} /><SummaryItem label="Vitórias" value={summary.wins} icon={Trophy} /><SummaryItem label="Derrotas" value={summary.losses} icon={XCircle} /><SummaryItem label="Empates" value={summary.draws} icon={CircleEqual} /><SummaryItem label="Analisadas" value={summary.analyzed} icon={SearchCheck} /><SummaryItem label="Pendentes" value={summary.pending} icon={Clock3} /></section>;
+  const count = (predicate: (game: ChessGame) => boolean) => games.filter(predicate).length;
+  return <section aria-label="Resumo das partidas" className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8"><SummaryItem label="Total" value={games.length} icon={Swords} /><SummaryItem label="Plataforma" value={count((game) => game.origin === "platform")} icon={Monitor} /><SummaryItem label="Externas" value={count((game) => game.origin === "external")} icon={ExternalLink} /><SummaryItem label="Vitórias" value={count((game) => game.result === "win")} icon={Trophy} /><SummaryItem label="Derrotas" value={count((game) => game.result === "loss")} icon={XCircle} /><SummaryItem label="Empates" value={count((game) => game.result === "draw")} icon={CircleEqual} /><SummaryItem label="Analisadas" value={count((game) => game.analysisStatus === "analyzed")} icon={SearchCheck} /><SummaryItem label="Pendentes" value={count((game) => game.analysisStatus !== "analyzed")} icon={Clock3} /></section>;
 }
