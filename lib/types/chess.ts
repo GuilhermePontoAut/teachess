@@ -129,34 +129,35 @@ export interface RankingPlayer {
   isCurrentUser: boolean;
 }
 
-export type UploadType = "physical_board" | "online_screenshot" | "study_position" | "game_sequence" | "other";
-export type UploadSource = "presencial" | "chess.com" | "lichess" | "outro";
+export type ImageOrigin = "physical_board_photo" | "online_game_screenshot";
+export type PhysicalBoardContext = "in_person_game" | "tournament" | "club" | "personal_study" | "other";
+export type OnlineGameContext = "teachess" | "chess.com" | "lichess" | "other";
+export type PositionSourceContext = PhysicalBoardContext | OnlineGameContext;
 export type UploadMimeType = "image/jpeg" | "image/png" | "image/webp";
-
-export interface UploadedFileMetadata {
-  name: string;
-  mimeType: UploadMimeType;
-  sizeInBytes: number;
-}
+export type RecognitionStatus = "demo_available" | "preview_only" | "not_processed";
 
 export interface UploadedPosition {
   id: string;
   ownerUserId: string;
   visibility: "private";
   title: string;
-  uploadType: UploadType;
-  uploadTypeDetails: string;
+  imageOrigin: ImageOrigin;
+  sourceContext: PositionSourceContext;
   date: string;
-  source: UploadSource;
   sourceDetails: string;
   description: string;
-  manualFen: string | null;
   linkedGameId: string | null;
   tags: string[];
-  files: UploadedFileMetadata[];
-  imageCount: number;
-  status: "metadata_saved";
-  notes: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: UploadMimeType;
+  simulatedDetectedFen: string | null;
+  simulatedSideToMove: PlayerColor | null;
+  simulatedConfidence: number | null;
+  recognitionStatus: RecognitionStatus;
+  favorite: boolean;
+  personalStudyNotes: string;
+  migrationNote: string | null;
   createdAt: string;
   updatedAt: string;
 }

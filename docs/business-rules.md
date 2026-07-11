@@ -34,8 +34,14 @@ Não há autenticação, backend, banco de dados, multiplayer real, Stockfish, I
 
 ## Envios de imagens
 
-Todo upload pertence ao usuário atual, é privado e não afeta ranking, rating ou estatísticas públicas. O protótipo não cria links públicos e permite ao usuário consultar e excluir somente seus próprios registros.
+Cada upload representa exclusivamente uma posição de estudo e aceita uma única imagem PNG, JPEG ou WebP de até 10 MB. A imagem pode ser uma foto de tabuleiro físico ou um print de partida online, com plataforma ou contexto compatível com a origem escolhida. Não há suporte a sequências nem reconstrução de partidas.
 
-As imagens reais não são persistidas: `File`, `Blob`, base64 e object URLs permanecem fora da store. Apenas metadados (nomes, tipos MIME, tamanhos, quantidade e informações do formulário) ficam no `localStorage`. Os previews usam object URLs temporários, revogados ao remover arquivos ou desmontar o componente, e ficam indisponíveis após recarregar a página.
+Todo upload pertence ao usuário atual, é privado e não afeta ranking, rating ou estatísticas públicas. O protótipo não cria links públicos e permite ao usuário consultar, estudar e excluir somente seus próprios registros. Essa proteção é apenas uma simulação no cliente; permissões reais dependerão de backend e autenticação.
 
-Não há OCR, reconhecimento de peças ou visão computacional. O FEN, quando presente, é informado manualmente pelo usuário e validado localmente com `chess.js`; ele nunca é extraído da imagem. A prévia de análise é inteiramente simulada e não executa IA, motor de xadrez, geração de PGN ou análise real.
+As imagens reais não são persistidas: `File`, `Blob`, base64 e object URLs permanecem fora do estado salvo. Apenas nome, tipo MIME, tamanho e informações do formulário ficam no `localStorage`. O preview usa object URL temporário durante a sessão, é revogado ao substituir ou excluir a imagem e fica indisponível após recarregar a página.
+
+No produto futuro, visão computacional poderá reconhecer as peças e gerar o FEN automaticamente. Nesta versão não há OCR, reconhecimento de peças, extração nem geração real de FEN: todo FEN, lado a jogar e confiança apresentados são dados mockados determinísticos, rotulados como demonstração simulada. O tabuleiro permite apenas estudo local com movimentos legais via `chess.js`, sem Stockfish, avaliação ou sugestão automática.
+
+Os controles de professor IA e professor humano são recursos futuros desabilitados. Não existe modelo de IA, compartilhamento público, revisão humana ou agendamento real nesta versão.
+
+A persistência de uploads usa Zustand versão 3 na mesma chave do `localStorage`. A migração preserva registros anteriores, converte sua origem e contexto para o modelo atual e, quando encontra múltiplos arquivos, guarda somente os metadados do primeiro e registra uma observação de migração sem exigir limpeza do navegador.
