@@ -1,91 +1,483 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TeaChess
 
-## Getting Started
+### Professor digital de xadrez — protótipo acadêmico de uma experiência integrada de jogo, análise e estudo
 
-First, run the development server:
+![Next.js](https://img.shields.io/badge/Next.js-16.2.10-000000?style=flat-square&logo=nextdotjs)
+![React](https://img.shields.io/badge/React-19.2.4-149ECA?style=flat-square&logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat-square&logo=tailwindcss)
+![Status](https://img.shields.io/badge/status-protótipo_acadêmico-6B7280?style=flat-square)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+> **Aviso:** o TeaChess é um protótipo acadêmico funcional de frontend. Seus dados, análises, adversários, professores e respostas são simulados. Não se trata de uma plataforma de xadrez em produção.
+
+**Endpoint público:** `A adicionar após o deploy na Vercel`
+
+## 1. Visão geral
+
+Quem estuda xadrez costuma distribuir sua rotina entre plataformas de jogo, anotações, imagens de posições, vídeos, exercícios e planilhas. Esse processo fragmentado dificulta reunir partidas, identificar erros recorrentes e transformar resultados isolados em um plano contínuo de evolução.
+
+O TeaChess propõe centralizar essa jornada. O protótipo permite navegar por partidas, métricas, análises didáticas simuladas, posições enviadas por imagem, treinamento pessoal, ranking e uma demonstração local da experiência de jogo. Também apresenta como poderiam funcionar, no futuro, um professor baseado em IA e a contratação de professores humanos.
+
+O produto distingue duas origens de partida:
+
+- **Partidas da plataforma:** seriam registradas e validadas pelo próprio TeaChess. No modelo atual, alimentam estatísticas oficiais e ranking.
+- **Partidas externas:** são cadastradas manualmente pelo jogador, permanecem privadas e podem compor apenas sua visão pessoal combinada. Não alteram rating nem ranking oficial.
+
+A visão de futuro inclui explicações didáticas apoiadas por IA, análise técnica fornecida por um motor de xadrez, reconhecimento de posições por visão computacional e revisão por professores humanos. Nenhum desses serviços está integrado nesta versão. O sistema atual demonstra os fluxos com componentes interativos, mocks e regras executadas localmente.
+
+![Dashboard funcional do TeaChess](docs/screenshots/dashboard-functional_2.png)
+
+## 2. Problema e solução proposta
+
+### Que problema o sistema resolve?
+
+O TeaChess organiza em uma única interface os principais elementos da evolução de um enxadrista: histórico de partidas, contexto de cada jogo, erros recorrentes, rating, posições de estudo, exercícios e próximos passos. A proposta reduz a distância entre “jogar uma partida” e “entender o que estudar depois”.
+
+### Para quem foi criado?
+
+O protótipo foi pensado principalmente para jogadores iniciantes e intermediários que jogam tanto em plataformas digitais quanto presencialmente e precisam de uma visão organizada do próprio aprendizado. Os fluxos também contemplam jogadores que desejam orientação futura de IA ou acompanhamento de um professor humano.
+
+### Por que o problema é desafiador?
+
+Partidas podem ter origens, níveis de confiabilidade, permissões e campos diferentes. Uma partida oficial afeta dados públicos; uma partida externa não pode fazer isso. Rating histórico não é igual a rating atual. Imagens, conversas, notas e treinamento exigem privacidade. Além disso, análise técnica, explicação pedagógica, reconhecimento visual e cálculo competitivo são responsabilidades diferentes e não devem ser confundidas.
+
+### Como a IA generativa poderá ajudar futuramente?
+
+Uma integração futura poderá transformar fatos técnicos já validados em explicações adequadas ao nível do aluno, relacionar padrões autorizados do histórico, responder perguntas e organizar planos de estudo. O modelo de linguagem não deverá inventar avaliações ou melhores lances: esses dados deverão vir de um motor de xadrez, enquanto posições reconhecidas em imagens deverão ser confirmadas pelo usuário antes de qualquer análise.
+
+### Relação com a complexidade da atividade
+
+A complexidade não está apenas na quantidade de telas. Ela aparece na coordenação entre rotas dinâmicas, formulários tipados, filtros, tabelas, gráficos, tabuleiros, diálogos, estados vazios e de erro, persistência, migrações, responsividade, acessibilidade e regras de autorização simuladas. O protótipo precisa manter coerência entre todos esses fluxos sem apresentar dados simulados como resultados reais.
+
+## 3. Funcionalidades implementadas
+
+### Dashboard
+
+**O que funciona:** calcula localmente total de partidas, vitórias, derrotas, empates e taxa de vitória; apresenta histórico recente, gráfico de rating, distribuição de resultados, aberturas frequentes, erros e recomendação de estudo. O usuário pode alternar entre a visão oficial e a visão privada combinada com partidas externas.
+
+**O que é mockado:** partidas iniciais, análises, erros e recomendações. Os gráficos derivam desses dados locais.
+
+**Futuro:** métricas provenientes de partidas validadas em backend e análises técnicas reais. Partidas externas continuarão fora do rating e do ranking oficial.
+
+### Minhas Partidas
+
+**O que funciona:** listagem responsiva em tabela e cartões, busca, filtros, ordenação, resumo, estados vazio e sem resultados, navegação para detalhes, edição e análise, além de restauração dos dados de demonstração.
+
+**O que é mockado:** o conjunto inicial de partidas e usuários.
+
+**Futuro:** sincronização segura com banco de dados, autenticação e autorização no servidor.
+
+![Listagem de partidas](docs/screenshots/games-functional.png)
+
+### Cadastro de partidas externas
+
+**O que funciona:** formulário para criar uma partida externa privada com origem, jogadores, resultado, data, cor, PGN, FEN, ratings opcionais, abertura, quantidade de lances, tags e observações. Os campos são validados no cliente e o registro é salvo no navegador.
+
+**O que é mockado:** não há importação ou verificação junto ao Chess.com, Lichess ou qualquer outra fonte.
+
+**Futuro:** importação autorizada, validação de notação e persistência em backend.
+
+### Edição de partidas
+
+**O que funciona:** partidas externas próprias permitem edição dos dados e exclusão; partidas da plataforma próprias permitem alterar somente observações e tags. As permissões são centralizadas em helpers e repetidas na store.
+
+**O que é mockado:** propriedade e papel do usuário são definidos por dados locais. Esconder ou bloquear controles no frontend não oferece segurança real.
+
+**Futuro:** autenticação, autorização e auditoria no servidor; edição técnica de partidas oficiais apenas por administração autorizada.
+
+### Detalhes
+
+**O que funciona:** exibição de origem, privacidade, resultado, jogadores, ratings histórico e atual, abertura, lances, PGN, FEN, tags, observações e ações permitidas. Há tratamento para campos opcionais, ID inexistente e acesso indisponível.
+
+**O que é mockado:** perfis e ratings atuais vêm do catálogo local.
+
+**Futuro:** dados oficiais e controle de acesso garantido pelo backend.
+
+### Análise simulada
+
+**O que funciona:** tabuleiro navegável, lista e navegação de lances, gráfico de avaliação, resumo, momentos críticos, categorias de erro, pontos fortes, pontos a melhorar e comentários didáticos. O PGN é interpretado localmente quando possível.
+
+**O que é mockado:** avaliações, precisão, melhores lances, variantes, erros e comentários. Não existe Stockfish, outro motor ou IA por trás da página.
+
+**Futuro:** análise técnica por motor apropriado, persistência dos resultados e explicação pedagógica rastreável.
+
+![Análise demonstrativa de partida](docs/screenshots/game-analysis.png)
+
+### Envio de imagem
+
+**O que funciona:** envio de uma única imagem PNG, JPEG ou WebP de até 10 MB por seleção ou arrastar e soltar; validação, preview temporário, formulário de contexto, listagem, detalhes e exclusão dos próprios registros.
+
+**O que é mockado:** FEN, lado a jogar e confiança eventualmente exibidos são determinísticos e rotulados como simulados. O arquivo real não é enviado nem persistido; somente seus metadados e o formulário ficam no `localStorage`.
+
+**Futuro:** armazenamento privado, visão computacional, confirmação da posição reconhecida e controles reais de acesso. Não há OCR nem reconhecimento de peças nesta versão.
+
+### Estudo de posição
+
+**O que funciona:** página privada por ID, tabuleiro interativo com movimentos legais via `chess.js`, inversão de orientação, restauração da posição, cópia do FEN demonstrativo, favorito e notas pessoais.
+
+**O que é mockado:** a posição reconhecida. Após F5, o preview da imagem real deixa de existir porque object URLs são temporárias. A posição inicial pode aparecer apenas como placeholder quando não há FEN.
+
+**Futuro:** reconhecimento visual confirmado pelo usuário, análise por motor e compartilhamento explícito e autorizado.
+
+![Estudo de posição enviada por imagem](docs/screenshots/image-position-study.png)
+
+### Treinamento
+
+**O que funciona:** plano semanal, indicadores, pontos fortes e fracos, temas recomendados, biblioteca com busca e filtros, progresso de exercícios, histórico de conclusões e restauração do estado inicial. O usuário escolhe escopo oficial ou privado combinado.
+
+**O que é mockado:** temas, exercícios e explicações são derivações determinísticas de catálogos, partidas e análises locais. Quando faltam análises, a interface declara o uso de fallback mockado. Não há geração ou correção inteligente.
+
+**Futuro:** exercícios reais, adaptação progressiva e explicações baseadas em dados técnicos validados e consentidos.
+
+![Treinamento funcional com dados simulados](docs/screenshots/training-functional.png)
+
+### Ranking
+
+**O que funciona:** pódio, tabela, filtros, ordenação determinística, resumo, sequência, regras e perfis públicos demonstrativos. Somente partidas da plataforma entram nos números oficiais.
+
+**O que é mockado:** jogadores, rating, histórico de posições e estatísticas competitivas. Não há cálculo Elo real.
+
+**Futuro:** rating calculado no servidor a partir de partidas oficiais validadas, medidas antifraude e perfis autenticados.
+
+![Ranking oficial simulado](docs/screenshots/ranking-functional.png)
+
+### Jogar
+
+**O que funciona:** configuração de controle de tempo e cor, busca local, filtros de adversários, desafios, salas abertas simuladas, tabuleiro com movimentos legais, relógios, orientação, histórico, chat local, empate, abandono e diálogos de resultado. Uma única sessão demonstrativa pode ficar ativa e seu estado é sincronizado entre abas do mesmo navegador.
+
+**O que é mockado:** adversários, presença, matchmaking e salas. O mesmo usuário controla os dois lados; não há bot, escolha automática de lances, WebSocket ou outro jogador conectado. A sessão não cria uma partida no histórico e não altera rating, ranking, análise ou treinamento.
+
+**Futuro:** autenticação, conexão em tempo real, relógios e validação de movimentos no servidor, persistência e rating oficial.
+
+![Demonstração local da página Jogar](docs/screenshots/play-demo.png)
+
+### Professor IA
+
+**O que funciona:** na rota histórica `/futura-ia`, o usuário pode explorar capacidades, arquitetura, roadmap e uma conversa demonstrativa contextualizada por uma partida ou posição privada. Perguntas livres ou sugeridas selecionam templates locais; as 30 interações mais recentes são persistidas.
+
+**O que é mockado:** todas as respostas. A seleção usa correspondência simples de termos e templates determinísticos, não compreensão semântica. Não há LLM, OpenAI API, motor, OCR, visão computacional ou requisição de rede.
+
+**Futuro:** separar reconhecimento visual, avaliação do motor e explicação do modelo; aplicar consentimento, rastreabilidade, indicação de fontes, incerteza e revisão humana. Nenhum provedor de IA está definido.
+
+![Demonstração do Professor IA](docs/screenshots/ai-professor-demo.png)
+
+### Professor humano
+
+**O que funciona:** catálogo de dez personas fictícias, busca e filtros locais, perfil, biografia, metodologia, avaliações, seleção de horário online, resumo, confirmação, consulta, cancelamento e repetição de um agendamento local.
+
+**O que é mockado:** pessoas, títulos, avaliações, disponibilidade, preços e agendamentos. Confirmar não reserva horário, não cobra, não envia mensagem e não cria aula ou videochamada.
+
+**Futuro:** profissionais reais, autenticação, agenda, comunicação, autorização para compartilhar dados, notificações, pagamento e infraestrutura de aula online.
+
+![Catálogo de professores humanos fictícios](docs/screenshots/human-teachers.png)
+
+## 4. Regras de negócio principais
+
+### Partidas da plataforma
+
+- Contam para ranking, rating e estatísticas oficiais.
+- São públicas no modelo demonstrativo.
+- Não podem ser excluídas ou tecnicamente editadas pelo jogador.
+- O proprietário pode alterar observações e tags.
+- Dados como rating no momento da partida, abertura e quantidade de lances são registrados pelo sistema no modelo proposto.
+
+### Partidas externas
+
+- São privadas e pertencem ao usuário que as cadastrou.
+- Não contam para ranking ou estatísticas públicas.
+- Não alteram o rating oficial.
+- Podem ser editadas e excluídas pelo proprietário.
+- Podem participar de estatísticas privadas combinadas quando o usuário habilita essa preferência.
+- Podem ter ratings, abertura e quantidade de lances ausentes; a interface não cria valores para preencher lacunas.
+
+### Rating
+
+- `playerRatingAtGame` e `opponentRatingAtGame` representam valores históricos no momento da partida.
+- O rating atual vem do perfil oficial mockado e é apresentado separadamente.
+- A comparação entre rating histórico e atual é apenas informativa.
+- Uma partida externa nunca provoca alta ou queda do rating oficial.
+- Quando o adversário externo não possui perfil TeaChess, seu rating atual fica indisponível.
+
+### Privacidade
+
+- Uploads, posições, conversas com o Professor IA, treinamento, agendamentos, observações e partidas externas são tratados como privados no fluxo do protótipo.
+- Imagens não são persistidas, apenas metadados.
+- Nenhum dado privado é compartilhado com professores humanos nesta versão.
+- O histórico do Professor IA e os demais estados ficam somente no navegador.
+- Essas regras são representadas no cliente e **não constituem proteção real**. Produção exigirá autenticação, autorização, backend seguro, auditoria e políticas de exclusão.
+
+As regras completas estão em [`docs/business-rules.md`](docs/business-rules.md).
+
+## 5. Arquitetura e tecnologias
+
+O TeaChess usa uma arquitetura frontend com Next.js App Router. Páginas e layouts ficam no diretório `app/`; componentes clientes concentram a interatividade; stores Zustand coordenam estado compartilhado; dados e regras de domínio ficam fora da apresentação.
+
+| Tecnologia | Uso no projeto |
+| --- | --- |
+| **Next.js 16.2.10** | App Router, rotas estáticas e dinâmicas, layouts, metadados e build de produção. |
+| **React 19.2.4** | Componentes, estado local, efeitos, formulários, diálogos e interação. |
+| **TypeScript 5** | Tipagem de entidades, props, stores, formulários e regras de negócio. |
+| **Tailwind CSS 4** | Identidade visual, responsividade, estados de foco e composição dos layouts. |
+| **Zustand 5** | Estado compartilhado, persistência, reidratação e migrações locais. |
+| **Recharts 3** | Gráficos do Dashboard e da análise demonstrativa. |
+| **chess.js 1.4** | Validação e reprodução local de movimentos legais. Não é motor de análise. |
+| **react-chessboard 5** | Renderização e interação dos tabuleiros. |
+| **react-dropzone 15** | Seleção, arrastar e soltar e validação inicial das imagens. |
+| **Lucide React** | Ícones consistentes e leves. |
+| **Vercel** | Destino planejado de deploy; ainda não realizado. |
+
+### Por que Next.js + Vercel?
+
+A arquitetura inicialmente sugerida pela atividade acadêmica, FastAPI + React, seria apropriada para um sistema já dependente de backend. Nesta etapa, porém, o escopo autorizado é um protótipo completo de frontend, sem API, autenticação, banco ou serviços externos. Next.js permitiu manter React e organizar as telas em rotas claras dentro do mesmo projeto, com TypeScript de ponta a ponta no cliente e um processo simples de build.
+
+A escolha também reduz o atrito do futuro deploy na Vercel, favorece responsividade e acessibilidade e mantém aberta a possibilidade de adicionar APIs ou integrar um backend real posteriormente. Ela não elimina a necessidade futura de serviços seguros: cálculo competitivo, arquivos, autenticação, autorização, pagamentos, multiplayer e IA não devem depender apenas do cliente.
+
+## 6. Estrutura de pastas
+
+```text
+teachess/
+├── app/                 # rotas, páginas, layout e estilos globais
+├── components/          # componentes compartilhados e módulos de interface
+│   ├── analysis/
+│   ├── dashboard/
+│   ├── future-ai/
+│   ├── games/
+│   ├── human-teachers/
+│   ├── play/
+│   ├── ranking/
+│   ├── study/
+│   ├── training/
+│   └── uploads/
+├── lib/
+│   ├── data/            # mocks e catálogos determinísticos
+│   ├── future-ai/       # templates locais do Professor IA
+│   ├── storage/         # adaptação segura de armazenamento
+│   ├── types/           # modelos TypeScript
+│   └── utils/           # regras e cálculos de domínio
+├── store/               # stores Zustand persistidas
+├── docs/                # regras, arquitetura futura, QA e evidências
+├── public/              # arquivos estáticos públicos
+├── AGENTS.md            # contexto, limites e critérios dados ao Codex
+└── package.json         # scripts e dependências
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+As rotas cobrem Dashboard, partidas e suas páginas dinâmicas, envio e estudo de imagem, treinamento, Jogar, ranking, Professor IA e Professor humano. Os componentes são separados por domínio; `lib/` evita colocar regras na camada visual; e `store/` contém a persistência e as transições de estado compartilhado.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 7. Persistência local
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+O protótipo usa Zustand com o middleware `persist` e `localStorage`. Existem stores para partidas, uploads, ranking, preferências, treinamento, partida local, demonstração do Professor IA e agendamentos.
 
-## Learn More
+### Como funciona
 
-To learn more about Next.js, take a look at the following resources:
+1. Durante renderização no servidor, `getSafeStorage` oferece um armazenamento em memória para evitar acesso a `window`.
+2. No navegador, a store usa `localStorage`.
+3. Todas as stores persistidas adotam `skipHydration: true`.
+4. Cada fluxo inicia a reidratação manualmente e mostra um estado de carregamento enquanto restaura os dados.
+5. As stores relevantes possuem `version` e funções de migração para converter formatos antigos sem exigir que o usuário limpe o navegador.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Essa estratégia evita que o HTML inicial e o primeiro estado do cliente discordem. Também permite controlar quando botões e cálculos ficam disponíveis.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Comportamento após F5
 
-## Deploy on Vercel
+Partidas cadastradas, preferências, progresso, metadados de uploads, conversa demonstrativa, agendamentos e a sessão local de jogo podem ser restaurados. Imagens reais e seus previews não sobrevivem, pois `File`, `Blob`, base64 e object URLs não são gravados. Relógios de uma partida local descontam o tempo decorrido, mas continuam dependentes do navegador e não são autoritativos.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Limitações
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`localStorage` tem capacidade limitada, pode ser apagado ou alterado pelo usuário, não sincroniza dispositivos e não oferece confidencialidade, integridade, autorização ou auditoria. As migrações ajudam na compatibilidade do protótipo, mas não substituem banco de dados, backups e migrações de servidor.
 
+## 8. Desenvolvimento com OpenAI Codex
 
-## O que não funcionou e exigiu intervenção
+O TeaChess foi desenvolvido com auxílio do **OpenAI Codex no terminal integrado do VS Code**, sob revisão humana. O Codex foi usado para inspecionar o repositório, propor planos curtos, implementar módulos, refatorar componentes, executar comandos de validação e corrigir erros encontrados. Ele não faz parte da aplicação em execução e nenhuma API da OpenAI foi integrada ao produto.
 
-Durante os testes, o Codex tentou iniciar o servidor de desenvolvimento com:
+### Contexto fornecido ao agente
 
-```bash
-npm run dev
-```
+Um dos primeiros passos foi criar o `AGENTS.md`, que funciona como contrato de trabalho do repositório. O arquivo descreve stack, organização, padrões de código, validação e, principalmente, os limites: nada de LLM, Stockfish, OCR, visão computacional, backend, autenticação ou multiplayer real.
 
-A primeira execução falhou com o erro:
+### Processo incremental
+
+O histórico do Git registra a progressão do trabalho em commits pequenos e frequentes:
+
+1. base Next.js, instruções, layout e identidade visual;
+2. mocks, tipos, stores e persistência;
+3. Dashboard;
+4. listagem, cadastro, detalhes e edição de partidas;
+5. regras de origem, privacidade e rating;
+6. análise simulada;
+7. upload e estudo de posição;
+8. treinamento;
+9. ranking;
+10. demonstração local de jogo;
+11. Professor IA e Professor humano;
+12. revisão integrada, acessibilidade e polimento.
+
+Cada etapa relevante foi seguida por inspeção do diff, lint e build. As decisões de produto foram registradas também em `docs/`, o que permitiu conferir se módulos posteriores respeitavam regras definidas anteriormente.
+
+### Exemplos resumidos dos prompts usados
+
+Os trechos abaixo são representativos e foram resumidos para mostrar o objetivo de cada solicitação, sem reproduzir instruções extensas integralmente:
+
+| Módulo | Trecho representativo do prompt | Objetivo |
+| --- | --- | --- |
+| Dashboard | “Implemente um Dashboard funcional com métricas e gráficos derivados das partidas mockadas.” | Transformar os mocks em uma visão útil sem alegar dados reais. |
+| Minhas Partidas | “Crie listagem responsiva, filtros, ordenação, estados vazios e exclusão conforme a origem.” | Cobrir consulta e regras diferentes para partidas oficiais e externas. |
+| Análise | “Implemente uma página completa de análise simulada; não use Stockfish nem IA.” | Demonstrar tabuleiro, lances, gráfico e feedback didático com rótulos honestos. |
+| Imagem | “Permita enviar uma posição por imagem, persistindo somente metadados e simulando o reconhecimento.” | Construir upload privado sem OCR ou armazenamento de arquivos. |
+| Treinamento | “Monte plano semanal, temas, exercícios e progresso a partir de dados locais.” | Demonstrar personalização determinística e persistência. |
+| Ranking | “Crie ranking oficial e perfil público excluindo integralmente partidas externas.” | Aplicar separação entre estatísticas públicas e privadas. |
+| Jogar | “Implemente uma demonstração local de partida, com tabuleiro, relógios, chat e matchmaking simulado.” | Testar o fluxo completo sem multiplayer, bot ou impacto competitivo. |
+| Professor IA | “Demonstre como funcionaria um professor digital com templates locais e arquitetura futura explícita.” | Apresentar o conceito sem modelo, engine ou visão computacional. |
+| Professor humano | “Crie catálogo fictício e agendamento online local, sem contato, pagamento ou reserva real.” | Representar descoberta, perfil e confirmação com limites visíveis. |
+| Revisão geral | “Revise todas as rotas, regras, responsividade, acessibilidade, estados e persistência; execute lint e build.” | Encontrar inconsistências entre módulos e concluir o protótipo com evidências. |
+
+![Exemplo de implementação incremental com Codex](docs/screenshots/codex-feature-implementation.png)
+
+## 9. O que funcionou bem com o agente
+
+- **Estrutura de componentes:** o Codex separou shell, navegação e componentes por domínio, evitando páginas monolíticas.
+- **Rotas:** a evolução incremental manteve rotas estáticas e dinâmicas organizadas pelo App Router.
+- **TypeScript:** entidades discriminadas para partidas externas e da plataforma ajudaram a expressar permissões e campos obrigatórios diferentes.
+- **Zustand:** stores concentraram operações, persistência e validações que precisavam ser compartilhadas entre telas.
+- **Tabelas, filtros e formulários:** o agente gerou rapidamente variações responsivas, validações, resumos e feedback de ação.
+- **Estados explícitos:** carregamento, vazio, busca sem resultado, ID inexistente, análise ausente e recurso indisponível receberam tratamento visual.
+- **Acessibilidade:** labels, mensagens de erro, foco visível, `aria-current`, tabs com teclado, botões por ícone identificados e diálogos nativos foram incorporados e refinados.
+- **Responsividade:** grades, tabelas com overflow localizado, navegação móvel e limites de largura foram revisados durante o polimento.
+- **Validação contínua:** lint e build expuseram erros de tipagem e integração que não seriam visíveis apenas olhando a interface.
+- **Refatorações incrementais:** upload, chat, ciclo da partida, ranking e agendamento foram ajustados sem reescrever a arquitetura inteira.
+
+O principal ganho foi velocidade para produzir e revisar muitos fluxos coerentes. Ainda assim, a qualidade resultou da combinação entre instruções precisas, documentação persistente, testes automatizados disponíveis e revisão humana — não de autonomia irrestrita do agente.
+
+## 10. O que não funcionou ou exigiu intervenção
+
+### Sandbox e porta do servidor
+
+Ao tentar executar `npm run dev`, o ambiente isolado bloqueou inicialmente a abertura da porta:
 
 ```text
 Error: listen EPERM: operation not permitted 0.0.0.0:3000
 ```
 
-O problema não estava no código da aplicação. O ambiente isolado do Codex bloqueou inicialmente a abertura da porta utilizada pelo servidor do Next.js.
+O erro era uma restrição do sandbox, não um defeito da aplicação. Foi necessária autorização explícita do desenvolvedor para iniciar o servidor fora do ambiente isolado. Depois da autorização, a aplicação ficou acessível localmente em `http://localhost:3000`.
 
-Foi necessário autorizar explicitamente a execução do comando fora do sandbox. Após a autorização, o servidor iniciou corretamente em:
+![Bloqueio inicial da porta pelo sandbox](docs/screenshots/codex-sandbox-port.png)
 
-```text
-http://localhost:3000
+### Inferência circular nas stores Zustand
+
+Na primeira implementação da hidratação, funções `hydrate` referenciavam a própria store durante sua inicialização. O TypeScript detectou inferência circular e interpretou parte do retorno como `any`, fazendo o build falhar.
+
+O problema só ficou evidente ao executar `npm run build`. A correção foi criar primeiro cada store e exportar a função de reidratação depois da declaração. O episódio reforçou que código gerado precisa ser compilado e revisto; aparência correta não garante tipagem correta.
+
+![Erro de hidratação identificado durante o build](docs/screenshots/codex-zustand-hydration-error.png)
+
+### Ajustes de regras entre módulos
+
+À medida que o produto cresceu, regras inicialmente simplificadas precisaram ser refinadas. A separação entre rating atual e rating no momento da partida, a edição restrita de partidas oficiais, a exclusão exclusiva de partidas externas próprias e a exclusão de dados privados do ranking exigiram revisões cruzadas em tipos, stores, helpers e interface.
+
+### Persistência e dados legados
+
+Alterações nos modelos de partidas, uploads, chat e agendamentos exigiram migrações versionadas. Um exemplo foi a conversão de antigos agendamentos presenciais ou mistos para o fluxo exclusivamente online. Outro foi tornar a migração do chat tolerante a registros incompletos. Essas mudanças exigiram decisões humanas sobre como preservar dados sem inventar informação ausente.
+
+### Revisão visual e de interação
+
+O agente conseguiu inspecionar código e gerar builds, mas isso não substitui navegar em diferentes browsers, testar leitores de tela ou avaliar detalhes visuais. Ajustes de rolagem, alinhamento numérico, cabeçalhos, ciclo da partida e confirmação de agendamento surgiram em rodadas posteriores de revisão.
+
+### Necessidade de prompts específicos
+
+Solicitações amplas produziram estruturas úteis, mas regras sensíveis ficaram melhores quando os prompts explicitaram origem, privacidade, persistência, estados de erro e proibições. A revisão humana foi essencial para evitar que uma interface convincente sugerisse que análise, matchmaking, reconhecimento ou agendamento eram reais.
+
+## 11. Qualidade, testes e validação
+
+O projeto disponibiliza os seguintes scripts:
+
+```bash
+npm run dev     # servidor local
+npm run lint    # ESLint
+npm run build   # build de produção, TypeScript e geração de páginas
+npm run start   # execução do build de produção
 ```
 
-Essa situação demonstrou que, embora o agente consiga gerar e validar grande parte do código de forma autônoma, algumas operações do sistema ainda exigem supervisão e autorização manual do desenvolvedor.
+A revisão integrada documentada em [`docs/qa-checklist.md`](docs/qa-checklist.md) verificou as rotas pelo código e obteve sucesso em lint, build e `git diff --check`. Não existe suíte de testes unitários, de integração ou end-to-end configurada no `package.json`; portanto, não se deve interpretar o build como cobertura funcional completa.
 
-### Evidência da limitação do sandbox
+Ainda precisam de validação manual abrangente:
 
-A imagem abaixo mostra a primeira tentativa de iniciar o servidor, o bloqueio da porta pelo sandbox e a execução posterior autorizada pelo usuário.
+- Chrome, Firefox e Safari;
+- desktop, notebook, tablet e celulares pequenos;
+- teclado, retorno de foco, leitor de tela e contraste especializado;
+- recarregamento, migrações antigas e múltiplas abas durante a partida local;
+- uploads reais nos formatos e limites aceitos;
+- inspeção do console durante todos os fluxos.
 
-![Erro de abertura da porta no sandbox do Codex](docs/screenshots/codex-sandbox-port.png)
+![Validação de lint e build durante o desenvolvimento](docs/screenshots/codex-build-validation.png)
 
-## Interface implementada
+## 12. Como executar localmente
 
-A identidade visual foi reformulada para utilizar predominantemente preto, branco e tons de cinza, fazendo referência às casas de um tabuleiro de xadrez.
+### Pré-requisitos
 
-![Interface inicial do TeaChess](docs/screenshots/teachess-interface-theme.png)
+- Node.js compatível com Next.js 16;
+- npm;
+- navegador moderno.
 
+### Instalação
 
-### Erro de inferência circular nas stores Zustand
+```bash
+git clone <URL-DO-REPOSITORIO>
+cd teachess
+npm install
+npm run dev
+```
 
-Durante a criação da camada de persistência local, o primeiro código gerado pelo Codex não passou no build de produção.
+Acesse `http://localhost:3000`.
 
-As funções `hydrate` referenciavam a própria store enquanto ela ainda estava sendo inicializada. Isso provocou uma inferência circular no TypeScript e fez o retorno ser interpretado como `any`.
+Para validar a versão de produção:
 
-O Codex identificou o problema após executar `npm run build` e reorganizou as funções de hidratação para que fossem exportadas somente depois da criação das stores.
+```bash
+npm run lint
+npm run build
+npm run start
+```
 
-Após a alteração, o lint e o build foram executados novamente para validar a correção.
+Não são necessárias variáveis de ambiente ou credenciais, pois o protótipo não consome APIs ou serviços externos.
 
+## 13. Limitações assumidas
 
-### Dashboard funcional
+O TeaChess **não possui**:
 
-O Dashboard calcula métricas a partir das partidas mockadas e apresenta evolução de rating, distribuição de resultados, padrões de erro e aberturas mais utilizadas.
+- IA ou LLM real;
+- integração com OpenAI, Anthropic, Gemini ou outro provedor;
+- Stockfish ou qualquer motor de xadrez;
+- OCR, visão computacional ou reconhecimento real de posições;
+- backend, API própria ou banco de dados;
+- autenticação, autorização ou segurança real;
+- multiplayer, matchmaking, presença ou chat em rede;
+- cálculo Elo real ou validação competitiva;
+- armazenamento persistente de imagens;
+- pagamentos, reservas, notificações ou videochamadas;
+- professores ou jogadores reais.
 
-![Dashboard funcional do TeaChess](docs/screenshots/dashboard-functional.png)
+Dados de partidas, análises, usuários, ranking, treinamento, posições reconhecidas, respostas, profissionais, avaliações, preços e horários são mocks ou derivações determinísticas locais. A interface demonstra a experiência pretendida; ela não comprova a operação de serviços futuros.
+
+## 14. Evolução futura
+
+Uma versão de produção exigiria, em etapas controladas:
+
+1. backend com banco de dados, autenticação, autorização, auditoria e exclusão;
+2. importação autorizada e validação de partidas externas;
+3. infraestrutura multiplayer com comunicação em tempo real e relógios no servidor;
+4. cálculo de rating e regras antifraude;
+5. armazenamento privado e reconhecimento de posições com confirmação humana;
+6. motor de xadrez para avaliações técnicas e variantes;
+7. modelo de linguagem para explicações baseadas apenas em fatos autorizados e rastreáveis;
+8. agenda, comunicação, pagamentos e consentimento de compartilhamento para professores humanos;
+9. testes automatizados e auditorias de acessibilidade, privacidade e segurança;
+10. deploy na Vercel e publicação do endpoint neste README.
+
+O desenho conceitual da futura integração está em [`docs/future-ai-architecture.md`](docs/future-ai-architecture.md), e o fluxo de professores em [`docs/human-teacher-flow.md`](docs/human-teacher-flow.md).
+
+## 15. Evidências do projeto
+
+As capturas em [`docs/screenshots/`](docs/screenshots/) registram a evolução da interface, módulos funcionais, uso do Codex, falhas encontradas e validações. Elas complementam — mas não substituem — o código, o histórico do Git e o checklist de QA.
+
+## 16. Conclusão
+
+O TeaChess demonstra uma experiência integrada e coerente para organizar partidas e estudos de xadrez, com regras explícitas de origem, rating e privacidade. O protótipo entrega navegação e fluxos locais suficientemente completos para avaliar a proposta de produto, ao mesmo tempo que identifica visualmente tudo o que ainda é simulado.
+
+O uso do OpenAI Codex acelerou implementação, refatoração e validação, mas os episódios de sandbox, tipagem, migração e consistência de regras mostram por que supervisão humana, documentação e testes continuam indispensáveis. A principal entrega acadêmica não é uma alegação de inteligência inexistente: é uma base frontend tipada, responsiva e evolutiva que torna visível como um produto real poderia ser construído com segurança em etapas futuras.
