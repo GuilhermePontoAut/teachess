@@ -218,8 +218,8 @@ O TeaChess usa uma arquitetura frontend com Next.js App Router. Páginas e layou
 | **React 19.2.4** | Componentes, estado local, efeitos, formulários, diálogos e interação. |
 | **TypeScript 5** | Tipagem de entidades, props, stores, formulários e regras de negócio. |
 | **Tailwind CSS 4** | Identidade visual, responsividade, estados de foco e composição dos layouts. |
-| **Zustand 5** | Estado compartilhado, persistência, reidratação e migrações locais. |
-| **Recharts 3** | Gráficos do Dashboard e da análise demonstrativa. |
+| **Zustand 5.0.14** | Estado compartilhado, persistência, reidratação e migrações locais. |
+| **Recharts 3.9.2** | Gráficos do Dashboard e da análise demonstrativa. |
 | **chess.js 1.4** | Validação e reprodução local de movimentos legais. Não é motor de análise. |
 | **react-chessboard 5** | Renderização e interação dos tabuleiros. |
 | **react-dropzone 15** | Seleção, arrastar e soltar e validação inicial das imagens. |
@@ -360,6 +360,20 @@ O erro era uma restrição do sandbox, não um defeito da aplicação. Foi neces
 
 ![Bloqueio inicial da porta pelo sandbox](docs/screenshots/codex-sandbox-port.png)
 
+
+### Fonte externa durante o build
+
+A configuração inicial utilizava `next/font` com a fonte Geist. Durante o build, o Next.js tentou obter arquivos externos, mas o ambiente de execução estava sem acesso à rede. Para tornar o projeto autocontido e permitir o build offline, a fonte externa foi removida e substituída por uma pilha de fontes do sistema.
+
+Esse caso mostrou que uma dependência aparentemente visual também pode comprometer a compilação em ambientes restritos.
+
+### Instância duplicada do servidor
+
+Em uma das retomadas do desenvolvimento, uma instância anterior do servidor Next.js continuava utilizando a porta 3000. Uma nova execução foi direcionada para a porta 3001, e o Codex identificou o processo que permanecia ativo.
+
+Foi necessário encerrar a instância antiga antes de continuar os testes. Esse problema não estava relacionado ao código da interface, mas ao estado do ambiente local.
+
+
 ### Inferência circular nas stores Zustand
 
 Na primeira implementação da hidratação, funções `hydrate` referenciavam a própria store durante sua inicialização. O TypeScript detectou inferência circular e interpretou parte do retorno como `any`, fazendo o build falhar.
@@ -397,14 +411,39 @@ npm run start   # execução do build de produção
 
 A revisão integrada documentada em [`docs/qa-checklist.md`](docs/qa-checklist.md) verificou as rotas pelo código e obteve sucesso em lint, build e `git diff --check`. Não existe suíte de testes unitários, de integração ou end-to-end configurada no `package.json`; portanto, não se deve interpretar o build como cobertura funcional completa.
 
-Ainda precisam de validação manual abrangente:
+### Testes manuais realizados
 
-- Chrome, Firefox e Safari;
-- desktop, notebook, tablet e celulares pequenos;
-- teclado, retorno de foco, leitor de tela e contraste especializado;
-- recarregamento, migrações antigas e múltiplas abas durante a partida local;
-- uploads reais nos formatos e limites aceitos;
-- inspeção do console durante todos os fluxos.
+Durante o desenvolvimento, foram realizados testes manuais incrementais nos
+principais fluxos da aplicação, incluindo:
+
+- criação, edição, consulta e exclusão de partidas externas;
+- edição de observações em partidas da plataforma;
+- busca, filtros e ordenação das partidas;
+- persistência dos dados após atualizar a página;
+- navegação dos lances e estados da análise simulada;
+- envio de imagem e abertura da posição no tabuleiro;
+- conclusão de atividades e exercícios de treinamento;
+- filtros, ordenação e perfis do ranking;
+- movimentos legais, relógios, chat, salas e encerramento da partida local;
+- histórico e respostas simuladas do Professor IA;
+- busca, filtros, horários e agendamentos do Professor humano;
+- tratamento de IDs inexistentes;
+- navegação e responsividade em diferentes larguras de tela.
+
+Esses testes foram executados manualmente durante cada iteração e complementados
+por `npm run lint` e `npm run build`.
+
+### Validações ainda recomendadas
+
+Embora os fluxos principais tenham sido testados, ainda não foi executada uma
+matriz completa envolvendo:
+
+- todos os principais navegadores e sistemas operacionais;
+- leitores de tela;
+- auditoria especializada de contraste;
+- dispositivos móveis físicos;
+- testes automatizados unitários, de integração e end-to-end;
+- cenários extensivos com dados legados de todas as versões das stores.
 
 ![Validação de lint e build durante o desenvolvimento](docs/screenshots/codex-build-validation.png)
 
@@ -412,6 +451,7 @@ Ainda precisam de validação manual abrangente:
 
 ### Pré-requisitos
 
+- Git;
 - Node.js compatível com Next.js 16;
 - npm;
 - navegador moderno.
@@ -419,7 +459,7 @@ Ainda precisam de validação manual abrangente:
 ### Instalação
 
 ```bash
-git clone <URL-DO-REPOSITORIO>
+git clone https://github.com/GuilhermePontoAut/teachess.git
 cd teachess
 npm install
 npm run dev
@@ -437,7 +477,27 @@ npm run start
 
 Não são necessárias variáveis de ambiente ou credenciais, pois o protótipo não consome APIs ou serviços externos.
 
-## 13. Limitações assumidas
+
+## 13. Dados simulados
+
+O TeaChess utiliza dados mockados e derivações determinísticas para
+demonstrar seus fluxos de interface. Nesta versão:
+
+- partidas, adversários e jogadores iniciais são fictícios;
+- análises, precisões, erros e recomendações são simulados;
+- o ranking não utiliza um sistema Elo real;
+- o Professor IA utiliza templates locais, sem LLM;
+- posições apresentadas após o envio de imagens não foram reconhecidas;
+- professores, avaliações, preços e horários são fictícios;
+- agendamentos não representam reservas reais;
+- matchmaking, salas e chat funcionam somente como demonstração local;
+- os dados persistidos ficam apenas no navegador por meio do `localStorage`.
+
+As opções de restauração disponíveis em algumas páginas recuperam os mocks
+originais e apagam as alterações locais daquele módulo.
+
+
+## 14. Limitações assumidas
 
 O TeaChess **não possui**:
 
@@ -455,7 +515,7 @@ O TeaChess **não possui**:
 
 Dados de partidas, análises, usuários, ranking, treinamento, posições reconhecidas, respostas, profissionais, avaliações, preços e horários são mocks ou derivações determinísticas locais. A interface demonstra a experiência pretendida; ela não comprova a operação de serviços futuros.
 
-## 14. Evolução futura
+## 15. Evolução futura
 
 Uma versão de produção exigiria, em etapas controladas:
 
@@ -472,12 +532,60 @@ Uma versão de produção exigiria, em etapas controladas:
 
 O desenho conceitual da futura integração está em [`docs/future-ai-architecture.md`](docs/future-ai-architecture.md), e o fluxo de professores em [`docs/human-teacher-flow.md`](docs/human-teacher-flow.md).
 
-## 15. Evidências do projeto
+## 16. Evidências do projeto
 
 As capturas em [`docs/screenshots/`](docs/screenshots/) registram a evolução da interface, módulos funcionais, uso do Codex, falhas encontradas e validações. Elas complementam — mas não substituem — o código, o histórico do Git e o checklist de QA.
 
-## 16. Conclusão
+
+## 17. Relação com os critérios da atividade
+
+### Endpoint funcional
+
+A aplicação foi estruturada para publicação na Vercel. Todas as páginas
+principais são navegáveis e os formulários, filtros, diálogos, tabuleiros,
+gráficos e demais interações funcionam com dados locais simulados.
+
+O endereço público será incluído neste README após o deploy.
+
+### Complexidade e ambição
+
+O TeaChess possui múltiplos fluxos integrados: gerenciamento de partidas,
+análise, upload de imagens, estudo de posições, treinamento, ranking,
+demonstração de jogo, Professor IA e professores humanos. O projeto utiliza
+rotas dinâmicas, persistência, migrações, formulários, filtros, gráficos,
+tabuleiros e diferentes regras de privacidade.
+
+### Repositório GitHub
+
+O código está organizado por domínios, com componentes reutilizáveis,
+stores, tipos, mocks, utilitários e documentação. O histórico registra
+commits incrementais realizados ao longo do desenvolvimento.
+
+### Documentação
+
+Este README registra o problema, a solução, as escolhas arquiteturais,
+as funcionalidades, as limitações, os acertos e os problemas encontrados
+durante o uso do agente de codificação.
+
+### Uso do agente de codificação
+
+O OpenAI Codex foi utilizado extensivamente pelo terminal do VS Code para
+inspeção, planejamento, implementação, refatoração e validação. As evidências
+estão disponíveis em `docs/screenshots/`.
+
+
+
+## 18. Conclusão
 
 O TeaChess demonstra uma experiência integrada e coerente para organizar partidas e estudos de xadrez, com regras explícitas de origem, rating e privacidade. O protótipo entrega navegação e fluxos locais suficientemente completos para avaliar a proposta de produto, ao mesmo tempo que identifica visualmente tudo o que ainda é simulado.
 
 O uso do OpenAI Codex acelerou implementação, refatoração e validação, mas os episódios de sandbox, tipagem, migração e consistência de regras mostram por que supervisão humana, documentação e testes continuam indispensáveis. A principal entrega acadêmica não é uma alegação de inteligência inexistente: é uma base frontend tipada, responsiva e evolutiva que torna visível como um produto real poderia ser construído com segurança em etapas futuras.
+
+
+
+
+## 19. Autor
+
+**Guilherme Magalhães Júnior**
+
+GitHub: [GuilhermePontoAut](https://github.com/GuilhermePontoAut)
