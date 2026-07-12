@@ -10,7 +10,7 @@
 
 > **Aviso:** o TeaChess é um protótipo acadêmico funcional de frontend. Seus dados, análises, adversários, professores e respostas são simulados. Não se trata de uma plataforma de xadrez em produção.
 
-**Endpoint público:** https://teachess.vercel.app/
+**Endpoint público:** [Acessar o TeaChess](https://teachess.vercel.app/)
 
 ## 1. Visão geral
 
@@ -230,7 +230,7 @@ O TeaChess usa uma arquitetura frontend com Next.js App Router. Páginas e layou
 
 A arquitetura inicialmente sugerida pela atividade acadêmica, FastAPI + React, seria apropriada para um sistema já dependente de backend. Nesta etapa, porém, o escopo autorizado é um protótipo completo de frontend, sem API, autenticação, banco ou serviços externos. Next.js permitiu manter React e organizar as telas em rotas claras dentro do mesmo projeto, com TypeScript de ponta a ponta no cliente e um processo simples de build.
 
-A escolha também reduz o atrito do futuro deploy na Vercel, favorece responsividade e acessibilidade e mantém aberta a possibilidade de adicionar APIs ou integrar um backend real posteriormente. Ela não elimina a necessidade futura de serviços seguros: cálculo competitivo, arquivos, autenticação, autorização, pagamentos, multiplayer e IA não devem depender apenas do cliente.
+A escolha também simplificou o deploy na Vercel, favorece a responsividade e a acessibilidade e mantém aberta a possibilidade de adicionar APIs ou integrar um backend real posteriormente. Ela não elimina a necessidade futura de serviços seguros: cálculo competitivo, arquivos, autenticação, autorização, pagamentos, multiplayer e IA não devem depender apenas do cliente.
 
 
 ### Escolhas de design da interface
