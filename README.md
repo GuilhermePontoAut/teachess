@@ -232,6 +232,21 @@ A arquitetura inicialmente sugerida pela atividade acadêmica, FastAPI + React, 
 
 A escolha também reduz o atrito do futuro deploy na Vercel, favorece responsividade e acessibilidade e mantém aberta a possibilidade de adicionar APIs ou integrar um backend real posteriormente. Ela não elimina a necessidade futura de serviços seguros: cálculo competitivo, arquivos, autenticação, autorização, pagamentos, multiplayer e IA não devem depender apenas do cliente.
 
+
+### Escolhas de design da interface
+
+A navegação lateral foi escolhida porque o TeaChess possui vários módulos independentes e o usuário precisa alternar rapidamente entre partidas, treinamento, ranking e professores.
+
+Cards foram utilizados para indicadores, professores e informações resumidas, pois facilitam a leitura e a adaptação para telas menores. Nas listagens de partidas e ranking, a visualização em tabela foi mantida no desktop por permitir comparações entre várias colunas, enquanto cartões são utilizados no mobile.
+
+Gráficos foram escolhidos para representar evolução de rating, distribuição de resultados e padrões de erro. Tabuleiros interativos foram utilizados nos fluxos em que apenas uma representação textual em PGN ou FEN seria insuficiente.
+
+Abas foram usadas para agrupar conteúdos relacionados sem criar uma rota para cada pequeno estado. Diálogos foram reservados para ações focadas, como confirmações, agendamentos e visualização de perfis.
+
+Uma interface centrada apenas em um chatbot foi descartada porque não representaria adequadamente os diferentes fluxos do problema. A alternativa FastAPI + React + SQLite também foi considerada, mas adiada porque esta etapa exigia principalmente a interface e não um backend real.
+
+
+
 ## 6. Estrutura de pastas
 
 ```text
@@ -344,7 +359,7 @@ Os trechos abaixo são representativos e foram resumidos para mostrar o objetivo
 - **Validação contínua:** lint e build expuseram erros de tipagem e integração que não seriam visíveis apenas olhando a interface.
 - **Refatorações incrementais:** upload, chat, ciclo da partida, ranking e agendamento foram ajustados sem reescrever a arquitetura inteira.
 
-O principal ganho foi velocidade para produzir e revisar muitos fluxos coerentes. Ainda assim, a qualidade resultou da combinação entre instruções precisas, documentação persistente, testes automatizados disponíveis e revisão humana — não de autonomia irrestrita do agente.
+O principal ganho foi velocidade para produzir e revisar muitos fluxos coerentes. Ainda assim, a qualidade resultou da combinação entre instruções precisas, documentação persistente, validações automatizadas disponíveis e revisão humana — não de autonomia irrestrita do agente.
 
 ## 10. O que não funcionou ou exigiu intervenção
 
@@ -397,6 +412,16 @@ O agente conseguiu inspecionar código e gerar builds, mas isso não substitui n
 ### Necessidade de prompts específicos
 
 Solicitações amplas produziram estruturas úteis, mas regras sensíveis ficaram melhores quando os prompts explicitaram origem, privacidade, persistência, estados de erro e proibições. A revisão humana foi essencial para evitar que uma interface convincente sugerisse que análise, matchmaking, reconhecimento ou agendamento eram reais.
+
+
+### O que eu faria diferente
+
+Em uma nova implementação, as regras de negócio e os modelos de dados seriam consolidados antes da criação das primeiras telas. Isso reduziria ajustes posteriores relacionados a partidas externas, rating histórico, privacidade e permissões.
+
+As stores persistidas também seriam versionadas desde a primeira implementação, com cenários de migração definidos previamente. A responsividade e a acessibilidade seriam verificadas desde o primeiro módulo, em vez de receberem uma revisão mais ampla apenas nas etapas finais.
+
+Também seria criada mais cedo uma pequena suíte de testes automatizados para regras críticas, como cálculos do Dashboard, permissões das partidas, ranking e migrações do localStorage. Por fim, fontes e outros recursos externos seriam evitados desde o início em ambientes de desenvolvimento com acesso restrito à internet.
+
 
 ## 11. Qualidade, testes e validação
 
