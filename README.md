@@ -10,7 +10,7 @@
 
 > **Aviso:** o TeaChess é um protótipo acadêmico funcional de frontend. Seus dados, análises, adversários, professores e respostas são simulados. Não se trata de uma plataforma de xadrez em produção.
 
-**Endpoint público:** `A adicionar após o deploy na Vercel`
+**Endpoint público:** https://teachess.vercel.app/
 
 ## 1. Visão geral
 
@@ -224,7 +224,7 @@ O TeaChess usa uma arquitetura frontend com Next.js App Router. Páginas e layou
 | **react-chessboard 5** | Renderização e interação dos tabuleiros. |
 | **react-dropzone 15** | Seleção, arrastar e soltar e validação inicial das imagens. |
 | **Lucide React** | Ícones consistentes e leves. |
-| **Vercel** | Destino planejado de deploy; ainda não realizado. |
+| **Vercel** | Hospedagem e disponibilização do endpoint público. |
 
 ### Por que Next.js + Vercel?
 
@@ -552,8 +552,7 @@ Uma versão de produção exigiria, em etapas controladas:
 6. motor de xadrez para avaliações técnicas e variantes;
 7. modelo de linguagem para explicações baseadas apenas em fatos autorizados e rastreáveis;
 8. agenda, comunicação, pagamentos e consentimento de compartilhamento para professores humanos;
-9. testes automatizados e auditorias de acessibilidade, privacidade e segurança;
-10. deploy na Vercel e publicação do endpoint neste README.
+9. testes automatizados e auditorias de acessibilidade, privacidade e segurança.
 
 O desenho conceitual da futura integração está em [`docs/future-ai-architecture.md`](docs/future-ai-architecture.md), e o fluxo de professores em [`docs/human-teacher-flow.md`](docs/human-teacher-flow.md).
 
@@ -570,7 +569,7 @@ A aplicação foi estruturada para publicação na Vercel. Todas as páginas
 principais são navegáveis e os formulários, filtros, diálogos, tabuleiros,
 gráficos e demais interações funcionam com dados locais simulados.
 
-O endereço público será incluído neste README após o deploy.
+A aplicação está publicada na Vercel e pode ser acessada pelo endpoint informado no início deste README. O endereço foi validado em uma sessão anônima, sem dados previamente armazenados no navegador.
 
 ### Complexidade e ambição
 
