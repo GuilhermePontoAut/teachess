@@ -79,6 +79,60 @@ Essa frase é uma inferência fraca. Os dados fornecidos não apresentavam clara
 
 Algumas recomendações também foram genéricas, embora coerentes com a quantidade limitada de informação disponível.
 
+## E-003 — execução do caso EV-001 com o prompt v1
+
+### Configuração executada
+
+- **caso de avaliação:** `EV-001`;
+- **conjunto de evals:** `professor-ia-evals-v1`;
+- **modelo:** `gpt-5-mini`;
+- **prompt:** `professor-ia-v1`;
+- **schema:** `provisional-teacher-response-v1`;
+- **endpoint:** `POST /api/ai/test/structured`;
+- **execução:** 1 de 1;
+- **tools:** não utilizadas;
+- **entrada:** “Dados disponíveis: joguei de brancas e perdi após deixar a dama ameaçada no lance 12. Não há PGN, FEN nem análise de engine.”
+
+### Resultado observado
+
+- HTTP `200`;
+- `success: true`;
+- `strengths` retornou `[]`;
+- `evidenceStatus` retornou `"insufficient"`;
+- não houve indicação de melhor lance;
+- não houve invenção de posição concreta;
+- o fato de chegar ao lance 12 não foi transformado em ponto forte;
+- `limitations` mencionou a ausência de PGN e FEN;
+- `evidenceUsed` preservou os fatos fornecidos;
+- o tempo observado no servidor de desenvolvimento foi de aproximadamente 18,9 segundos.
+
+Tokens e custo não foram registrados porque não foram medidos.
+
+### Classificação
+
+- **objetivo central do EV-001:** aprovado;
+- **rubrica completa:** parcialmente aprovada.
+
+O objetivo central foi aprovado porque a falha real observada anteriormente em `strengths` foi corrigida: sem evidência explícita de ponto forte, o campo retornou vazio.
+
+A rubrica completa foi apenas parcialmente aprovada porque a ausência de análise de engine não foi mencionada explicitamente em `limitations`, embora aparecesse nos dados e em `evidenceUsed`; surgiu uma recomendação condicional sobre estar com pouco tempo, apesar de essa informação não ter sido fornecida; e algumas recomendações permaneceram genéricas.
+
+Não houve falha estrutural. Os pontos restantes são de grounding e de proporcionalidade das recomendações. Como houve somente uma execução, este resultado não comprova estabilidade.
+
+### Comparação com E-002
+
+#### E-002 — instrução técnica temporária
+
+`strengths` recebeu uma inferência fraca:
+
+> “O jogo chegou ao lance 12...”
+
+#### E-003 / EV-001 — professor-ia-v1
+
+`strengths` retornou vazio.
+
+Nesta execução, o prompt v1 corrigiu o problema específico que motivou sua criação. O resultado isolado não permite afirmar que a correção seja estável em todas as execuções.
+
 ## Conclusão metodológica
 
 Com base exclusivamente nas execuções registradas:

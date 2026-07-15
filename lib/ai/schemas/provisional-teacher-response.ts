@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+export const PROVISIONAL_TEACHER_RESPONSE_SCHEMA_VERSION =
+  "provisional-teacher-response-v1";
+
 // Hipótese técnica inicial: o schema controla a forma da saída, não sua veracidade factual.
 export const provisionalTeacherResponseSchema = z
   .object({
