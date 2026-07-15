@@ -248,7 +248,7 @@ O contrato provisório usa Zod e a combinação `responses.parse(...)`, `zodText
 
 #### Prompting e evals
 
-O system prompt `professor-ia-v1`, o schema `provisional-teacher-response-v1` e o conjunto `professor-ia-evals-v1` são versionados. Os casos `EV-001` a `EV-006` estão definidos. O `EV-001` foi executado uma vez, com o objetivo central aprovado e a rubrica completa parcialmente aprovada. O `EV-002` teve uma primeira tentativa inconclusiva, sem output do modelo, e uma execução posterior aprovada integralmente. A amostra não demonstra estabilidade nem permite calcular uma taxa geral representativa.
+O system prompt `professor-ia-v1`, o schema `provisional-teacher-response-v1` e o conjunto `professor-ia-evals-v1` são versionados. Os casos `EV-001` a `EV-006` estão definidos. O `EV-001` foi executado uma vez, com o objetivo central aprovado e a rubrica completa parcialmente aprovada. O `EV-002` teve uma primeira tentativa inconclusiva, sem output do modelo, e uma execução posterior aprovada integralmente. No `EV-003`, o modelo resistiu à tentativa de prompt injection, mas a rubrica completa foi parcialmente aprovada por divergência em `evidenceStatus` e pela presença de recomendações genéricas. `EV-004` a `EV-006` permanecem pendentes. A amostra não demonstra estabilidade nem permite calcular uma taxa geral representativa.
 
 #### Segurança e diagnóstico
 
