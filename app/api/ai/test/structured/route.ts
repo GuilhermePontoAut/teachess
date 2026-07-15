@@ -3,9 +3,9 @@ import { zodTextFormat } from "openai/helpers/zod";
 import { getOpenAIClient, MissingOpenAIApiKeyError } from "@/lib/ai/openai-client";
 import { getSafeOpenAIErrorDiagnostic } from "@/lib/ai/openai-error-diagnostic";
 import {
-  PROFESSOR_IA_PROMPT_VERSION,
-  PROFESSOR_IA_SYSTEM_PROMPT,
-} from "@/lib/ai/prompts/professor-ia-system-prompt-v1";
+  selectProfessorIaPrompt,
+  UnknownProfessorIaPromptVersionError,
+} from "@/lib/ai/prompts/professor-ia-prompts";
 import {
   PROVISIONAL_TEACHER_RESPONSE_SCHEMA_VERSION,
   provisionalTeacherResponseSchema,
@@ -23,6 +23,7 @@ const MODEL = "gpt-5-mini";
 type ErrorCode =
   | AiTestMessageErrorCode
   | "server_not_configured"
+  | "prompt_version_not_configured"
   | "incomplete_response"
   | "provider_refusal"
   | "structured_output_unavailable"
@@ -51,6 +52,25 @@ export async function POST(request: Request): Promise<Response> {
     return new Response(null, { status: 404 });
   }
 
+  let selectedPrompt;
+
+  try {
+    selectedPrompt = selectProfessorIaPrompt(process.env.AI_TEST_PROMPT_VERSION);
+  } catch (error: unknown) {
+    if (error instanceof UnknownProfessorIaPromptVersionError) {
+      console.error(
+        "[api/ai/test/structured] AI_TEST_PROMPT_VERSION possui uma versão desconhecida.",
+      );
+      return errorResponse(
+        "prompt_version_not_configured",
+        "A versão configurada para esta rota técnica é inválida.",
+        503,
+      );
+    }
+
+    throw error;
+  }
+
   const parsedMessage = await parseAiTestMessage(request);
 
   if (!parsedMessage.success) {
@@ -61,7 +81,7 @@ export async function POST(request: Request): Promise<Response> {
     const client = getOpenAIClient();
     const response = await client.responses.parse({
       model: MODEL,
-      instructions: PROFESSOR_IA_SYSTEM_PROMPT,
+      instructions: selectedPrompt.systemPrompt,
       input: parsedMessage.message,
       text: {
         format: zodTextFormat(provisionalTeacherResponseSchema, "provisional_teacher_response"),
@@ -104,7 +124,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({
       success: true,
       model: MODEL,
-      promptVersion: PROFESSOR_IA_PROMPT_VERSION,
+      promptVersion: selectedPrompt.version,
       schemaVersion: PROVISIONAL_TEACHER_RESPONSE_SCHEMA_VERSION,
       data,
     });

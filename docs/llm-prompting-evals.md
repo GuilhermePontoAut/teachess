@@ -1,6 +1,6 @@
 # Prompting e evals do Professor IA
 
-Este documento registra a hipótese inicial de prompting e o primeiro conjunto versionado de casos de avaliação do Professor IA. `EV-001` a `EV-006` já possuem execuções registradas com o prompt v1; essa amostra pequena não comprova estabilidade.
+Este documento registra a hipótese inicial de prompting e o primeiro conjunto versionado de casos de avaliação do Professor IA. `EV-001` a `EV-006` já possuem execuções registradas com o prompt v1, e `EV-001` possui uma execução com o prompt v2; essa amostra pequena não comprova estabilidade.
 
 ## Por que o prompt é versionado
 
@@ -71,7 +71,7 @@ No `EV-004`, `evidenceUsed` vazio foi aceito porque não havia evidência enxadr
 
 `EV-001`, `EV-003`, `EV-005` e `EV-006` sugerem um padrão semelhante: o modelo respeita limites factuais, de segurança e de escopo importantes, mas tende a compensar a falta de evidência confiável preenchendo recomendações ou arrays e usando campos de modo semanticamente inadequado. Há poucas execuções, não existe garantia de estabilidade e o padrão permanece uma hipótese sustentada pelos resultados observados até agora.
 
-Esse padrão poderá motivar regras mais fortes em uma futura versão `professor-ia-v2`. O prompt v1 será preservado como baseline, sem alterações silenciosas. As divergências observadas em `evidenceStatus` também poderão indicar futuramente a necessidade de tornar sua definição mais precisa ou de revisar critérios em uma nova versão do conjunto de evals, sem modificar retrospectivamente a versão atual.
+Esse padrão motivou regras mais fortes na hipótese `professor-ia-v2`. O prompt v1 permanece preservado como baseline, sem alterações silenciosas. As divergências observadas em `evidenceStatus` orientaram definições mais determinísticas na v2, sem modificar retrospectivamente a versão atual do prompt ou do conjunto de evals.
 
 ## Conclusão do baseline do professor-ia-v1
 
@@ -108,7 +108,7 @@ As execuções de `EV-001`, `EV-003`, `EV-005` e `EV-006` registraram:
 - divergências na classificação de `evidenceStatus`;
 - confusão entre dado presente e evidência confiável.
 
-Como hipótese para uma futura versão v2:
+As hipóteses usadas para preparar a versão v2 foram:
 
 - `strengths` e `improvements` devem se referir exclusivamente ao desempenho do jogador;
 - qualidade do dado de entrada deve aparecer em `observations` ou `limitations`, nunca em `strengths`;
@@ -117,7 +117,49 @@ Como hipótese para uma futura versão v2:
 - em perguntas fora do escopo ou dados insuficientes, o número de campos preenchidos deve ser reduzido;
 - ausência de conteúdo deve continuar sendo preferível a conteúdo genérico.
 
-Essas hipóteses não criam nem alteram `professor-ia-v2` nesta etapa. O `professor-ia-v1` permanece imutável como baseline para uma comparação futura com o mesmo eval set.
+O `professor-ia-v1` permanece imutável como baseline para a comparação futura com o mesmo eval set.
+
+## professor-ia-v2 como hipótese
+
+O `professor-ia-v2` foi criado a partir dos padrões realmente observados no baseline v1. Ele é uma hipótese de melhoria, não substitui nem apaga o `professor-ia-v1` e será mantido imutável durante a execução do conjunto atual para preservar a comparação.
+
+As mudanças principais da v2 são:
+
+- semântica rígida de `strengths` e `improvements`, reservadas ao desempenho do jogador sustentado por evidência compatível;
+- redução do preenchimento artificial, com uma regra de evidência aplicada antes de preencher cada array;
+- recomendações diretamente grounded em pontos fortes, melhorias ou limitações concretas;
+- diferenciação explícita entre presença, validade técnica, confiabilidade e suficiência dos dados;
+- regras mais determinísticas de `evidenceStatus` para a tarefa efetivamente solicitada;
+- resposta mínima para perguntas fora do escopo e para dados insuficientes;
+- tratamento explícito de dados automáticos não confirmados como insuficientes para analisar a partida ou posição real.
+
+O primeiro resultado da v2 está registrado abaixo. Uma única execução não valida a versão nem permite concluir que ela seja superior ou inferior em geral.
+
+## Protocolo de comparação v1 versus v2
+
+A comparação controlada mantém constantes:
+
+- modelo `gpt-5-mini`;
+- schema `provisional-teacher-response-v1`;
+- eval set `professor-ia-evals-v1`;
+- entradas de `EV-001` a `EV-006`;
+- rota técnica estruturada;
+- expectativas e rubricas congeladas;
+- demais configurações atuais da chamada.
+
+A única variável deliberadamente alterada é o system prompt. A rota usa `AI_TEST_PROMPT_VERSION`, exclusivamente server-side, para selecionar `professor-ia-v1` ou `professor-ia-v2` por meio do registro central. A ausência da variável preserva a v1 como padrão; uma versão desconhecida produz erro de configuração e nunca gera fallback silencioso.
+
+## Comparação v1 versus v2
+
+O `EV-001` foi executado uma vez com `professor-ia-v2`, mantendo `gpt-5-mini`, `provisional-teacher-response-v1`, `professor-ia-evals-v1`, a mesma entrada, a mesma rota e a mesma rubrica usadas no baseline v1.
+
+- **objetivo central do EV-001:** aprovado;
+- **rubrica completa:** parcialmente aprovada;
+- `strengths` permaneceu vazio nas duas versões;
+- a v1 retornou `evidenceStatus: "insufficient"`;
+- a v2 retornou `evidenceStatus: "partial"` e continuou preenchendo extensamente `improvements` e `studyRecommendations`.
+
+A v2 ainda não demonstrou melhoria sobre a v1 nesse caso. `EV-002` a `EV-006` ainda não foram executados com v2, portanto nenhuma conclusão geral sobre superioridade pode ser feita. A versão v2 continuará imutável durante essas execuções para evitar mudanças intermediárias que prejudiquem a comparação.
 
 ## Rubrica inicial
 

@@ -248,7 +248,7 @@ O contrato provisório usa Zod e a combinação `responses.parse(...)`, `zodText
 
 #### Prompting e evals
 
-O system prompt `professor-ia-v1`, o schema `provisional-teacher-response-v1` e o conjunto `professor-ia-evals-v1` são versionados. O baseline de `EV-001` a `EV-006` foi concluído: `EV-002`, em sua execução bem-sucedida, e `EV-004` tiveram aprovação integral da rubrica; os demais casos atingiram seus objetivos centrais, mas apresentaram limitações semânticas. O prompt v1 será preservado como baseline, e uma versão v2 será considerada com base nos padrões observados. A amostra não demonstra estabilidade nem permite calcular uma taxa geral representativa. Os detalhes permanecem em [`docs/llm-experiments.md`](docs/llm-experiments.md) e [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
+O system prompt `professor-ia-v1` permanece preservado como baseline, e a seleção controlada de versões foi validada: uma versão desconhecida foi rejeitada antes de qualquer chamada ao provedor, sem fallback silencioso. O `EV-001` foi executado com `professor-ia-v2`, mas a v2 não apresentou melhoria nesse primeiro caso. A comparação continuará com `EV-002` a `EV-006`, mantendo modelo, schema, eval set, entradas e rubricas constantes. Os detalhes permanecem em [`docs/llm-experiments.md`](docs/llm-experiments.md) e [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
 
 #### Segurança e diagnóstico
 

@@ -392,3 +392,96 @@ Com base exclusivamente nas execuções registradas:
 - prompting, grounding, tools e evals continuam necessários.
 
 Uma única execução não demonstra estabilidade nem permite generalizar a aderência estrutural ou a qualidade semântica para todas as respostas. O schema continua sendo uma hipótese inicial; não há tools implementadas nestes experimentos, validação factual completa ou integração com o Professor IA real.
+
+## E-010 — teste de configuração com versão desconhecida
+
+### Objetivo
+
+Validar que uma versão de prompt não configurada é rejeitada de forma explícita, antes do processamento da entrada e sem fallback silencioso.
+
+### Configuração executada
+
+- **endpoint:** `POST /api/ai/test/structured`;
+- **ENABLE_AI_TEST_ROUTE:** habilitada;
+- **AI_TEST_PROMPT_VERSION:** `professor-ia-v99`;
+- **corpo enviado:** propositalmente inválido.
+
+### Resultado observado
+
+- HTTP `503`;
+- código público `prompt_version_not_configured`;
+- a versão do prompt foi validada antes da leitura do JSON;
+- não houve fallback silencioso para `professor-ia-v1` ou `professor-ia-v2`;
+- nenhuma chamada à OpenAI foi realizada;
+- o tempo observado no servidor local foi de aproximadamente 163 ms.
+
+### Classificação
+
+Este foi um teste gratuito de configuração da rota, não um eval do modelo. Como o modelo não foi chamado, o resultado não avalia qualidade, aderência, latência ou qualquer outro comportamento de uma resposta de LLM.
+
+## E-011 — execução do caso EV-001 com o prompt v2
+
+### Configuração executada
+
+- **caso:** `EV-001`;
+- **eval set:** `professor-ia-evals-v1`;
+- **modelo:** `gpt-5-mini`;
+- **prompt:** `professor-ia-v2`;
+- **schema:** `provisional-teacher-response-v1`;
+- **endpoint:** `POST /api/ai/test/structured`;
+- **execução:** 1 de 1;
+- **tools:** não utilizadas;
+- **entrada:** “Dados disponíveis: joguei de brancas e perdi após deixar a dama ameaçada no lance 12. Não há PGN, FEN nem análise de engine.”
+
+### Resultado observado
+
+- HTTP `200`;
+- `success: true`;
+- `promptVersion: "professor-ia-v2"`;
+- `schemaVersion: "provisional-teacher-response-v1"`;
+- `strengths` retornou `[]`;
+- `evidenceStatus` retornou `"partial"`;
+- `observations` preservou os fatos fornecidos;
+- `evidenceUsed` utilizou somente as declarações presentes na entrada;
+- `limitations` registrou a ausência de PGN, FEN, lista de lances, posição e análise de engine;
+- não indicou melhor lance;
+- não inventou posição concreta;
+- não transformou o fato de chegar ao lance 12 em ponto forte;
+- `improvements` foi preenchido com quatro orientações;
+- `studyRecommendations` foi preenchido com quatro recomendações;
+- apareceram recomendações detalhadas sobre peças *en prise*, *candidate moves*, checklist, tempo de checagem e exercícios;
+- o tempo observado no servidor de desenvolvimento foi de aproximadamente 27,3 segundos.
+
+Tokens e custo não foram registrados porque não foram medidos.
+
+### Classificação congelada
+
+- **objetivo central do EV-001:** aprovado;
+- **rubrica completa:** parcialmente aprovada.
+
+O objetivo central foi aprovado porque `strengths` permaneceu vazio, não houve indicação de melhor lance e nenhuma posição concreta foi inventada. A rubrica completa foi apenas parcialmente aprovada porque o caso esperava `evidenceStatus: "insufficient"`, mas a resposta retornou `"partial"`.
+
+A expectativa original do caso permanece inalterada. O resultado foi classificado contra a rubrica congelada, sem adaptação retrospectiva do critério.
+
+### Comparação controlada com o baseline v1
+
+Foram preservados como constantes:
+
+- modelo `gpt-5-mini`;
+- schema `provisional-teacher-response-v1`;
+- eval set `professor-ia-evals-v1`;
+- mesma entrada;
+- mesma rota;
+- mesma rubrica.
+
+A única variável deliberadamente alterada foi o prompt, de `professor-ia-v1` para `professor-ia-v2`.
+
+Nas duas versões, `strengths` permaneceu vazio. A v1 retornou `evidenceStatus: "insufficient"`, enquanto a v2 retornou `"partial"`. A v2 também não reduziu o preenchimento de `improvements` e `studyRecommendations`. Portanto, a v2 não demonstrou melhoria no `EV-001`.
+
+Esse resultado não permite concluir que a v2 seja pior em geral, pois somente um caso foi executado com essa versão. O `professor-ia-v2` permanecerá imutável durante a execução de `EV-002` a `EV-006`, evitando alterações intermediárias que prejudiquem a comparação.
+
+### Hipótese técnica
+
+Como hipótese, e não como conclusão, o prompt v2 pode ter sido prejudicado por ser maior e conter mais regras. As instruções de utilidade pedagógica podem estar competindo com as regras de resposta mínima, e mais instruções não garantem maior aderência.
+
+Depois da execução dos demais casos, poderá ser necessário simplificar o prompt, usar exemplos *few-shot*, alterar o schema ou aplicar pós-validação determinística. Nenhuma dessas alternativas foi implementada neste momento.
