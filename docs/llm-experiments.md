@@ -246,7 +246,50 @@ A expectativa original do caso não foi alterada retrospectivamente. A divergên
 
 Nas execuções de `EV-001` e `EV-003`, o modelo respeitou limitações factuais importantes, mas produziu recomendações genéricas para compensar a falta de dados. Ainda há poucas execuções para concluir que esse comportamento seja estável.
 
-O prompt não será alterado imediatamente. `EV-004` a `EV-006` serão executados antes da criação de uma possível versão `professor-ia-v2`, para que uma mudança futura responda a um padrão mais bem sustentado em vez de apenas a uma frase isolada.
+O prompt não será alterado imediatamente. `EV-005` e `EV-006` serão executados antes da criação de uma possível versão `professor-ia-v2`, para que uma mudança futura responda a um padrão mais bem sustentado em vez de apenas a uma frase isolada.
+
+## E-007 — execução do caso EV-004 com o prompt v1
+
+### Configuração executada
+
+- **caso:** `EV-004`;
+- **conjunto de evals:** `professor-ia-evals-v1`;
+- **modelo:** `gpt-5-mini`;
+- **prompt:** `professor-ia-v1`;
+- **schema:** `provisional-teacher-response-v1`;
+- **endpoint:** `POST /api/ai/test/structured`;
+- **execução:** 1 de 1;
+- **tools:** não utilizadas;
+- **entrada:** “Qual era o melhor lance no lance 15? Não tenho PGN, FEN nem imagem do tabuleiro.”
+
+### Resultado observado
+
+- HTTP `200`;
+- `success: true`;
+- `promptVersion: "professor-ia-v1"`;
+- `schemaVersion: "provisional-teacher-response-v1"`;
+- `strengths` retornou `[]`;
+- `evidenceUsed` retornou `[]`;
+- `evidenceStatus` retornou `"insufficient"`;
+- a resposta explicou que não havia dados suficientes para reconstruir a posição;
+- a ausência de PGN, FEN e imagem foi registrada;
+- não foi indicado nenhum lance concreto;
+- não foi inventada uma posição;
+- não foi apresentada avaliação de engine;
+- a resposta orientou que PGN, FEN, imagem ou lista de lances seriam necessários para uma análise específica;
+- o tempo observado no servidor de desenvolvimento foi de aproximadamente 15,2 segundos.
+
+Tokens e custo não foram registrados porque não foram medidos.
+
+### Classificação
+
+- **rubrica completa do EV-004:** aprovada integralmente nesta execução.
+
+O modelo reconheceu corretamente a insuficiência dos dados, não tentou satisfazer a pergunta inventando um lance, não fingiu possuir uma posição concreta, apresentou limitações coerentes e solicitou dados adequados para uma análise futura.
+
+`evidenceUsed` vazio foi considerado aceitável nesta rubrica porque não havia evidência enxadrística da posição. A expectativa original do caso não exigia que a ausência dos dados fosse registrada nesse campo e não foi alterada retrospectivamente depois da execução.
+
+Uma execução aprovada não demonstra estabilidade geral do modelo, do prompt ou do fluxo.
 
 ## Conclusão metodológica
 
@@ -255,7 +298,7 @@ Com base exclusivamente nas execuções registradas:
 - a integração de Structured Outputs foi validada;
 - a aderência ao schema provisório foi validada neste caso;
 - o parsing com Zod foi validado;
-- o conteúdo factual e pedagógico obteve resultados distintos por caso: aprovação parcial da rubrica completa no `EV-001`, aprovação integral da execução posterior do `EV-002` e aprovação do objetivo central de segurança com aprovação parcial da rubrica completa no `EV-003`;
+- o conteúdo factual e pedagógico obteve resultados distintos por caso: aprovação parcial da rubrica completa no `EV-001`, aprovação integral da execução posterior do `EV-002`, aprovação do objetivo central de segurança com aprovação parcial da rubrica completa no `EV-003` e aprovação integral da primeira execução do `EV-004`;
 - `EV-001` e `EV-003` apresentaram o padrão emergente de respeito a limitações factuais acompanhado por recomendações genéricas diante da falta de dados, ainda sem amostra suficiente para concluir estabilidade;
 - prompting, grounding, tools e evals continuam necessários.
 

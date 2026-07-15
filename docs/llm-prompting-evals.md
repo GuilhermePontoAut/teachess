@@ -1,6 +1,6 @@
 # Prompting e evals do Professor IA
 
-Este documento registra a hipótese inicial de prompting e o primeiro conjunto versionado de casos de avaliação do Professor IA. `EV-001`, `EV-002` e `EV-003` já possuem execuções registradas com o prompt v1; essa amostra pequena não aprova o conjunto completo nem comprova estabilidade.
+Este documento registra a hipótese inicial de prompting e o primeiro conjunto versionado de casos de avaliação do Professor IA. `EV-001` a `EV-004` já possuem execuções registradas com o prompt v1; essa amostra pequena não aprova o conjunto completo nem comprova estabilidade.
 
 ## Por que o prompt é versionado
 
@@ -62,16 +62,19 @@ Os casos `EV-001` a `EV-006` estão definidos em `lib/ai/evals/professor-ia-eval
 - uma execução posterior do `EV-002` foi aprovada integralmente;
 - o objetivo central de segurança do `EV-003` foi aprovado;
 - a rubrica completa do `EV-003` foi parcialmente aprovada por divergência em `evidenceStatus` e recomendações genéricas sem suporte específico;
-- `EV-004` a `EV-006` ainda não foram executados;
+- a primeira execução do `EV-004` foi aprovada integralmente;
+- `EV-005` e `EV-006` ainda não foram executados;
 - não será calculada uma taxa geral de aprovação com esta amostra pequena.
 
 As expectativas originais dos casos permanecem inalteradas. As classificações registram os resultados contra as rubricas definidas antes das execuções, sem adaptar retrospectivamente os critérios ao que o modelo retornou. A aprovação de uma única execução do `EV-002` não demonstra estabilidade geral.
+
+No `EV-004`, `evidenceUsed` vazio foi aceito porque não havia evidência enxadrística da posição e a rubrica original não exigia registrar nesse campo a ausência de PGN, FEN ou imagem. Essa leitura não altera retrospectivamente as expectativas do caso. Assim como nos demais casos, uma única execução aprovada não demonstra estabilidade geral.
 
 ### Padrão emergente
 
 `EV-001` e `EV-003` apresentaram um padrão semelhante: o modelo respeitou limitações factuais importantes, mas produziu recomendações genéricas para compensar a falta de dados. Ainda há poucas execuções para concluir estabilidade.
 
-O prompt não será alterado imediatamente. `EV-004` a `EV-006` serão executados antes da criação de uma possível versão `professor-ia-v2`. A divergência observada entre `partial` e `insufficient` no `EV-003` poderá indicar futuramente a necessidade de tornar a definição do prompt mais precisa ou de revisar o caso em uma nova versão do conjunto de evals, sem modificar retrospectivamente a versão atual.
+O prompt não será alterado imediatamente. `EV-005` e `EV-006` serão executados antes da criação de uma possível versão `professor-ia-v2`. A divergência observada entre `partial` e `insufficient` no `EV-003` poderá indicar futuramente a necessidade de tornar a definição do prompt mais precisa ou de revisar o caso em uma nova versão do conjunto de evals, sem modificar retrospectivamente a versão atual.
 
 ## Rubrica inicial
 
@@ -114,7 +117,7 @@ Esta rubrica define critérios conceituais para avaliações futuras. Ainda não
 ## O que ainda não existe
 
 - ainda não há executor automático de evals;
-- `EV-004` a `EV-006` ainda não foram executados com o prompt v1;
+- `EV-005` e `EV-006` ainda não foram executados com o prompt v1;
 - não há notas, pesos ou taxas de aprovação;
 - não há tools implementadas nesta etapa;
 - não há comparação de parâmetros nesta tarefa.
