@@ -8,7 +8,7 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat-square&logo=tailwindcss)
 ![Status](https://img.shields.io/badge/status-protótipo_acadêmico-6B7280?style=flat-square)
 
-> **Aviso:** o TeaChess é um protótipo acadêmico funcional de frontend. Seus dados, análises, adversários, professores e respostas são simulados. Não se trata de uma plataforma de xadrez em produção.
+> **Aviso:** o TeaChess é um protótipo acadêmico. A experiência pública do produto continua baseada em dados, análises, adversários, professores e respostas simulados. Rotas técnicas isoladas validam a integração server-side com LLM, mas não estão conectadas à interface do Professor IA nem representam uma plataforma de xadrez em produção.
 
 **Endpoint público:** [Acessar o TeaChess](https://teachess.vercel.app/)
 
@@ -23,7 +23,7 @@ O produto distingue duas origens de partida:
 - **Partidas da plataforma:** seriam registradas e validadas pelo próprio TeaChess. No modelo atual, alimentam estatísticas oficiais e ranking.
 - **Partidas externas:** são cadastradas manualmente pelo jogador, permanecem privadas e podem compor apenas sua visão pessoal combinada. Não alteram rating nem ranking oficial.
 
-A visão de futuro inclui explicações didáticas apoiadas por IA, análise técnica fornecida por um motor de xadrez, reconhecimento de posições por visão computacional e revisão por professores humanos. Nenhum desses serviços está integrado nesta versão. O sistema atual demonstra os fluxos com componentes interativos, mocks e regras executadas localmente.
+A visão de futuro inclui explicações didáticas apoiadas por IA, análise técnica fornecida por um motor de xadrez, reconhecimento de posições por visão computacional e revisão por professores humanos. A segunda etapa já possui uma integração técnica isolada com LLM para experimentação, mas nenhum desses serviços está integrado à experiência real do produto. O sistema atual demonstra os fluxos públicos com componentes interativos, mocks e regras executadas localmente.
 
 ![Dashboard funcional do TeaChess](docs/screenshots/dashboard-functional_2.png)
 
@@ -155,9 +155,9 @@ A complexidade não está apenas na quantidade de telas. Ela aparece na coordena
 
 **O que funciona:** na rota histórica `/futura-ia`, o usuário pode explorar capacidades, arquitetura, roadmap e uma conversa demonstrativa contextualizada por uma partida ou posição privada. Perguntas livres ou sugeridas selecionam templates locais; as 30 interações mais recentes são persistidas.
 
-**O que é mockado:** todas as respostas. A seleção usa correspondência simples de termos e templates determinísticos, não compreensão semântica. Não há LLM, OpenAI API, motor, OCR, visão computacional ou requisição de rede.
+**O que é mockado:** todas as respostas dessa interface. A seleção usa correspondência simples de termos e templates determinísticos, não compreensão semântica. A rota `/futura-ia` não chama LLM, OpenAI API, motor, OCR, visão computacional ou outro serviço de rede.
 
-**Futuro:** separar reconhecimento visual, avaliação do motor e explicação do modelo; aplicar consentimento, rastreabilidade, indicação de fontes, incerteza e revisão humana. Nenhum provedor de IA está definido.
+**Futuro:** conectar de forma segura a integração técnica já iniciada à interface, separando reconhecimento visual, avaliação do motor e explicação do modelo; aplicar consentimento, rastreabilidade, indicação de fontes, incerteza e revisão humana. A OpenAI foi escolhida como primeiro provedor e o `gpt-5-mini` como modelo inicial sujeito a avaliação.
 
 ![Demonstração do Professor IA](docs/screenshots/ai-professor-demo.png)
 
@@ -228,9 +228,37 @@ O TeaChess usa uma arquitetura frontend com Next.js App Router. Páginas e layou
 
 ### Por que Next.js + Vercel?
 
-A arquitetura inicialmente sugerida pela atividade acadêmica, FastAPI + React, seria apropriada para um sistema já dependente de backend. Nesta etapa, porém, o escopo autorizado é um protótipo completo de frontend, sem API, autenticação, banco ou serviços externos. Next.js permitiu manter React e organizar as telas em rotas claras dentro do mesmo projeto, com TypeScript de ponta a ponta no cliente e um processo simples de build.
+A arquitetura inicialmente sugerida pela atividade acadêmica, FastAPI + React, seria apropriada para um sistema já dependente de backend. Na primeira etapa, porém, o escopo autorizado era um protótipo completo de frontend, sem API, autenticação, banco ou serviços externos. Next.js permitiu manter React e organizar as telas em rotas claras dentro do mesmo projeto, com TypeScript de ponta a ponta e um processo simples de build. A segunda etapa acrescentou apenas rotas técnicas server-side isoladas para engenharia de LLM, sem transformar o protótipo em um backend de produto.
 
 A escolha também simplificou o deploy na Vercel, favorece a responsividade e a acessibilidade e mantém aberta a possibilidade de adicionar APIs ou integrar um backend real posteriormente. Ela não elimina a necessidade futura de serviços seguros: cálculo competitivo, arquivos, autenticação, autorização, pagamentos, multiplayer e IA não devem depender apenas do cliente.
+
+### Engenharia de LLM — estado da segunda etapa
+
+#### Provedor e modelo
+
+A OpenAI foi escolhida como provedora da primeira integração, e o `gpt-5-mini` como modelo inicial. A escolha é orientada a custo e à hipótese de suficiência para um fluxo bem delimitado; o modelo continua sujeito à avaliação no fluxo real e não é tratado como definitivo.
+
+#### Integração implementada
+
+A integração técnica usa o SDK oficial da OpenAI, exclusivamente no servidor, pela Responses API. `OPENAI_API_KEY` permanece em variável de ambiente não pública. As rotas técnicas são protegidas por uma flag server-side, ficam desabilitadas por padrão e incluem uma chamada textual mínima e uma rota com Structured Outputs. Nenhuma delas está conectada à interface do Professor IA.
+
+#### Structured Outputs
+
+O contrato provisório usa Zod e a combinação `responses.parse(...)`, `zodTextFormat(...)` e `response.output_parsed`. O schema é versionado como `provisional-teacher-response-v1`. A aderência estrutural permite validação e consumo previsível pela aplicação, mas não garante veracidade factual.
+
+#### Prompting e evals
+
+O system prompt `professor-ia-v1`, o schema `provisional-teacher-response-v1` e o conjunto `professor-ia-evals-v1` são versionados. Os casos `EV-001` a `EV-006` estão definidos. O `EV-001` foi executado uma vez, com o objetivo central aprovado e a rubrica completa parcialmente aprovada. O `EV-002` teve uma primeira tentativa inconclusiva, sem output do modelo, e uma execução posterior aprovada integralmente. A amostra não demonstra estabilidade nem permite calcular uma taxa geral representativa.
+
+#### Segurança e diagnóstico
+
+A chave não é enviada ao frontend, e a rota técnica só pode ser habilitada por flag server-side. A resposta pública de erro permanece genérica. O diagnóstico no servidor registra apenas campos seguros para distinguir erros HTTP, conexão, timeout e falhas inesperadas. Prompts, entrada do usuário, headers completos, chave e objeto bruto do erro não devem ser registrados.
+
+#### Limitações atuais
+
+Ainda não existem tools implementadas, RAG, integração real com a interface do Professor IA, autenticação, rate limiting do endpoint final ou validação por engine de xadrez. Também não há garantia de estabilidade nem medição sistemática de custo, tokens e latência.
+
+As decisões e evidências detalhadas estão em [`docs/llm-architecture.md`](docs/llm-architecture.md), [`docs/llm-provider-model-selection.md`](docs/llm-provider-model-selection.md), [`docs/llm-experiments.md`](docs/llm-experiments.md) e [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
 
 
 ### Escolhas de design da interface
@@ -264,6 +292,7 @@ teachess/
 │   ├── training/
 │   └── uploads/
 ├── lib/
+│   ├── ai/              # integração técnica, prompts, schema e evals versionados
 │   ├── data/            # mocks e catálogos determinísticos
 │   ├── future-ai/       # templates locais do Professor IA
 │   ├── storage/         # adaptação segura de armazenamento
@@ -302,7 +331,7 @@ Partidas cadastradas, preferências, progresso, metadados de uploads, conversa d
 
 ## 8. Desenvolvimento com OpenAI Codex
 
-O TeaChess foi desenvolvido com auxílio do **OpenAI Codex no terminal integrado do VS Code**, sob revisão humana. O Codex foi usado para inspecionar o repositório, propor planos curtos, implementar módulos, refatorar componentes, executar comandos de validação e corrigir erros encontrados. Ele não faz parte da aplicação em execução e nenhuma API da OpenAI foi integrada ao produto.
+O TeaChess foi desenvolvido com auxílio do **OpenAI Codex no terminal integrado do VS Code**, sob revisão humana. O Codex foi usado para inspecionar o repositório, propor planos curtos, implementar módulos, refatorar componentes, executar comandos de validação e corrigir erros encontrados. Ele não faz parte da aplicação em execução. A segunda etapa passou a usar a OpenAI API somente em rotas técnicas server-side isoladas, ainda sem integração com a interface do produto.
 
 ### Contexto fornecido ao agente
 
@@ -500,7 +529,7 @@ npm run build
 npm run start
 ```
 
-Não são necessárias variáveis de ambiente ou credenciais, pois o protótipo não consome APIs ou serviços externos.
+Não são necessárias variáveis de ambiente ou credenciais para navegar pela interface simulada. As rotas técnicas de LLM permanecem desabilitadas por padrão e só funcionam, em ambiente de desenvolvimento autorizado, com `OPENAI_API_KEY` e a flag server-side correspondente; elas não são necessárias para executar a experiência pública do protótipo.
 
 
 ## 13. Dados simulados
@@ -524,13 +553,13 @@ originais e apagam as alterações locais daquele módulo.
 
 ## 14. Limitações assumidas
 
-O TeaChess **não possui**:
+O TeaChess **ainda não possui**:
 
-- IA ou LLM real;
-- integração com OpenAI, Anthropic, Gemini ou outro provedor;
+- integração de LLM com a interface real do Professor IA;
+- endpoint final de IA com autenticação e rate limiting;
 - Stockfish ou qualquer motor de xadrez;
 - OCR, visão computacional ou reconhecimento real de posições;
-- backend, API própria ou banco de dados;
+- backend de produto ou banco de dados; as APIs existentes são somente rotas técnicas isoladas;
 - autenticação, autorização ou segurança real;
 - multiplayer, matchmaking, presença ou chat em rede;
 - cálculo Elo real ou validação competitiva;
@@ -550,7 +579,7 @@ Uma versão de produção exigiria, em etapas controladas:
 4. cálculo de rating e regras antifraude;
 5. armazenamento privado e reconhecimento de posições com confirmação humana;
 6. motor de xadrez para avaliações técnicas e variantes;
-7. modelo de linguagem para explicações baseadas apenas em fatos autorizados e rastreáveis;
+7. integração do modelo de linguagem à interface para explicações baseadas apenas em fatos autorizados e rastreáveis;
 8. agenda, comunicação, pagamentos e consentimento de compartilhamento para professores humanos;
 9. testes automatizados e auditorias de acessibilidade, privacidade e segurança.
 

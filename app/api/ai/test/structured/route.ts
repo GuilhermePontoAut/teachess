@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import { getOpenAIClient, MissingOpenAIApiKeyError } from "@/lib/ai/openai-client";
+import { getSafeOpenAIErrorDiagnostic } from "@/lib/ai/openai-error-diagnostic";
 import {
   PROFESSOR_IA_PROMPT_VERSION,
   PROFESSOR_IA_SYSTEM_PROMPT,
@@ -117,13 +118,10 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    if (error instanceof OpenAI.APIError) {
-      console.error("[api/ai/test/structured] Falha na chamada à OpenAI.", {
-        status: error.status,
-      });
-    } else {
-      console.error("[api/ai/test/structured] Falha ao processar a resposta estruturada.");
-    }
+    console.error(
+      "[api/ai/test/structured] Falha na integração com a OpenAI.",
+      getSafeOpenAIErrorDiagnostic(error),
+    );
 
     return errorResponse("provider_error", "Não foi possível obter uma resposta do provedor.", 502);
   }

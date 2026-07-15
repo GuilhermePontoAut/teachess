@@ -1,5 +1,5 @@
-import OpenAI from "openai";
 import { getOpenAIClient, MissingOpenAIApiKeyError } from "@/lib/ai/openai-client";
+import { getSafeOpenAIErrorDiagnostic } from "@/lib/ai/openai-error-diagnostic";
 import {
   parseAiTestMessage,
   type AiTestMessageErrorCode,
@@ -64,11 +64,10 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    if (error instanceof OpenAI.APIError) {
-      console.error("[api/ai/test] Falha na chamada à OpenAI.", { status: error.status });
-    } else {
-      console.error("[api/ai/test] Falha inesperada na integração com a OpenAI.");
-    }
+    console.error(
+      "[api/ai/test] Falha na integração com a OpenAI.",
+      getSafeOpenAIErrorDiagnostic(error),
+    );
 
     return errorResponse("provider_error", "Não foi possível obter uma resposta do provedor.", 502);
   }

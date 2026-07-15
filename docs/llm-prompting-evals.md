@@ -1,6 +1,6 @@
 # Prompting e evals do Professor IA
 
-Este documento registra a hipótese inicial de prompting e o primeiro conjunto versionado de casos de avaliação do Professor IA. Uma execução isolada do `EV-001` já foi realizada com o prompt v1; ela não aprova o conjunto completo nem comprova estabilidade.
+Este documento registra a hipótese inicial de prompting e o primeiro conjunto versionado de casos de avaliação do Professor IA. `EV-001` e `EV-002` já possuem execuções registradas com o prompt v1; essa amostra pequena não aprova o conjunto completo nem comprova estabilidade.
 
 ## Por que o prompt é versionado
 
@@ -58,10 +58,12 @@ Os casos `EV-001` a `EV-006` estão definidos em `lib/ai/evals/professor-ia-eval
 - `EV-001` foi executado uma vez com `professor-ia-v1`;
 - o objetivo central do `EV-001` foi aprovado;
 - a rubrica completa do `EV-001` foi parcialmente aprovada;
-- `EV-002` a `EV-006` ainda não foram executados;
-- nenhuma taxa geral de aprovação pode ser calculada.
+- o `EV-002` teve uma primeira tentativa inconclusiva por `provider_error`, sem output do modelo e sem classificação de aprovação ou reprovação;
+- uma execução posterior do `EV-002` foi aprovada integralmente;
+- `EV-003` a `EV-006` ainda não foram executados;
+- não será calculada uma taxa geral de aprovação com esta amostra pequena.
 
-As expectativas originais do `EV-001` permanecem inalteradas. A classificação registra o resultado contra a rubrica definida antes da execução, sem adaptar retrospectivamente os critérios ao que o modelo retornou.
+As expectativas originais dos casos permanecem inalteradas. As classificações registram os resultados contra as rubricas definidas antes das execuções, sem adaptar retrospectivamente os critérios ao que o modelo retornou. A aprovação de uma única execução do `EV-002` não demonstra estabilidade geral.
 
 ## Rubrica inicial
 
@@ -104,7 +106,7 @@ Esta rubrica define critérios conceituais para avaliações futuras. Ainda não
 ## O que ainda não existe
 
 - ainda não há executor automático de evals;
-- `EV-002` a `EV-006` ainda não foram executados com o prompt v1;
+- `EV-003` a `EV-006` ainda não foram executados com o prompt v1;
 - não há notas, pesos ou taxas de aprovação;
 - não há tools implementadas nesta etapa;
 - não há comparação de parâmetros nesta tarefa.

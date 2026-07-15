@@ -133,6 +133,71 @@ Não houve falha estrutural. Os pontos restantes são de grounding e de proporci
 
 Nesta execução, o prompt v1 corrigiu o problema específico que motivou sua criação. O resultado isolado não permite afirmar que a correção seja estável em todas as execuções.
 
+## E-004 — primeira tentativa do EV-002 inconclusiva
+
+### Configuração executada
+
+- **caso de avaliação:** `EV-002`;
+- **conjunto de evals:** `professor-ia-evals-v1`;
+- **modelo:** `gpt-5-mini`;
+- **prompt:** `professor-ia-v1`;
+- **schema:** `provisional-teacher-response-v1`;
+- **endpoint:** `POST /api/ai/test/structured`;
+- **execução:** primeira tentativa.
+
+### Resultado observado
+
+- HTTP `502`;
+- contrato retornado com `success: false` e `code: "provider_error"`;
+- tempo observado de aproximadamente 33,0 segundos;
+- o log disponível naquele momento mostrou status indefinido;
+- nenhum output estruturado foi produzido;
+- não havia resposta do modelo para avaliar.
+
+### Classificação
+
+Esta execução foi classificada como **inconclusiva**: não foi aprovada nem reprovada. Sem uma resposta do modelo, o evento não permite avaliar nem atribuir falha ao modelo, ao prompt, ao schema ou ao caso. O registro disponível também não permite afirmar a causa exata do erro.
+
+Depois desse evento, foi implementado um diagnóstico server-side seguro para distinguir erros HTTP, erros de conexão, timeouts e erros inesperados. A resposta pública permanece genérica, e o diagnóstico não expõe dados sensíveis.
+
+## E-005 — segunda tentativa do EV-002 com o prompt v1
+
+### Configuração executada
+
+- **caso de avaliação:** `EV-002`;
+- **conjunto de evals:** `professor-ia-evals-v1`;
+- **modelo:** `gpt-5-mini`;
+- **prompt:** `professor-ia-v1`;
+- **schema:** `provisional-teacher-response-v1`;
+- **endpoint:** `POST /api/ai/test/structured`;
+- **execução:** segunda tentativa;
+- **tools:** não utilizadas;
+- **entrada:** “Dados disponíveis: ganhei uma torre com um garfo no lance 10, mas no lance 18 deixei minha dama sem proteção e ela foi capturada. Não há PGN nem FEN.”
+
+### Resultado observado
+
+- HTTP `200`;
+- `success: true`;
+- `promptVersion: "professor-ia-v1"`;
+- `schemaVersion: "provisional-teacher-response-v1"`;
+- `evidenceStatus: "partial"`;
+- `strengths` mencionou o garfo e o ganho da torre;
+- `improvements` mencionou a perda da dama sem proteção;
+- `evidenceUsed` preservou somente os fatos fornecidos;
+- `limitations` mencionou a ausência de PGN e FEN;
+- não foram inventadas as peças que participaram do garfo;
+- não foram inventados lances intermediários;
+- não foi inventada posição concreta, avaliação de engine ou melhor lance;
+- o tempo observado no servidor de desenvolvimento foi de aproximadamente 27,4 segundos.
+
+Tokens e custo não foram registrados porque não foram medidos.
+
+### Classificação
+
+O `EV-002` foi **aprovado integralmente nesta execução**. O modelo separou corretamente um fato positivo explícito de um erro explícito, e as interpretações foram apresentadas de forma proporcional às evidências disponíveis.
+
+Esta aprovação descreve somente a segunda tentativa. Uma execução aprovada não demonstra estabilidade geral do modelo, do prompt ou do fluxo.
+
 ## Conclusão metodológica
 
 Com base exclusivamente nas execuções registradas:
@@ -140,7 +205,7 @@ Com base exclusivamente nas execuções registradas:
 - a integração de Structured Outputs foi validada;
 - a aderência ao schema provisório foi validada neste caso;
 - o parsing com Zod foi validado;
-- o conteúdo factual e pedagógico ainda não foi aprovado;
+- o conteúdo factual e pedagógico obteve resultados distintos por caso: aprovação parcial da rubrica completa no `EV-001` e aprovação integral da execução posterior do `EV-002`;
 - prompting, grounding, tools e evals continuam necessários.
 
 Uma única execução não demonstra estabilidade nem permite generalizar a aderência estrutural ou a qualidade semântica para todas as respostas. O schema continua sendo uma hipótese inicial; não há tools implementadas nestes experimentos, validação factual completa ou integração com o Professor IA real.
