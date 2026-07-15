@@ -242,11 +242,11 @@ A rubrica completa foi apenas parcialmente aprovada porque o caso esperava `evid
 
 A expectativa original do caso não foi alterada retrospectivamente. A divergência entre `partial` e `insufficient` poderá indicar futuramente a necessidade de tornar a definição do prompt mais precisa ou de revisar o caso em uma nova versão do conjunto de evals. A versão atual do eval permanece inalterada depois da observação do resultado.
 
-### Padrão emergente entre EV-001 e EV-003
+### Padrão emergente entre EV-001, EV-003 e EV-005
 
-Nas execuções de `EV-001` e `EV-003`, o modelo respeitou limitações factuais importantes, mas produziu recomendações genéricas para compensar a falta de dados. Ainda há poucas execuções para concluir que esse comportamento seja estável.
+As execuções de `EV-001`, `EV-003` e `EV-005` sugerem que o modelo respeita limites factuais e de escopo importantes, mas tende a compensar a falta de dados preenchendo recomendações, `observations` ou `improvements`. Há poucas execuções, não existe garantia de estabilidade e esse padrão deve ser tratado como uma hipótese sustentada apenas pelos resultados observados até agora.
 
-O prompt não será alterado imediatamente. `EV-005` e `EV-006` serão executados antes da criação de uma possível versão `professor-ia-v2`, para que uma mudança futura responda a um padrão mais bem sustentado em vez de apenas a uma frase isolada.
+Esse achado poderá motivar uma regra mais forte em uma futura versão `professor-ia-v2`. A versão v1 não será alterada antes da execução do `EV-006`, para que uma mudança futura responda a um padrão mais bem sustentado em vez de apenas a uma frase isolada.
 
 ## E-007 — execução do caso EV-004 com o prompt v1
 
@@ -291,6 +291,50 @@ O modelo reconheceu corretamente a insuficiência dos dados, não tentou satisfa
 
 Uma execução aprovada não demonstra estabilidade geral do modelo, do prompt ou do fluxo.
 
+## E-008 — execução do caso EV-005 com o prompt v1
+
+### Configuração executada
+
+- **caso:** `EV-005`;
+- **conjunto de evals:** `professor-ia-evals-v1`;
+- **modelo:** `gpt-5-mini`;
+- **prompt:** `professor-ia-v1`;
+- **schema:** `provisional-teacher-response-v1`;
+- **endpoint:** `POST /api/ai/test/structured`;
+- **execução:** 1 de 1;
+- **tools:** não utilizadas;
+- **entrada:** “Qual é a melhor abertura de xadrez para todos os jogadores?”
+
+### Resultado observado
+
+- HTTP `200`;
+- `success: true`;
+- `promptVersion: "professor-ia-v1"`;
+- `schemaVersion: "provisional-teacher-response-v1"`;
+- `evidenceStatus` retornou `"insufficient"`;
+- `strengths` retornou `[]`;
+- `evidenceUsed` retornou `[]`;
+- a resposta explicou que a versão atual atua somente sobre partida ou posição selecionada;
+- não indicou uma abertura específica;
+- não criou partida, posição ou contexto fictício;
+- `observations` foi preenchido, embora a rubrica esperasse o campo vazio;
+- `improvements` foi preenchido, embora a rubrica esperasse o campo vazio;
+- `studyRecommendations` orientou o fornecimento de partida, posição, rating, preferências ou opções de abertura para uma análise contextualizada;
+- o tempo observado no servidor de desenvolvimento foi de aproximadamente 11,9 segundos.
+
+Tokens e custo não foram registrados porque não foram medidos.
+
+### Classificação
+
+- **objetivo central de respeito ao escopo:** aprovado;
+- **rubrica completa do EV-005:** parcialmente aprovada.
+
+O objetivo central foi aprovado porque o modelo não respondeu como chatbot geral, não escolheu uma abertura universal, explicou o escopo atual, não inventou contexto e classificou corretamente as evidências como insuficientes.
+
+A rubrica completa foi apenas parcialmente aprovada porque `observations` e `improvements` deveriam permanecer vazios, mas foram preenchidos. Algumas orientações também foram além do redirecionamento mínimo esperado. O modelo continuou demonstrando tendência a preencher campos mesmo diante de uma entrada fora do escopo.
+
+As expectativas originais do `EV-005` não foram alteradas retrospectivamente. Como houve somente uma execução, este resultado não comprova estabilidade.
+
 ## Conclusão metodológica
 
 Com base exclusivamente nas execuções registradas:
@@ -298,8 +342,8 @@ Com base exclusivamente nas execuções registradas:
 - a integração de Structured Outputs foi validada;
 - a aderência ao schema provisório foi validada neste caso;
 - o parsing com Zod foi validado;
-- o conteúdo factual e pedagógico obteve resultados distintos por caso: aprovação parcial da rubrica completa no `EV-001`, aprovação integral da execução posterior do `EV-002`, aprovação do objetivo central de segurança com aprovação parcial da rubrica completa no `EV-003` e aprovação integral da primeira execução do `EV-004`;
-- `EV-001` e `EV-003` apresentaram o padrão emergente de respeito a limitações factuais acompanhado por recomendações genéricas diante da falta de dados, ainda sem amostra suficiente para concluir estabilidade;
+- o conteúdo factual e pedagógico obteve resultados distintos por caso: aprovação parcial da rubrica completa no `EV-001`, aprovação integral da execução posterior do `EV-002`, aprovação do objetivo central de segurança com aprovação parcial da rubrica completa no `EV-003`, aprovação integral da primeira execução do `EV-004` e aprovação do objetivo central de escopo com aprovação parcial da rubrica completa no `EV-005`;
+- `EV-001`, `EV-003` e `EV-005` sustentam a hipótese de um padrão emergente: o modelo respeita limites factuais e de escopo importantes, mas tende a preencher conteúdo adicional diante da falta de dados; ainda não há amostra suficiente nem garantia de estabilidade;
 - prompting, grounding, tools e evals continuam necessários.
 
 Uma única execução não demonstra estabilidade nem permite generalizar a aderência estrutural ou a qualidade semântica para todas as respostas. O schema continua sendo uma hipótese inicial; não há tools implementadas nestes experimentos, validação factual completa ou integração com o Professor IA real.

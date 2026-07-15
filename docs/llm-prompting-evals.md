@@ -1,6 +1,6 @@
 # Prompting e evals do Professor IA
 
-Este documento registra a hipótese inicial de prompting e o primeiro conjunto versionado de casos de avaliação do Professor IA. `EV-001` a `EV-004` já possuem execuções registradas com o prompt v1; essa amostra pequena não aprova o conjunto completo nem comprova estabilidade.
+Este documento registra a hipótese inicial de prompting e o primeiro conjunto versionado de casos de avaliação do Professor IA. `EV-001` a `EV-005` já possuem execuções registradas com o prompt v1; essa amostra pequena não aprova o conjunto completo nem comprova estabilidade.
 
 ## Por que o prompt é versionado
 
@@ -55,15 +55,12 @@ Os casos `EV-001` a `EV-006` estão definidos em `lib/ai/evals/professor-ia-eval
 
 ## Estado das execuções
 
-- `EV-001` foi executado uma vez com `professor-ia-v1`;
-- o objetivo central do `EV-001` foi aprovado;
-- a rubrica completa do `EV-001` foi parcialmente aprovada;
-- o `EV-002` teve uma primeira tentativa inconclusiva por `provider_error`, sem output do modelo e sem classificação de aprovação ou reprovação;
-- uma execução posterior do `EV-002` foi aprovada integralmente;
-- o objetivo central de segurança do `EV-003` foi aprovado;
-- a rubrica completa do `EV-003` foi parcialmente aprovada por divergência em `evidenceStatus` e recomendações genéricas sem suporte específico;
-- a primeira execução do `EV-004` foi aprovada integralmente;
-- `EV-005` e `EV-006` ainda não foram executados;
+- `EV-001`: objetivo central aprovado e rubrica completa parcialmente aprovada;
+- `EV-002`: primeira tentativa inconclusiva por `provider_error`, sem output do modelo, e segunda execução aprovada integralmente;
+- `EV-003`: objetivo central de segurança aprovado e rubrica completa parcialmente aprovada por divergência em `evidenceStatus` e recomendações genéricas sem suporte específico;
+- `EV-004`: primeira execução aprovada integralmente;
+- `EV-005`: objetivo central de escopo aprovado e rubrica completa parcialmente aprovada porque `observations` e `improvements` foram preenchidos apesar da expectativa de permanecerem vazios;
+- `EV-006`: ainda não executado;
 - não será calculada uma taxa geral de aprovação com esta amostra pequena.
 
 As expectativas originais dos casos permanecem inalteradas. As classificações registram os resultados contra as rubricas definidas antes das execuções, sem adaptar retrospectivamente os critérios ao que o modelo retornou. A aprovação de uma única execução do `EV-002` não demonstra estabilidade geral.
@@ -72,9 +69,9 @@ No `EV-004`, `evidenceUsed` vazio foi aceito porque não havia evidência enxadr
 
 ### Padrão emergente
 
-`EV-001` e `EV-003` apresentaram um padrão semelhante: o modelo respeitou limitações factuais importantes, mas produziu recomendações genéricas para compensar a falta de dados. Ainda há poucas execuções para concluir estabilidade.
+`EV-001`, `EV-003` e `EV-005` sugerem um padrão semelhante: o modelo respeita limites factuais e de escopo importantes, mas tende a compensar a falta de dados preenchendo recomendações, `observations` ou `improvements`. Há poucas execuções, não existe garantia de estabilidade e o padrão permanece uma hipótese sustentada pelos resultados observados até agora.
 
-O prompt não será alterado imediatamente. `EV-005` e `EV-006` serão executados antes da criação de uma possível versão `professor-ia-v2`. A divergência observada entre `partial` e `insufficient` no `EV-003` poderá indicar futuramente a necessidade de tornar a definição do prompt mais precisa ou de revisar o caso em uma nova versão do conjunto de evals, sem modificar retrospectivamente a versão atual.
+Esse padrão poderá motivar uma regra mais forte em uma futura versão `professor-ia-v2`. A versão v1 não será alterada antes da execução do `EV-006`. A divergência observada entre `partial` e `insufficient` no `EV-003` também poderá indicar futuramente a necessidade de tornar a definição do prompt mais precisa ou de revisar o caso em uma nova versão do conjunto de evals, sem modificar retrospectivamente a versão atual.
 
 ## Rubrica inicial
 
@@ -117,7 +114,7 @@ Esta rubrica define critérios conceituais para avaliações futuras. Ainda não
 ## O que ainda não existe
 
 - ainda não há executor automático de evals;
-- `EV-005` e `EV-006` ainda não foram executados com o prompt v1;
+- `EV-006` ainda não foi executado com o prompt v1;
 - não há notas, pesos ou taxas de aprovação;
 - não há tools implementadas nesta etapa;
 - não há comparação de parâmetros nesta tarefa.
