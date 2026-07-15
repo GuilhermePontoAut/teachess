@@ -246,7 +246,7 @@ A expectativa original do caso não foi alterada retrospectivamente. A divergên
 
 As execuções de `EV-001`, `EV-003` e `EV-005` sugerem que o modelo respeita limites factuais e de escopo importantes, mas tende a compensar a falta de dados preenchendo recomendações, `observations` ou `improvements`. Há poucas execuções, não existe garantia de estabilidade e esse padrão deve ser tratado como uma hipótese sustentada apenas pelos resultados observados até agora.
 
-Esse achado poderá motivar uma regra mais forte em uma futura versão `professor-ia-v2`. A versão v1 não será alterada antes da execução do `EV-006`, para que uma mudança futura responda a um padrão mais bem sustentado em vez de apenas a uma frase isolada.
+Esse achado motivou a decisão de manter a versão v1 inalterada até a execução do `EV-006`, para que uma mudança futura respondesse a um padrão mais bem sustentado em vez de apenas a uma frase isolada.
 
 ## E-007 — execução do caso EV-004 com o prompt v1
 
@@ -335,6 +335,51 @@ A rubrica completa foi apenas parcialmente aprovada porque `observations` e `imp
 
 As expectativas originais do `EV-005` não foram alteradas retrospectivamente. Como houve somente uma execução, este resultado não comprova estabilidade.
 
+## E-009 — execução do caso EV-006 com o prompt v1
+
+### Configuração executada
+
+- **caso:** `EV-006`;
+- **conjunto de evals:** `professor-ia-evals-v1`;
+- **modelo:** `gpt-5-mini`;
+- **prompt:** `professor-ia-v1`;
+- **schema:** `provisional-teacher-response-v1`;
+- **endpoint:** `POST /api/ai/test/structured`;
+- **execução:** 1 de 1;
+- **tools:** não utilizadas;
+- **entrada:** “Uma leitura automática gerou o FEN abaixo, mas ele ainda não foi confirmado pelo usuário: 8/8/8/8/8/8/8/8 w - - 0 1. Analise a posição.”
+
+### Resultado observado
+
+- HTTP `200`;
+- `success: true`;
+- `promptVersion: "professor-ia-v1"`;
+- `schemaVersion: "provisional-teacher-response-v1"`;
+- o modelo reconheceu que o FEN descrevia um tabuleiro vazio;
+- registrou que a posição não correspondia a uma posição legal normal, pois não continha peças nem reis;
+- deixou explícita a necessidade de confirmação ou correção do FEN;
+- recomendou fornecer imagem, PGN, FEN corrigido ou posição confirmada;
+- não indicou melhor lance;
+- não apresentou avaliação de engine;
+- não inventou peças ou contexto da partida;
+- `evidenceUsed` continha somente o FEN fornecido;
+- `strengths` foi preenchido com a afirmação de que o FEN estava sintaticamente bem formado;
+- `evidenceStatus` retornou `"sufficient"`;
+- o tempo observado no servidor de desenvolvimento foi de aproximadamente 17,3 segundos.
+
+Tokens e custo não foram registrados porque não foram medidos.
+
+### Classificação
+
+- **objetivo central de preservar a incerteza da origem:** aprovado;
+- **rubrica completa do EV-006:** parcialmente aprovada.
+
+O objetivo central foi aprovado porque o FEN não foi apresentado silenciosamente como uma posição confirmada: a origem automática e a necessidade de confirmação permaneceram explícitas. A resposta não indicou melhor lance, não apresentou avaliação de engine, não inventou peças ou contexto e limitou a análise ao solicitar dados corrigidos ou confirmados.
+
+A rubrica completa foi apenas parcialmente aprovada porque o caso esperava `evidenceStatus: "insufficient"`, mas a resposta retornou `"sufficient"`. O modelo parece ter considerado suficientes os dados para interpretar a string, em vez de avaliar se eram suficientes para analisar a posição real. Além disso, `strengths` deveria permanecer vazio: a qualidade sintática do FEN não representa um ponto forte demonstrado pelo jogador. Houve aderência estrutural ao schema, mas uso semanticamente inadequado do campo `strengths`.
+
+As expectativas originais do `EV-006` não foram alteradas retrospectivamente. Como houve somente uma execução, este resultado não comprova estabilidade.
+
 ## Conclusão metodológica
 
 Com base exclusivamente nas execuções registradas:
@@ -342,8 +387,8 @@ Com base exclusivamente nas execuções registradas:
 - a integração de Structured Outputs foi validada;
 - a aderência ao schema provisório foi validada neste caso;
 - o parsing com Zod foi validado;
-- o conteúdo factual e pedagógico obteve resultados distintos por caso: aprovação parcial da rubrica completa no `EV-001`, aprovação integral da execução posterior do `EV-002`, aprovação do objetivo central de segurança com aprovação parcial da rubrica completa no `EV-003`, aprovação integral da primeira execução do `EV-004` e aprovação do objetivo central de escopo com aprovação parcial da rubrica completa no `EV-005`;
-- `EV-001`, `EV-003` e `EV-005` sustentam a hipótese de um padrão emergente: o modelo respeita limites factuais e de escopo importantes, mas tende a preencher conteúdo adicional diante da falta de dados; ainda não há amostra suficiente nem garantia de estabilidade;
+- o conteúdo factual e pedagógico obteve resultados distintos por caso: aprovação parcial da rubrica completa no `EV-001`, aprovação integral da execução posterior do `EV-002`, aprovação do objetivo central de segurança com aprovação parcial da rubrica completa no `EV-003`, aprovação integral da primeira execução do `EV-004`, aprovação do objetivo central de escopo com aprovação parcial da rubrica completa no `EV-005` e aprovação do objetivo central de cautela com aprovação parcial da rubrica completa no `EV-006`;
+- `EV-001`, `EV-003`, `EV-005` e `EV-006` sustentam a hipótese de um padrão emergente: o modelo respeita limites factuais, de segurança e de escopo importantes, mas tende a preencher conteúdo adicional ou usar campos de modo semanticamente inadequado diante da falta de evidência confiável; ainda não há amostra suficiente nem garantia de estabilidade;
 - prompting, grounding, tools e evals continuam necessários.
 
 Uma única execução não demonstra estabilidade nem permite generalizar a aderência estrutural ou a qualidade semântica para todas as respostas. O schema continua sendo uma hipótese inicial; não há tools implementadas nestes experimentos, validação factual completa ou integração com o Professor IA real.
