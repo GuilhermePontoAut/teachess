@@ -1,13 +1,15 @@
 # Estratégia de seleção de provedor e modelo de LLM
 
-Este documento registra a escolha do provedor da primeira integração real do Professor IA do TeaChess e define como o modelo será selecionado futuramente. Ele não descreve uma integração implementada nem resultados de testes. A escolha do provedor está resolvida; a escolha do modelo continua pendente de experimento.
+Este documento registra a escolha do provedor e do modelo inicial da primeira integração real do Professor IA do TeaChess. Ele não descreve uma integração implementada nem resultados de testes. A escolha do provedor e do primeiro modelo a implementar está resolvida; a decisão de manter esse modelo ou subir de faixa dependerá da avaliação do fluxo real.
 
 ## 1. Estado da decisão
 
 - **Provedor da primeira integração real:** OpenAI.
-- **Modelo:** ainda não escolhido.
+- **Modelo inicial da primeira implementação:** `gpt-5-mini`.
 - **SDK e interface específicos:** ainda não definidos em caráter final.
-- **Estratégia prática:** comparar um pequeno conjunto de modelos OpenAI economicamente viáveis, sem integração paralela com outros provedores nesta etapa.
+- **Estratégia prática:** implementar e avaliar primeiro o `gpt-5-mini`, sem comparação extensa prévia nem integração paralela com outros provedores nesta etapa.
+
+A escolha do modelo inicial está resolvida. Isso não significa que o `gpt-5-mini` tenha sido demonstrado como o melhor modelo possível, nem que seja o modelo definitivo do TeaChess. Ele será o primeiro modelo implementado e avaliado no fluxo real.
 
 A OpenAI foi escolhida por uma decisão de engenharia orientada pelas restrições atuais do projeto. Essa escolha não representa uma conclusão de superioridade absoluta sobre Anthropic, Google Gemini ou outras alternativas.
 
@@ -28,13 +30,59 @@ Essa familiaridade reduz a curva de aprendizado e o tempo de integração, mas n
 
 **Modelo** é o modelo específico executado pelo provedor ou pela infraestrutura. Ele possui capacidades, limites, custo e comportamento próprios.
 
-Escolher a OpenAI como provedor não escolhe automaticamente um modelo. Os modelos OpenAI específicos somente serão definidos após consulta à documentação vigente e experimentos com os critérios registrados neste documento.
+Escolher a OpenAI como provedor não escolheu automaticamente um modelo. O `gpt-5-mini` foi definido posteriormente como ponto de partida da primeira implementação. Seu comportamento ainda deverá ser avaliado com os critérios registrados neste documento.
 
 ## 3. Estado dos candidatos considerados
 
 ### OpenAI — selecionada para os experimentos práticos
 
-A OpenAI será o provedor da primeira integração real. A decisão reduz o número de integrações necessárias nesta etapa e permite concentrar a avaliação nas variáveis internas do fluxo do Professor IA. Ainda deverão ser avaliados, para cada modelo candidato, tool calling, saída estruturada, grounding, qualidade pedagógica, latência, custo e aderência às instruções.
+A OpenAI será o provedor da primeira integração real. A decisão reduz o número de integrações necessárias nesta etapa e permite concentrar a avaliação nas variáveis internas do fluxo do Professor IA. O `gpt-5-mini` será o primeiro modelo implementado. Ainda deverão ser avaliados no fluxo real seu tool calling, saída estruturada, grounding, qualidade pedagógica, latência, custo e aderência às instruções.
+
+### `gpt-5-mini` — modelo inicial selecionado
+
+O `gpt-5-mini` foi selecionado porque combina:
+
+- baixo custo;
+- adequação esperada a tarefas bem definidas e prompts precisos;
+- suporte necessário à arquitetura planejada;
+- Responses API;
+- function calling;
+- Structured Outputs;
+- integração com o ecossistema OpenAI já escolhido.
+
+Essa adequação é uma expectativa a validar, não um resultado de teste no TeaChess. A seleção define a ordem de implementação, não uma superioridade demonstrada sobre outros modelos.
+
+Preços consultados na documentação oficial em **2026-07-15**:
+
+| Entrada | Entrada em cache | Saída |
+| --- | --- | --- |
+| US$ 0,25 por 1 milhão de tokens | US$ 0,025 por 1 milhão de tokens | US$ 2,00 por 1 milhão de tokens |
+
+Os preços podem mudar, por isso a data da consulta deve permanecer registrada. Os custos reais do TeaChess serão medidos durante a implementação; os valores acima são preços unitários consultados, não custos reais de produção.
+
+### `gpt-5-nano` — alternativa considerada
+
+O `gpt-5-nano` possui custo significativamente menor e suporta function calling e Structured Outputs. Ele foi considerado, mas não foi escolhido como modelo inicial porque seu posicionamento é mais orientado a tarefas como sumarização e classificação, enquanto o Professor IA também exige interpretação, explicação pedagógica, grounding e decisões sobre uso de tools.
+
+Isso não significa que o modelo seja incapaz de executar o Professor IA: ele não foi testado no TeaChess. O `gpt-5-nano` permanece como possível alternativa futura para subtarefas mais simples.
+
+Preços consultados na documentação oficial em **2026-07-15**:
+
+| Entrada | Entrada em cache | Saída |
+| --- | --- | --- |
+| US$ 0,05 por 1 milhão de tokens | US$ 0,005 por 1 milhão de tokens | US$ 0,40 por 1 milhão de tokens |
+
+### `gpt-5.4-mini` — alternativa de faixa superior considerada
+
+O `gpt-5.4-mini` foi considerado como possível próximo nível de capacidade. Ele suporta Responses API, function calling e Structured Outputs, mas não será usado inicialmente porque possui custo superior sem que essa necessidade tenha sido demonstrada.
+
+Preços consultados na documentação oficial em **2026-07-15**:
+
+| Entrada | Entrada em cache | Saída |
+| --- | --- | --- |
+| US$ 0,75 por 1 milhão de tokens | US$ 0,075 por 1 milhão de tokens | US$ 4,50 por 1 milhão de tokens |
+
+O `gpt-5.4-mini` poderá ser considerado futuramente somente se a avaliação real demonstrar que o modelo inicial não atinge os requisitos mínimos. Não há resultado que prove que ele seja melhor para o TeaChess.
 
 ### Anthropic — fora do escopo prático desta etapa
 
@@ -101,22 +149,26 @@ A matriz abaixo preserva o registro inicial das alternativas. Ela não represent
 
 Nenhuma célula da matriz deve ser interpretada como resultado de teste. Ela combina características arquiteturais conhecidas e itens ainda pendentes de evidência.
 
-## 7. Estratégia escalonada de seleção de modelo
+## 7. Estratégia escalonada de avaliação do modelo
 
-A seleção seguirá uma progressão orientada a custo:
+A estratégia seguirá uma progressão pragmática orientada à suficiência:
 
-1. começar com um modelo econômico plausível para o fluxo;
-2. avaliá-lo contra os critérios mínimos;
-3. somente subir para uma faixa de maior capacidade se necessário.
+1. implementar o `gpt-5-mini`;
+2. avaliar seu comportamento no fluxo real;
+3. medir qualidade, grounding, structured output, tool calling, latência e custo;
+4. manter o modelo se ele atingir os requisitos mínimos;
+5. considerar um modelo de faixa superior apenas se houver deficiência relevante demonstrada.
 
 ```text
-modelo econômico
+gpt-5-mini
 → atende aos critérios mínimos?
-  → sim: candidato forte
-  → não: testar próximo nível de capacidade
+  → sim: manter o modelo
+  → não: considerar o próximo nível de capacidade
 ```
 
-O modelo mais barato não vence automaticamente, pois pode falhar nos requisitos e gerar repetições ou respostas inutilizáveis. O modelo mais poderoso também não vence automaticamente, pois capacidade adicional pode não justificar seu custo no fluxo real. A decisão será baseada em custo-benefício.
+Não haverá comparação extensa de modelos antes da implementação. O modelo mais barato absoluto não foi escolhido automaticamente, pois preço nominal não comprova suficiência para todo o fluxo. O modelo mais poderoso também não será escolhido automaticamente, pois capacidade adicional pode não justificar seu custo. A avaliação será pragmática e orientada à suficiência, mantendo a pergunta:
+
+> **Qual é o modelo de menor custo que atende satisfatoriamente aos requisitos do Professor IA?**
 
 ## 8. Estratégia experimental
 
@@ -128,9 +180,9 @@ Não será feita integração paralela com vários provedores. A decisão não d
 
 ### Decisão de modelo
 
-Continua pendente de experimento. Será comparado apenas um pequeno conjunto de modelos OpenAI economicamente viáveis, cujos nomes e versões ainda não foram escolhidos.
+O modelo inicial está resolvido: será o `gpt-5-mini`. Permanece pendente de avaliação real decidir se ele deverá ser mantido ou se uma deficiência relevante justifica subir de faixa.
 
-Não serão testados modelos premium apenas para descobrir se produzem respostas melhores. Modelos mais caros somente entrarão na avaliação se houver necessidade demonstrada porque os candidatos econômicos não alcançaram os requisitos mínimos.
+Não serão testados modelos premium inicialmente nem haverá subida de faixa apenas para obter a maior qualidade absoluta. Uma alternativa mais cara somente entrará na avaliação diante de necessidade demonstrada porque o `gpt-5-mini` não alcançou requisitos mínimos relevantes.
 
 ### Fases de avaliação
 
@@ -164,13 +216,13 @@ Avaliar:
 
 Cada fase deverá usar casos, prompts, schemas, configurações e rubricas versionados. Resultados somente poderão ser registrados após a execução real dos experimentos.
 
-## 9. Seleção dos candidatos antes dos experimentos
+## 9. Registro e revisão das alternativas
 
-Não há lista definitiva nem IDs de modelos registrados nesta etapa. Antes dos experimentos, a documentação oficial e vigente da OpenAI deverá ser consultada.
+Os modelos inicialmente registrados são `gpt-5-mini`, `gpt-5-nano` e `gpt-5.4-mini`, com papéis diferentes nesta estratégia. O primeiro será implementado; os demais são alternativas consideradas, não uma fila obrigatória de testes.
 
-A seleção inicial deverá privilegiar modelos economicamente viáveis que suportem as capacidades necessárias. Para cada candidato, deverão ser registrados data, identificação exata, versão ou alias usado, capacidades exigidas, preço vigente consultado e justificativa de inclusão. Estar na lista de teste não implica aprovação final.
+Antes de qualquer implementação ou avaliação futura, a documentação oficial vigente da OpenAI deverá ser consultada novamente. Identificação exata, versão ou alias usado, capacidades exigidas e preço vigente deverão permanecer datados. Estar registrado como alternativa não implica aprovação nem resultado favorável.
 
-Um modelo de faixa superior somente deverá ser adicionado se os resultados demonstrarem que os candidatos econômicos não atingem os critérios mínimos.
+Um modelo de faixa superior somente deverá ser avaliado se os resultados demonstrarem que o `gpt-5-mini` não atinge os critérios mínimos.
 
 ## 10. Decisões pendentes
 
@@ -178,21 +230,22 @@ Um modelo de faixa superior somente deverá ser adicionado se os resultados demo
 
 - [x] provedor da primeira integração real: OpenAI;
 - [x] primeiro provedor dos experimentos: OpenAI;
+- [x] modelo inicial da primeira implementação: `gpt-5-mini`;
 - [x] não realizar integração paralela com vários provedores nesta etapa.
 
 ### Ainda pendentes
 
-- [ ] modelos OpenAI específicos;
-- [ ] orçamento máximo dos experimentos;
-- [ ] limite de custo considerado aceitável;
-- [ ] número de casos;
-- [ ] métricas e pesos;
-- [ ] nível mínimo de qualidade necessário para aprovação de um modelo;
-- [ ] parâmetros;
-- [ ] política de repetição;
-- [ ] critério final de escolha.
+- [ ] parâmetros iniciais;
+- [ ] reasoning effort ou configuração equivalente;
+- [ ] limite de saída;
+- [ ] orçamento máximo;
+- [ ] limite de custo aceitável por interação;
+- [ ] schema final;
+- [ ] tools finais;
+- [ ] critérios quantitativos de aprovação;
+- [ ] decisão de permanecer no `gpt-5-mini` ou subir de faixa após avaliação real.
 
-Também continuam pendentes os detalhes concretos de SDK, interface da API, schemas e instrumentação, que pertencem à futura implementação e não são definidos por esta decisão de provedor.
+Também continuam pendentes os detalhes concretos de SDK e instrumentação, que pertencem à futura implementação e não são definidos por esta decisão de modelo.
 
 ## 11. Riscos metodológicos
 
@@ -209,4 +262,4 @@ Para reduzir esses riscos, prompts, casos, schemas, tools conceituais, parâmetr
 
 ## 12. Limites desta etapa
 
-Nenhum teste com provedor ou modelo foi executado para este documento. Não foram instalados SDKs, criadas variáveis de ambiente ou implementadas chamadas de LLM. Nenhum modelo OpenAI específico foi escolhido. Custos, latências, qualidade e aderência ainda não medidos permanecem explicitamente como itens a verificar por experimento.
+Nenhum teste com provedor ou modelo foi executado para este documento. Não foram instalados SDKs, criadas variáveis de ambiente ou implementadas chamadas de LLM. O `gpt-5-mini` foi escolhido somente como modelo inicial; não foi testado no TeaChess, não foi demonstrado como superior ao `gpt-5-nano` ou ao `gpt-5.4-mini` e não é tratado como modelo definitivo. Custos reais, latências, qualidade e aderência ainda não medidos permanecem explicitamente como itens a verificar durante a implementação e a avaliação.
