@@ -1,6 +1,6 @@
 # Prompting e evals do Professor IA
 
-Este documento registra a hipótese inicial de prompting, o primeiro conjunto versionado de casos de avaliação do Professor IA e os primeiros achados do prompt v2 com a Tool real. `EV-001` a `EV-006` possuem execuções registradas com os prompts v1 e v2; essa amostra pequena não comprova estabilidade. Os experimentos de function calling receberam IDs `E-017` a `E-019` e não alteram os casos declarativos existentes.
+Este documento registra a hipótese inicial de prompting, os conjuntos versionados de avaliação do Professor IA e os primeiros achados do prompt v2 com a Tool real. `EV-001` a `EV-006` possuem execuções registradas com os prompts v1 e v2; essa amostra pequena não comprova estabilidade. Os experimentos de function calling e seleção automática receberam IDs `E-017` a `E-020` e não alteram os casos declarativos existentes.
 
 ## Por que o prompt é versionado
 
@@ -309,7 +309,7 @@ Esta rubrica define critérios conceituais para avaliações futuras. Ainda não
 
 ## Casos declarativos de seleção automática
 
-O conjunto `position-context-tool-selection-evals-v1`, definido em `lib/ai/evals/position-context-tool-selection-cases.ts`, prepara a futura avaliação da decisão automática entre chamar `get_position_context` e seguir sem Tool. Todos os casos possuem status inicial `not_executed`; nenhuma resposta, decisão ou taxa foi registrada como se viesse do modelo.
+O conjunto `position-context-tool-selection-evals-v1`, definido em `lib/ai/evals/position-context-tool-selection-cases.ts`, especifica a avaliação da decisão automática entre chamar `get_position_context` e seguir sem Tool. Todos os casos possuem status declarativo inicial `not_executed`. Esse arquivo é a definição canônica e imutável do eval set, não o histórico das execuções.
 
 | ID | Mensagem | Decisão esperada | Justificativa resumida | Status |
 | --- | --- | --- | --- | --- |
@@ -326,15 +326,15 @@ Cada caso também registra uma justificativa completa e comportamentos proibidos
 
 Os testes offline usam respostas simuladas para comprovar que o orquestrador aceita zero ou uma `function_call`, preserva integralmente o protocolo, executa a Tool apenas quando solicitada e sempre produz a segunda resposta estruturada. Eles testam o código do TeaChess, não a capacidade de decisão do modelo.
 
-A eval real deverá executar os seis casos contra a rota automática, comparar `toolSelection.decision` com `expectedDecision` e registrar as observações sem adaptar retrospectivamente os casos. Um falso positivo ocorre quando a Tool é chamada sem necessidade; um falso negativo ocorre quando ela deixa de ser chamada apesar de a resposta depender dos fatos da posição.
+A eval real compara `toolSelection.decision` com `expectedDecision` sem adaptar retrospectivamente os casos. Um falso positivo ocorre quando a Tool é chamada sem necessidade; um falso negativo ocorre quando ela deixa de ser chamada apesar de a resposta depender dos fatos da posição.
 
-Uma única execução por caso não demonstrará estabilidade. O runner abaixo permite de uma a cinco repetições para observar a amostra executada, sem afirmar que repetição garante estabilidade estatística. Nesta etapa não houve chamada real, repetição contra o modelo nem taxa de seleção observada.
+Uma única execução por caso não demonstra estabilidade. O runner abaixo permite de uma a cinco repetições para observar a amostra executada, sem afirmar que repetição garante estabilidade estatística. A primeira execução real usou uma repetição por caso e está registrada separadamente abaixo; ela não reescreveu o status nem qualquer outro campo da definição canônica.
 
 ## Runner de seleção automática
 
 ### Objetivo e controle de variáveis
 
-O runner da Etapa 6D-B-A prepara a execução futura do conjunto `position-context-tool-selection-evals-v1` sem modificar os seis casos declarativos. A biblioteca recebe casos, configuração, prompt, snapshot e executor injetado; ela não lê `process.env`, não cria cliente e não depende diretamente da OpenAI. Os testes usam somente executores e transportes simulados.
+O runner da Etapa 6D-B-A executa o conjunto `position-context-tool-selection-evals-v1` sem modificar os seis casos declarativos. A biblioteca recebe casos, configuração, prompt, snapshot e executor injetado; ela não lê `process.env`, não cria cliente e não depende diretamente da OpenAI. Os testes offline usam somente executores e transportes simulados.
 
 A versão do eval set identifica o conteúdo integral e imutável dos seis casos, não apenas sua quantidade ou o formato dos IDs. Antes de qualquer execução ou consumo da API, o runner compara o conjunto recebido com `positionContextToolSelectionCases`: exige exatamente seis IDs únicos na ordem canônica e igualdade de `id`, `message`, `expectedDecision`, `rationale`, `status` e `prohibitedBehaviors`, inclusive sua ordem. Omissão, duplicação, reordenação ou modificação produz um erro global e sanitizado de configuração, sem relatório parcial nem conversão em `technical_error` individual. Somente um conjunto integralmente correspondente pode produzir um relatório identificado por `position-context-tool-selection-evals-v1`.
 
@@ -380,7 +380,7 @@ O JSON público não contém mensagem do usuário, FEN, snapshot, ID de posiçã
 
 ### Opt-in e saída temporária
 
-O comando futuro é:
+O comando previsto para execuções autorizadas é:
 
 ```bash
 RUN_REAL_AI_EVALS=true \
@@ -389,16 +389,78 @@ AI_EVAL_REPETITIONS=1 \
 npm run eval:position-context-tool-selection
 ```
 
-O script exige o valor exato `RUN_REAL_AI_EVALS=true`. Sem ele, encerra com código 2 e mensagem segura, sem consultar `AI_EVAL_PROMPT_VERSION`, `AI_EVAL_REPETITIONS` ou `OPENAI_API_KEY`, sem criar cliente e sem executar casos. Depois do opt-in, exige uma versão registrada de prompt, valida repetições entre 1 e 5 — usando 1 quando a variável está ausente — e só então consulta a chave. Erro de configuração encerra com código 1; sucesso futuro usa código 0.
+O script exige o valor exato `RUN_REAL_AI_EVALS=true`. Sem ele, encerra com código 2 e mensagem segura, sem consultar `AI_EVAL_PROMPT_VERSION`, `AI_EVAL_REPETITIONS` ou `OPENAI_API_KEY`, sem criar cliente e sem executar casos. Depois do opt-in, exige uma versão registrada de prompt, valida repetições entre 1 e 5 — usando 1 quando a variável está ausente — e só então consulta a chave. Erro de configuração encerra com código 1; sucesso usa código 0.
 
-O resumo legível e o JSON sanitizado serão impressos no terminal. O JSON também será gravado em `/tmp/teachess-position-context-tool-selection-evals.json`, nunca automaticamente dentro do repositório. O script não altera README ou documentação com resultados.
+O resumo legível e o JSON sanitizado são impressos no terminal. O JSON também é gravado em `/tmp/teachess-position-context-tool-selection-evals.json`, nunca automaticamente dentro do repositório. O script não altera README ou documentação com resultados.
+
+## Primeira execução real da seleção automática — E-020
+
+### Metodologia e configuração
+
+A primeira execução real usou `position-context-tool-selection-evals-v1`, modelo `gpt-5-mini`, prompt `professor-ia-v2`, schema `provisional-teacher-response-v1` e uma repetição de `AUTO-SEL-001` a `AUTO-SEL-006`. Os casos rodaram sequencialmente, com `tool_choice: "auto"`, `parallel_tool_calls: false`, o mesmo snapshot autorizado e confirmado e somente a mensagem variando. Não houve integração com a interface pública. O relatório sanitizado foi gravado em `/tmp`, sem persistir as respostas pedagógicas completas.
+
+- **início:** `2026-07-16T04:44:50.026Z`;
+- **conclusão:** `2026-07-16T04:46:42.190Z`.
+
+Os timestamps são os valores ISO 8601 do relatório. Nenhuma duração total foi inferida a partir deles.
+
+### Resultado por caso
+
+| caseId | Esperado | Observado | Classificação | toolCallCount | evidenceStatus | Latência isolada |
+| --- | --- | --- | --- | ---: | --- | ---: |
+| `AUTO-SEL-001` | `called` | `called` | `correct` | 1 | `sufficient` | ≈ 19946,87 ms |
+| `AUTO-SEL-002` | `called` | `called` | `correct` | 1 | `sufficient` | ≈ 23138,06 ms |
+| `AUTO-SEL-003` | `called` | `called` | `correct` | 1 | `sufficient` | ≈ 20144,97 ms |
+| `AUTO-SEL-004` | `not_called` | `not_called` | `correct` | 0 | `insufficient` | ≈ 19877,70 ms |
+| `AUTO-SEL-005` | `not_called` | `not_called` | `correct` | 0 | `insufficient` | ≈ 8021,91 ms |
+| `AUTO-SEL-006` | `not_called` | `not_called` | `correct` | 0 | `insufficient` | ≈ 21032,99 ms |
+
+As latências são observações isoladas do fluxo completo. Não foram calculados média, mediana, percentis, SLA ou custo.
+
+### Matriz observada e resultado consolidado
+
+| Esperado | Observado | Classificação | Quantidade |
+| --- | --- | --- | ---: |
+| `called` | `called` | `correct` | 3 |
+| `not_called` | `not_called` | `correct` | 3 |
+| `not_called` | `called` | `false_positive` | 0 |
+| `called` | `not_called` | `false_negative` | 0 |
+| qualquer | sem decisão válida | `technical_error` | 0 |
+
+- `totalRuns: 6`;
+- `correct: 6`;
+- `falsePositives: 0`;
+- `falseNegatives: 0`;
+- `technicalErrors: 0`;
+- accuracy observada nesta execução: `1`, equivalente a 100% das decisões válidas desta amostra.
+
+Esta foi a primeira execução com uma repetição por caso e obteve 100% na amostra de seis execuções. Os três casos que dependiam de fatos da posição resultaram em `called`, uma chamada da Tool em cada caso. Os três casos que não dependiam da posição resultaram em `not_called`, sem chamada da Tool. Não ocorreram falsos positivos, falsos negativos ou erros técnicos; o modelo distinguiu corretamente os dois grupos nessa execução.
+
+`evidenceStatus: "insufficient"` nos casos `not_called` não representa falha da seleção. Nesses casos, a resposta não recebeu o contexto da posição porque ele não era necessário ou porque a pergunta estava fora do escopo específico. O experimento avaliou principalmente a decisão `called` versus `not_called`, não a qualidade pedagógica completa, que não pode ser revisada a partir do relatório sanitizado porque o conteúdo integral das respostas não foi persistido.
+
+### Definição canônica e histórico
+
+`lib/ai/evals/position-context-tool-selection-cases.ts` representa a definição imutável do eval set. Uma execução real não deve reescrever automaticamente seus textos, `expectedDecision`, status ou IDs. O histórico do que foi efetivamente executado fica no relatório sanitizado e em `docs/llm-experiments.md`; por isso, os estados declarativos `not_executed` da tabela acima permanecem como parte da versão canônica, sem criação de uma nova versão do eval set.
+
+### Limitações e próximo passo
+
+- houve somente uma repetição por caso;
+- o conjunto possui apenas seis casos curados;
+- o mesmo snapshot demonstrativo foi usado em todos;
+- 100% nesta amostra não comprova estabilidade;
+- não houve avaliação em outros modelos nem comparação entre prompts nesta execução;
+- tokens e custo não foram medidos;
+- as latências são observações isoladas;
+- não houve avaliação humana da resposta pedagógica final;
+- o experimento avaliou principalmente `called` versus `not_called`.
+
+O próximo passo futuro é executar repetições controladas, verificar a consistência por caso e observar possíveis falsos positivos ou falsos negativos. Somente depois será adequado considerar conclusões mais amplas.
 
 ## O que ainda não existe
 
-- ainda não houve execução real do runner de evals;
 - ainda não há repetições suficientes para medir estabilidade dos casos;
 - não há notas, pesos ou taxas de aprovação;
-- não há execução real dos casos de seleção automática nem repetição suficiente para medir estabilidade;
-- não há comparação de parâmetros nesta tarefa.
+- não há comparação entre modelos, prompts ou parâmetros nesta execução;
+- não há avaliação humana das respostas pedagógicas completas desta execução.
 
-O runner controlado existe e foi testado somente offline com transportes simulados. Não foram feitas novas chamadas à OpenAI para criar estes artefatos, e os seis casos continuam `not_executed`. Resultados futuros deverão registrar, no mínimo, modelo, versões do prompt, schema e eval set, repetições e IDs dos casos.
+O runner controlado continua coberto por testes offline com transportes simulados e agora possui a primeira execução real documentada separadamente. Os seis casos continuam com `status: "not_executed"` apenas na definição canônica imutável; o relatório e o experimento E-020 registram o histórico real. Resultados futuros deverão registrar, no mínimo, modelo, versões do prompt, schema e eval set, repetições e IDs dos casos.

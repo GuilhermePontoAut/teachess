@@ -903,12 +903,90 @@ Nas respostas observadas, o texto final expôs `positionContextId` e nomes inter
 
 Como trabalho futuro, será necessário impedir identificadores internos no texto pedagógico; decidir entre regra adicional em uma futura versão do prompt, sanitização ou pós-processamento server-side e transformação na camada de apresentação; avaliar se `evidenceUsed` será visível, resumido ou reservado para auditoria; e manter dados técnicos disponíveis para rastreabilidade sem apresentá-los diretamente ao jogador. Nenhuma `professor-ia-v3` foi criada nesta tarefa.
 
-## Protocolo futuro — runner de seleção automática
+## E-020 — primeira execução real do runner de seleção automática
 
-Foi preparado um runner controlado para uma futura execução real de `AUTO-SEL-001` a `AUTO-SEL-006`. Isso é protocolo, não resultado: nenhum caso de seleção automática foi chamado contra o modelo nesta etapa, e todos continuam com status `not_executed`.
+### Objetivo
 
-O protocolo manterá constantes `gpt-5-mini`, o schema versionado, a versão escolhida do prompt e um único snapshot confirmado. Somente a mensagem declarada de cada caso variará. Os casos serão executados na ordem versionada, com repetições inteiras entre 1 e 5, sem paralelismo, retry ou backoff. Cada execução comparará a decisão esperada com a observada e será classificada como acerto, falso positivo, falso negativo ou erro técnico. Um erro técnico será registrado com código sanitizado e não impedirá necessariamente os casos seguintes.
+Observar, pela primeira vez no runner real, se `gpt-5-mini` selecionaria automaticamente `get_position_context` quando a mensagem dependesse dos fatos da posição e deixaria de selecioná-la quando esses fatos não fossem necessários.
 
-O relatório não conterá FEN, snapshot, ID de posição, `call_id`, argumentos, resposta pedagógica completa, raciocínio, objetos do SDK, stack ou `cause`. A accuracy observada será `acertos / execuções com decisão válida`; erros técnicos ficarão fora do denominador. Essa razão descreve somente a amostra executada e não é garantia geral nem prova de estabilidade.
+### Hipótese
 
-A execução real somente poderá começar com `RUN_REAL_AI_EVALS=true`, uma versão válida em `AI_EVAL_PROMPT_VERSION`, repetições válidas em `AI_EVAL_REPETITIONS` — padrão 1 — e `OPENAI_API_KEY`. Sem o opt-in exato, o script encerra com código 2 antes de consultar a chave, criar o cliente ou executar casos. Em sucesso futuro, o JSON sanitizado será gravado em `/tmp/teachess-position-context-tool-selection-evals.json`; a documentação pública não será atualizada automaticamente.
+Com a Tool disponível em modo automático e o mesmo snapshot autorizado em todos os casos, o modelo deveria produzir `called` em `AUTO-SEL-001` a `AUTO-SEL-003` e `not_called` em `AUTO-SEL-004` a `AUTO-SEL-006`.
+
+### Configuração executada
+
+- **eval set:** `position-context-tool-selection-evals-v1`;
+- **modelo:** `gpt-5-mini`;
+- **prompt:** `professor-ia-v2`;
+- **schema:** `provisional-teacher-response-v1`;
+- **repetições:** 1;
+- **casos:** `AUTO-SEL-001` a `AUTO-SEL-006`;
+- **ordem:** sequencial;
+- **seleção:** `tool_choice: "auto"`;
+- **chamadas paralelas:** `parallel_tool_calls: false`;
+- **integração com a interface pública:** nenhuma;
+- **relatório:** JSON sanitizado gravado em `/tmp/teachess-position-context-tool-selection-evals.json`.
+
+O relatório registra `startedAt: "2026-07-16T04:44:50.026Z"` e `completedAt: "2026-07-16T04:46:42.190Z"`. Esses timestamps são preservados em ISO 8601, sem conversão de fuso e sem inferência de duração total.
+
+### Controle de variáveis
+
+Modelo, prompt, schema, versão do eval set, configuração de seleção, execução sequencial e snapshot autorizado permaneceram constantes. O mesmo snapshot confirmado foi usado nos seis casos; somente a mensagem declarada variou. A presença do snapshot também nos casos `not_called` permitiu observar se a mera disponibilidade do contexto causaria chamadas desnecessárias.
+
+A definição canônica em `lib/ai/evals/position-context-tool-selection-cases.ts` permaneceu imutável. Ela registra os casos, expectativas e status declarativo inicial; não é reescrita automaticamente por uma execução real. O relatório sanitizado e este documento registram o histórico do que foi efetivamente executado. Nenhuma nova versão do eval set foi criada.
+
+### Resultado consolidado
+
+- `totalRuns: 6`;
+- `correct: 6`;
+- `falsePositives: 0`;
+- `falseNegatives: 0`;
+- `technicalErrors: 0`;
+- accuracy observada nesta execução: `1`, equivalente a 100% das decisões válidas desta amostra.
+
+Esta foi a primeira execução com uma repetição por caso e atingiu 100% na amostra de seis execuções.
+
+### Resultado por caso
+
+| caseId | Decisão esperada | Decisão observada | Classificação | toolCallCount | evidenceStatus | Latência isolada |
+| --- | --- | --- | --- | ---: | --- | ---: |
+| `AUTO-SEL-001` | `called` | `called` | `correct` | 1 | `sufficient` | ≈ 19946,87 ms |
+| `AUTO-SEL-002` | `called` | `called` | `correct` | 1 | `sufficient` | ≈ 23138,06 ms |
+| `AUTO-SEL-003` | `called` | `called` | `correct` | 1 | `sufficient` | ≈ 20144,97 ms |
+| `AUTO-SEL-004` | `not_called` | `not_called` | `correct` | 0 | `insufficient` | ≈ 19877,70 ms |
+| `AUTO-SEL-005` | `not_called` | `not_called` | `correct` | 0 | `insufficient` | ≈ 8021,91 ms |
+| `AUTO-SEL-006` | `not_called` | `not_called` | `correct` | 0 | `insufficient` | ≈ 21032,99 ms |
+
+Os valores de latência são observações isoladas do fluxo automático completo. Não foram calculados média, mediana, percentis, SLA ou custo.
+
+### Interpretação limitada
+
+Os três casos que dependiam de fatos da posição resultaram em `called`, com uma chamada da Tool por caso. Os três casos que não dependiam da posição resultaram em `not_called`, sem chamada da Tool. Não ocorreram falsos positivos, falsos negativos ou erros técnicos. O modelo distinguiu corretamente os dois grupos nessa execução.
+
+`evidenceStatus: "insufficient"` em `AUTO-SEL-004` a `AUTO-SEL-006` não representa falha da seleção. Nesses casos, a resposta não recebeu o contexto da posição porque ele não era necessário ou porque a pergunta estava fora do escopo específico. A avaliação principal foi a decisão `called` versus `not_called`.
+
+Não é possível avaliar a qualidade pedagógica completa das respostas a partir do relatório sanitizado, pois o conteúdo integral delas não foi persistido. Essa minimização mantém o relatório alinhado ao objetivo da eval e reduz a retenção de conteúdo desnecessário.
+
+### Limitações
+
+- houve somente uma repetição por caso;
+- o conjunto possui apenas seis casos curados;
+- o mesmo snapshot demonstrativo foi usado em todos;
+- 100% nesta amostra não comprova estabilidade;
+- não houve avaliação em outros modelos;
+- não houve comparação entre prompts nesta execução;
+- não houve medição de tokens ou custo;
+- as latências são observações isoladas;
+- não houve avaliação humana da resposta pedagógica final;
+- o experimento avaliou principalmente a decisão `called` versus `not_called`.
+
+### Conclusão limitada
+
+Nesta primeira execução, com uma repetição por caso, o modelo selecionou corretamente a Tool nos três casos dependentes da posição e não a selecionou nos três casos independentes. O resultado foi 6/6, sem falsos positivos, falsos negativos ou erros técnicos. A amostra pequena não permite concluir estabilidade ou desempenho geral.
+
+### Próximos passos
+
+- executar repetições controladas;
+- verificar consistência por caso;
+- observar possíveis falsos positivos ou falsos negativos;
+- somente depois considerar conclusões mais amplas.

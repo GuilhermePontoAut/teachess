@@ -254,9 +254,9 @@ O system prompt `professor-ia-v1` permanece preservado como baseline, e a compar
 
 A função interna determinística `get_position_context` possui uma definição estrita de Tool para a Responses API e um fluxo técnico controlado de function calling em rota isolada. O primeiro ciclo real foi validado localmente: a Tool foi executada no servidor sobre um snapshot autorizado, e uma comparação entre o mesmo contexto `confirmed` e `unconfirmed` preservou a diferença de suficiência esperada. A integração pública com a interface do Professor IA ainda não foi implementada. Os detalhes estão em [`docs/llm-tools.md`](docs/llm-tools.md), [`docs/llm-experiments.md`](docs/llm-experiments.md) e [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
 
-A seleção automática também foi preparada em uma rota técnica separada. O baseline forçado permanece preservado, enquanto o novo fluxo aceita zero ou uma chamada de `get_position_context` e sempre realiza uma segunda interação estruturada. Os dois caminhos possuem testes exclusivamente offline; os casos declarativos de seleção ainda não foram executados contra o modelo real, e nenhuma integração foi conectada à interface pública.
+A seleção automática também foi preparada em uma rota técnica separada. O baseline forçado permanece preservado, enquanto o novo fluxo aceita zero ou uma chamada de `get_position_context` e sempre realiza uma segunda interação estruturada. A primeira execução real da seleção automática foi concluída com seis casos e uma repetição por caso: as seis decisões foram corretas na amostra, sem falsos positivos, falsos negativos ou erros técnicos. A accuracy observada nessa execução foi de 100%, mas a amostra pequena ainda não comprova estabilidade. Nenhuma integração foi conectada à interface pública. Os detalhes e limitações estão em [`docs/llm-experiments.md`](docs/llm-experiments.md) e [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
 
-Um runner controlado e reutilizável também está preparado para executar futuramente os seis casos `AUTO-SEL` com snapshot fixo, ordem sequencial e relatório sanitizado. O comando `npm run eval:position-context-tool-selection` exige o opt-in exato `RUN_REAL_AI_EVALS=true`, além da configuração de prompt e da chave; sem o opt-in, encerra antes de consultar a chave ou criar o cliente. Nenhum eval real foi executado nesta etapa. O protocolo completo está em [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
+Um runner controlado e reutilizável executa os seis casos `AUTO-SEL` com snapshot fixo, ordem sequencial e relatório sanitizado. O comando `npm run eval:position-context-tool-selection` exige o opt-in exato `RUN_REAL_AI_EVALS=true`, além da configuração de prompt e da chave; sem o opt-in, encerra antes de consultar a chave ou criar o cliente. A primeira execução real está documentada, e novas execuções continuam dependendo de autorização explícita. O protocolo completo está em [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
 
 #### Segurança e diagnóstico
 
@@ -264,7 +264,7 @@ A chave não é enviada ao frontend, e a rota técnica só pode ser habilitada p
 
 #### Limitações atuais
 
-Ainda não existe avaliação real da qualidade da seleção automática, RAG, integração real com a interface do Professor IA, autenticação, rate limiting do endpoint final ou validação por engine de xadrez. Os fluxos de function calling permanecem restritos a rotas técnicas: o baseline forçado já teve execuções manuais documentadas, enquanto o modo automático foi validado somente com transporte simulado e sem rede. Também não há garantia de estabilidade nem medição sistemática de custo, tokens e latência.
+A avaliação real da seleção automática ainda se limita à primeira execução com uma repetição de cada um dos seis casos curados. Não existem RAG, integração real com a interface do Professor IA, autenticação, rate limiting do endpoint final ou validação por engine de xadrez. Os fluxos de function calling permanecem restritos a rotas técnicas. Também não há garantia de estabilidade nem medição sistemática de custo, tokens e latência.
 
 As decisões e evidências detalhadas estão em [`docs/llm-architecture.md`](docs/llm-architecture.md), [`docs/llm-provider-model-selection.md`](docs/llm-provider-model-selection.md), [`docs/llm-experiments.md`](docs/llm-experiments.md) e [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
 
@@ -476,6 +476,10 @@ npm run test:position-context-tool-selection-runner # testes offline do runner d
 npm run eval:position-context-tool-selection # runner real; exige opt-in explícito
 npm run test:ai-tools # executa todas as suítes relacionadas à Tool
 ```
+
+A infraestrutura de IA possui uma suíte agregada com 121 testes automatizados aprovados, incluindo 30 testes exclusivos do runner de evals e 62 testes relacionados ao fluxo e ao runner de seleção automática da Tool. Os comandos específicos e agregados possuem sobreposição; por isso, suas quantidades não devem ser somadas como testes únicos. A validação atual também registra lint, build de produção e `git diff --check` aprovados.
+
+Esses testes offline comprovam a lógica e a orquestração da infraestrutura. Separadamente, a primeira execução real do runner observou 6/6 decisões corretas, ou 100% na amostra de seis execuções, com somente uma repetição por caso e sem comprovar estabilidade estatística do comportamento do LLM. O status `not_executed` permanece na definição canônica dos casos porque ela não é reescrita pelo histórico de execução.
 
 A revisão integrada documentada em [`docs/qa-checklist.md`](docs/qa-checklist.md) verificou as rotas pelo código e obteve sucesso em lint, build e `git diff --check`. Existe uma suíte unitária direcionada ao runtime de `get_position_context`, executada com o test runner nativo do Node.js e sem rede. Ainda não há uma suíte automatizada ampla para os demais módulos, nem testes de integração ou end-to-end; portanto, não se deve interpretar o build ou a suíte específica como cobertura funcional completa.
 
