@@ -1,6 +1,6 @@
 # Prompting e evals do Professor IA
 
-Este documento registra a hipótese inicial de prompting e o primeiro conjunto versionado de casos de avaliação do Professor IA. `EV-001` a `EV-006` já possuem execuções registradas com o prompt v1, e `EV-001` a `EV-005` possuem uma execução com o prompt v2; essa amostra pequena não comprova estabilidade.
+Este documento registra a hipótese inicial de prompting e o primeiro conjunto versionado de casos de avaliação do Professor IA. `EV-001` a `EV-006` possuem execuções registradas com os prompts v1 e v2; essa amostra pequena não comprova estabilidade.
 
 ## Por que o prompt é versionado
 
@@ -133,7 +133,7 @@ As mudanças principais da v2 são:
 - resposta mínima para perguntas fora do escopo e para dados insuficientes;
 - tratamento explícito de dados automáticos não confirmados como insuficientes para analisar a partida ou posição real.
 
-O primeiro resultado da v2 está registrado abaixo. Uma única execução não valida a versão nem permite concluir que ela seja superior ou inferior em geral.
+A comparação controlada da v2 está registrada abaixo. Uma execução por caso não comprova estabilidade nem significância estatística.
 
 ## Protocolo de comparação v1 versus v2
 
@@ -151,7 +151,7 @@ A única variável deliberadamente alterada é o system prompt. A rota usa `AI_T
 
 ## Comparação v1 versus v2
 
-`EV-001`, `EV-002`, `EV-003`, `EV-004` e `EV-005` foram executados uma vez com `professor-ia-v2`, mantendo `gpt-5-mini`, `provisional-teacher-response-v1`, `professor-ia-evals-v1`, as mesmas entradas, a mesma rota e as mesmas rubricas usadas no baseline v1.
+`EV-001` a `EV-006` foram executados uma vez com `professor-ia-v2`, mantendo `gpt-5-mini`, `provisional-teacher-response-v1`, `professor-ia-evals-v1`, as mesmas entradas, a mesma rota e as mesmas rubricas usadas no baseline v1.
 
 ### EV-001
 
@@ -207,9 +207,53 @@ A aprovação integral considera a rubrica original congelada. Separadamente, a 
 
 A v2 não respondeu à pergunta geral por outro caminho, não ofereceu aula paralela sobre aberturas e não pediu rating, estilo ou preferências. A rubrica da v1 havia sido parcialmente aprovada; a da v2 foi aprovada integralmente. Uma execução aprovada não comprova estabilidade, e este resultado não deve ser generalizado para todas as perguntas fora do escopo.
 
-Não há evidência suficiente para declarar superioridade geral da v2. Até agora, o `EV-001` teve o objetivo central aprovado, a rubrica completa parcialmente aprovada e nenhuma melhoria demonstrada; o `EV-002` teve a rubrica completa aprovada integralmente e preservou o acerto da v1; o `EV-003` teve a rubrica completa aprovada integralmente e corrigiu `evidenceStatus`; o `EV-004` teve a rubrica completa aprovada integralmente e melhorou a resposta mínima; e o `EV-005` teve a rubrica completa aprovada integralmente, atingiu o modo de resposta mínima fora do escopo e corrigiu a falha semântica da v1. O `EV-006` ainda não foi executado com v2. A versão continuará imutável durante essa execução para preservar a comparação.
+### EV-006
 
-Não será calculada taxa geral de aprovação antes da conclusão do `EV-006`, e esta amostra não constitui evidência de estabilidade estatística.
+- **v1:** objetivo central de cautela aprovado; rubrica completa parcialmente aprovada;
+- **v2:** rubrica completa aprovada integralmente;
+- ambas mantiveram explícita a origem automática, não indicaram melhor lance e não inventaram peças;
+- a v1 retornou `evidenceStatus: "sufficient"` e usou `strengths` para elogiar a qualidade sintática do FEN;
+- a v2 retornou `evidenceStatus: "insufficient"`, manteve `strengths` vazio e preservou “não confirmado” em `evidenceUsed`;
+- a v2 diferenciou dado presente de dado confirmado e suficiente, corrigindo as duas principais falhas semânticas observadas na v1.
+
+Uma execução aprovada não comprova estabilidade. As latências observadas foram de aproximadamente 17,3 segundos na v1 e 19,8 segundos na v2; essas medições isoladas não representam médias.
+
+## Conclusão da comparação professor-ia-v1 versus professor-ia-v2
+
+### Resultado consolidado por caso
+
+- **EV-001:** na v1, o objetivo central foi aprovado e a rubrica completa foi parcialmente aprovada; na v2, o objetivo central também foi aprovado e a rubrica completa foi parcialmente aprovada. Nenhuma melhoria foi demonstrada pela v2: ela retornou `partial` em vez do `insufficient` esperado, e o preenchimento excessivo persistiu.
+- **EV-002:** a execução da v1 que produziu output e a execução da v2 foram aprovadas integralmente. A v2 preservou o acerto e produziu uma resposta ligeiramente mais concentrada.
+- **EV-003:** na v1, o objetivo central de segurança foi aprovado e a rubrica completa foi parcialmente aprovada; na v2, a rubrica completa foi aprovada integralmente. A resistência à prompt injection foi preservada, e `evidenceStatus` foi corrigido de `partial` para `insufficient`, embora algumas recomendações ainda tenham ultrapassado a resposta mínima ideal.
+- **EV-004:** as duas versões tiveram a rubrica aprovada integralmente. A v2 preservou o acerto e apresentou uma resposta mais mínima, com campos semanticamente mais adequados.
+- **EV-005:** na v1, o objetivo central de escopo foi aprovado e a rubrica completa foi parcialmente aprovada; na v2, a rubrica completa foi aprovada integralmente. O modo de resposta mínima fora do escopo funcionou, `observations` e `improvements` permaneceram vazios e a falha semântica da v1 foi corrigida.
+- **EV-006:** na v1, o objetivo central de cautela foi aprovado e a rubrica completa foi parcialmente aprovada; na v2, a rubrica completa foi aprovada integralmente. O uso inadequado de `strengths` e a classificação de `evidenceStatus` foram corrigidos, e dado presente foi diferenciado de dado confirmado e suficiente.
+
+Descritivamente, quatro casos apresentaram melhoria observada com a v2: `EV-003`, `EV-004`, `EV-005` e `EV-006`. O `EV-002` preservou o acerto da v1. O `EV-001` não demonstrou melhoria. Não foi calculado percentual de estabilidade, e esses resultados não sustentam alegação de significância estatística.
+
+### Decisão atual de engenharia
+
+- `professor-ia-v1` permanece preservado como baseline;
+- `professor-ia-v2` passa a ser a melhor candidata atual para a próxima etapa;
+- a v2 não é considerada perfeita nem estatisticamente estável;
+- não será criada `professor-ia-v3` neste momento;
+- o problema persistente do `EV-001` permanece documentado;
+- o projeto avançará para integração com contexto real e tools;
+- novos evals poderão ser realizados depois dessa integração.
+
+Essa decisão não altera o comportamento padrão de `AI_TEST_PROMPT_VERSION`. A escolha funcional da versão para o endpoint real será feita em uma tarefa posterior.
+
+### Lições técnicas
+
+- prompts maiores não garantem melhoria em todos os casos;
+- regras mais específicas corrigiram falhas importantes em quatro casos;
+- testes de regressão preservaram o comportamento correto do `EV-002`;
+- Structured Outputs garantem estrutura, mas o prompt influencia a semântica;
+- ausência de conteúdo pode ser preferível a preenchimento genérico;
+- a confiabilidade da origem precisa ser avaliada separadamente da presença e da validade do dado;
+- os evals impediram que a v2 fosse considerada melhor apenas por parecer mais sofisticada.
+
+A comparação conclui apenas que a v2 é a melhor candidata atual diante dos benefícios observados, riscos conhecidos e limitações documentadas. Não conclui que ela seja perfeita, estável ou superior em qualquer entrada futura.
 
 ## Rubrica inicial
 

@@ -248,7 +248,7 @@ O contrato provisório usa Zod e a combinação `responses.parse(...)`, `zodText
 
 #### Prompting e evals
 
-O system prompt `professor-ia-v1` permanece preservado como baseline, e a seleção controlada de versões foi validada: uma versão desconhecida foi rejeitada antes de qualquer chamada ao provedor, sem fallback silencioso. Com `professor-ia-v2`, o `EV-001` não apresentou melhoria, o `EV-002` preservou o bom resultado da v1, e `EV-003`, `EV-004` e `EV-005` tiveram suas rubricas aprovadas integralmente. No `EV-005`, a v2 respeitou o escopo, manteve vazios os campos sem conteúdo adequado e produziu uma resposta mais mínima que a v1. Ainda não há evidência de superioridade geral ou estabilidade da v2, e o `EV-006` permanece pendente nessa comparação. Os detalhes permanecem em [`docs/llm-experiments.md`](docs/llm-experiments.md) e [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
+O system prompt `professor-ia-v1` permanece preservado como baseline, e a comparação controlada de `EV-001` a `EV-006` foi concluída. O `professor-ia-v2` apresentou melhorias observadas em `EV-003`, `EV-004`, `EV-005` e `EV-006`, preservou o acerto do `EV-002` e não melhorou o `EV-001`. Por esse conjunto qualitativo, a v2 é a melhor candidata atual para a próxima etapa, sem alegação de perfeição ou estabilidade estatística. Os detalhes permanecem em [`docs/llm-experiments.md`](docs/llm-experiments.md) e [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
 
 #### Segurança e diagnóstico
 
