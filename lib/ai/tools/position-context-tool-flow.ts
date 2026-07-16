@@ -210,9 +210,20 @@ export async function runPositionContextToolFlow(
   input: PositionContextToolFlowInput,
   transport: PositionContextToolTransport,
 ): Promise<PositionContextToolFlowResult> {
+  const snapshotValidation = authorizedPositionSnapshotSchema.safeParse(
+    input.authorizedSnapshot,
+  );
+  if (!snapshotValidation.success) {
+    throw new PositionContextToolFlowError(
+      input.authorizedSnapshot === undefined
+        ? "SNAPSHOT_MISSING"
+        : "SNAPSHOT_INVALID",
+    );
+  }
+
   const originalInput = buildOriginalInput(
     input.message,
-    input.authorizedSnapshot.positionContextId,
+    snapshotValidation.data.positionContextId,
   );
 
   let firstResponse: FirstProviderResponse;
@@ -247,7 +258,7 @@ export async function runPositionContextToolFlow(
   try {
     toolResult = executeGetPositionContext({
       rawArguments,
-      authorizedSnapshot: input.authorizedSnapshot,
+      authorizedSnapshot: snapshotValidation.data,
     });
   } catch (error: unknown) {
     if (error instanceof PositionContextToolError) {

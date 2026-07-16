@@ -362,6 +362,18 @@ test("contexto técnico usa somente o ID confiável e explica quando a Tool é o
   assert.equal(technicalContext.content.includes(FEN), false);
 });
 
+test("ID de posição inválido encerra o fluxo automático antes do provider e executor", async () => {
+  const invalidId = "position/context";
+  const { dependencies, calls, executions } = createDependencies();
+  const error = await expectFlowError(
+    () => run(dependencies, createSnapshot({ positionContextId: invalidId })),
+    "SNAPSHOT_INVALID",
+  );
+  assert.equal(calls.length, 0);
+  assert.equal(executions.length, 0);
+  assert.equal(JSON.stringify(error).includes(invalidId), false);
+});
+
 test("injeção de ID na chamada da Tool é recusada sem expor dados privados", async () => {
   const trustedId = "id-confiavel-auto";
   const injectedId = "id-injetado-pelo-usuario";

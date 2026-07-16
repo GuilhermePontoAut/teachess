@@ -347,6 +347,10 @@ As escolhas abaixo permanecem abertas:
 
 ## 16. Diagrama
 
+### Estado técnico isolado da Etapa 7C-A
+
+Em uma rota exclusivamente técnica, a aplicação agora autoriza no máximo um contexto discriminado por requisição — partida, posição ou nenhum — e pode oferecer simultaneamente as definições de `get_game_context` e `get_position_context`. O modelo seleciona uma Tool ou nenhuma, mas autorização do snapshot, compatibilidade entre Tool e contexto, argumentos e execução continuam validados server-side. Essa implementação possui duas interações fixas e não cria loop ou abstração genérica de agente. Ela permanece desconectada da interface pública e ainda não constitui avaliação real da qualidade de seleção do modelo.
+
 ```mermaid
 sequenceDiagram
     actor U as Usuário
@@ -372,7 +376,7 @@ sequenceDiagram
     F-->>U: Resposta renderizada
 ```
 
-O diagrama representa o caminho com tool calling. Quando nenhuma tool for necessária, o modelo poderá produzir a resposta final após a primeira chamada. Em nenhum dos casos há ligação na qual o LLM execute diretamente a tool: solicitação, validação de argumentos e execução passam pelo orquestrador e pelo runtime da aplicação.
+O diagrama representa o caminho conceitual com tool calling. Em fluxos futuros, uma resposta sem Tool poderá eventualmente encerrar após a primeira chamada. No fluxo técnico da Etapa 7C-A, porém, tanto a decisão com Tool quanto a decisão sem Tool seguem para uma segunda chamada estruturada, preservando exatamente duas interações lógicas. Em nenhum dos casos há ligação na qual o LLM execute diretamente a Tool: solicitação, validação de argumentos e execução passam pelo orquestrador e pelo runtime da aplicação.
 
 ## 17. Princípios arquiteturais
 

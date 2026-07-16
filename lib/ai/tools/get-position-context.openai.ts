@@ -1,5 +1,8 @@
 import type { FunctionTool } from "openai/resources/responses/responses";
-import { POSITION_CONTEXT_ID_MAX_LENGTH } from "./get-position-context.schemas";
+import {
+  POSITION_CONTEXT_ID_MAX_LENGTH,
+  POSITION_CONTEXT_ID_PATTERN,
+} from "./get-position-context.schemas";
 
 export const GET_POSITION_CONTEXT_TOOL_NAME = "get_position_context" as const;
 
@@ -18,6 +21,7 @@ export const getPositionContextOpenAITool = {
         type: "string",
         minLength: 1,
         maxLength: POSITION_CONTEXT_ID_MAX_LENGTH,
+        pattern: POSITION_CONTEXT_ID_PATTERN.source,
         description:
           "Identificador opaco da única posição selecionada e autorizada para esta requisição; não concede autorização.",
       },

@@ -1,6 +1,6 @@
 # Tools do Professor IA: runtimes determinísticos de contexto
 
-Este documento registra a investigação da Etapa 6A, os fluxos de `get_position_context`, o runtime determinístico de `get_game_context` da Etapa 7A e seu fluxo técnico forçado da Etapa 7B. As duas funções possuem definições compatíveis com a Responses API e infraestrutura técnica isolada. `get_game_context` continua sem integração com a interface pública, sem seleção automática e foi validada nesta etapa somente com transportes simulados, sem chamada real à OpenAI.
+Este documento registra a investigação da Etapa 6A, os fluxos de `get_position_context`, o runtime determinístico de `get_game_context` da Etapa 7A, seu fluxo forçado da Etapa 7B e a orquestração conjunta da Etapa 7C-A. As duas funções possuem definições compatíveis com a Responses API e infraestrutura técnica isolada. `get_game_context` continua sem integração com a interface pública; sua seleção conjunta foi validada somente com transportes simulados, sem chamada real à OpenAI.
 
 ## 1. Classificação das definições
 
@@ -188,6 +188,7 @@ O ID já existe no modelo atual, mas não concede autorização. Ele deve corres
       "type": "string",
       "minLength": 1,
       "maxLength": 128,
+      "pattern": "^[A-Za-z0-9._:-]+$",
       "description": "Identificador opaco da única posição autorizada para esta requisição."
     }
   },
@@ -471,7 +472,7 @@ O modelo solicita a função, mas a aplicação valida e executa o código. O mo
 
 ### Contrato congelado da versão inicial
 
-Os argumentos aceitam somente `{ positionContextId: string }`. O valor recebe `trim`, precisa conter de 1 a 128 caracteres úteis e propriedades adicionais são rejeitadas. FEN, confirmação e quaisquer outros dados não podem ser escolhidos nos argumentos.
+Os argumentos aceitam somente `{ positionContextId: string }`. O valor recebe `trim`, precisa conter de 1 a 128 caracteres úteis e seguir `^[A-Za-z0-9._:-]+$`; propriedades adicionais são rejeitadas. FEN, confirmação e quaisquer outros dados não podem ser escolhidos nos argumentos. O mesmo formato é aplicado aos argumentos Zod, ao snapshot, ao resultado e ao JSON Schema da definição OpenAI.
 
 O snapshot é uma allowlist estrita com todos os campos obrigatórios documentados. `positionContextId` usa as mesmas regras dos argumentos; `fen` aceita `null` ou uma string após `trim` de 1 a 256 caracteres. Os enums de origem, contexto e reconhecimento correspondem aos tipos exportados em `lib/types/chess.ts`. A entidade `UploadedPosition`, a store e a persistência não foram alteradas.
 
@@ -678,7 +679,7 @@ O baseline forçado permanece preservado e não se confunde com essa avaliação
 
 `get_game_context` organiza somente fatos da única partida que a aplicação já selecionou e disponibilizou para a requisição. O runtime não pesquisa partidas, não lê stores ou `localStorage`, não recebe o histórico do jogador, não calcula estatísticas globais, não altera dados e não acessa rede. Também não usa LLM ou engine, não avalia a partida e não indica melhor lance.
 
-O runtime determinístico permanece separado da definição registrada e da orquestração. A Etapa 7B acrescenta a definição OpenAI, um fluxo forçado de duas chamadas e uma rota técnica isolada. Ainda não existem fluxo automático com duas Tools nem integração com o Professor IA público. Nenhuma chamada à OpenAI foi executada nesta etapa.
+O runtime determinístico permanece separado da definição registrada e da orquestração. A Etapa 7B acrescenta a definição OpenAI, um fluxo forçado de duas chamadas e uma rota técnica isolada. Naquele recorte ainda não existia fluxo automático com duas Tools; a Etapa 7C-A, documentada na seção 24, acrescenta essa infraestrutura sem integração com o Professor IA público. Nenhuma chamada à OpenAI foi executada nessas etapas offline.
 
 ### Tipos reais e campos escolhidos
 
@@ -753,7 +754,7 @@ O executor segue a ordem: presença do snapshot, schema do snapshot, schema dos 
 
 `npm run test:get-game-context` executa 75 testes determinísticos com `node:test`, sem rede. A suíte substituiu os casos que autorizavam público e administrador por rejeições owner-only e cobre proprietário de partida platform e external, minimização do solicitante para somente o ID, argumentos, limites, formato restrito do identificador, allowlist do snapshot, rejeição de FEN, campos obrigatórios por origem, datas reais, ordem das validações, quatro casos positivos e nove rejeições independentes da matriz de PGN, ausência de chamadas desnecessárias ao `chess.js`, diferença permitida entre as duas contagens, texto malicioso tratado como dado, readiness, invariantes do resultado, sanitização, determinismo e imutabilidade.
 
-`npm run test:ai-tools` inclui a suíte determinística sem remover as anteriores. Após a revisão final da Etapa 7B, o agregado passa a 292 testes únicos: 75 do runtime de partida e 96 da definição, fluxo e rota; cada teste aparece uma única vez no agregado. Os comandos específicos continuam sobrepostos ao agregado e não devem ser somados novamente. `get_game_context` permanece desconectada da interface do Professor IA.
+`npm run test:ai-tools` inclui a suíte determinística sem remover as anteriores. Após a revisão final da Etapa 7B, o agregado possuía 292 testes únicos. A implementação inicial da Etapa 7C-A elevou esse total a 388; sua revisão de segurança acrescentou 27 casos únicos nos runtimes e fluxos de posição e na suíte conjunta, levando o agregado a 415. Os comandos específicos continuam sobrepostos ao agregado e não devem ser somados novamente. `get_game_context` permanece desconectada da interface do Professor IA.
 
 ## 23. Definição OpenAI e fluxo forçado de `get_game_context` — Etapa 7B
 
@@ -817,4 +818,119 @@ O teste de sucesso da rota verifica o wiring completo: mensagem validada, snapsh
 
 `npm run test:game-context-tool-flow` executa 96 testes offline da definição, schemas compartilhados, fluxo e rota. Eles cobrem configuração das duas chamadas, preservação de `reasoning`, `message` e `function_call`, output malformado, envelope e correlação por `call_id`, formato compartilhado do ID, fronteira exata entre protocolo e executor determinístico, argumentos maliciosos, snapshots, owner-only, execução única, ausência de terceira chamada, wiring completo da rota, conteúdo exato dos logs, erros do provider e Structured Output, sanitização, precedência das validações HTTP, `Content-Length` excessivo, ausente ou menor que o corpo real, fronteira exata em bytes, ausência de vazamento e de criação do cliente nas rejeições, restauração normal e excepcional de `process.env` e cliente injetado. Nenhum teste monkey patcha o SDK global ou acessa rede.
 
-O estado atual é estritamente técnico: a Tool está disponível apenas na rota isolada, forçada para validar infraestrutura. Ela não está na interface pública, não escolhe automaticamente entre partida e posição, não compara Tools e não implementa engine, autenticação real, backend, RAG, streaming ou retries.
+O estado desta baseline permanece estritamente técnico: a Tool está disponível apenas na rota isolada e forçada para validar infraestrutura. O fluxo conjunto posterior está documentado na seção 24; nenhum dos dois está na interface pública ou implementa engine, autenticação real, backend, RAG, streaming ou retries.
+
+## 24. Orquestração conjunta de contexto — Etapa 7C-A
+
+### Escopo técnico
+
+A Etapa 7C-A cria um fluxo isolado que disponibiliza simultaneamente as definições existentes `getGameContextOpenAITool` e `getPositionContextOpenAITool`. A ordem é estável — partida antes de posição — apenas para tornar payloads e testes reproduzíveis; ela não representa prioridade semântica. As definições continuam sendo as fontes únicas dos nomes, descriptions, `strict: true`, limites, pattern de `gameContextId` e `additionalProperties: false`.
+
+O fluxo não substitui os baselines forçados, o modo automático exclusivo de posição, os casos `AUTO-SEL` nem seu runner. Também não cria agente genérico, loop, terceira chamada, retry, streaming ou integração pública.
+
+### Contrato discriminado de autorização
+
+`AuthorizedProfessorContext` é uma união discriminada Zod estrita:
+
+```ts
+type AuthorizedProfessorContext =
+  | { type: "game"; snapshot: AuthorizedGameSnapshot }
+  | { type: "position"; snapshot: AuthorizedPositionSnapshot }
+  | { type: "none" };
+```
+
+Cada branch reutiliza integralmente o schema real do snapshot correspondente. Estruturas híbridas, propriedades adicionais, snapshot da categoria errada, dois snapshots, `none` com snapshot e branches sem o snapshot obrigatório são rejeitados. O contrato representa a escolha da aplicação, não uma escolha feita pelo modelo. Partidas continuam owner-only e são recusadas antes da criação do cliente quando proprietário e solicitante divergem.
+
+### Contexto mínimo enviado ao provider
+
+A mensagem original permanece em um item `user`. Um item `developer` separado contém somente JSON técnico gerado no servidor:
+
+- `{"type":"game","gameContextId":"..."}`;
+- `{"type":"position","positionContextId":"..."}`;
+- `{"type":"none"}`.
+
+O ID sempre vem do snapshot autorizado. Um ID escrito na mensagem do usuário não o substitui. Snapshot, PGN, FEN, adversário, ratings, notas, tags, origem da imagem, IDs de usuário, store e `localStorage` não entram nessa primeira chamada.
+
+### Primeira interação e matriz de compatibilidade
+
+A primeira interação usa `gpt-5-mini`, o system prompt selecionado pelo registro existente, as duas Tools, `tool_choice: "auto"`, `parallel_tool_calls: false` e `store: false`. Não há Structured Output nessa fase. Zero `function_call` e uma única `function_call` são resultados permitidos; itens legítimos como `reasoning` e `message` são preservados somente depois da validação estrutural descrita abaixo.
+
+### Validação estrutural dos itens do provider
+
+`response.output` continua sendo entrada não confiável mesmo quando veio do SDK e mesmo quando o campo `type` contém um discriminador conhecido. Conferir apenas `type: "message"`, por exemplo, não demonstra que `content` seja um array, que cada parte possua um tipo aceito ou que `output_text` e `refusal` contenham seus textos obrigatórios. Do mesmo modo, `type: "reasoning"` não comprova a presença de `id` e `summary`, e `type: "function_call"` não comprova que `name`, `call_id` e `arguments` sejam strings.
+
+O fluxo conjunto usa type guards determinísticos baseados nas interfaces reais do SDK OpenAI 6.47.0. Na primeira resposta, aceita somente `ResponseReasoningItem`, `ResponseOutputMessage` e `ResponseFunctionToolCall` estruturalmente válidos; na resposta final, aceita somente reasoning e message. Mensagens validam `id`, papel, status, `content`, os tipos `output_text` e `refusal`, seus textos e as estruturas auxiliares presentes. Reasoning valida `id`, `summary` e suas partes, além dos campos opcionais quando enviados. Function calls validam sua estrutura antes das regras semânticas separadas de nome suportado, limite do `call_id`, JSON, quantidade e autorização.
+
+Um cast TypeScript não executa em runtime e não transforma um objeto em `ResponseOutputItem`; ele apenas instrui o compilador a confiar no programador. Por isso, a conversão entre as unions de output e input só ocorre depois que todos os itens foram validados. Objetos malformados não são corrigidos, filtrados ou reenviados. Itens legítimos continuam preservados por referência e na ordem original.
+
+### Mesmo alfabeto para os dois IDs técnicos
+
+`gameContextId` e `positionContextId` agora compartilham os mesmos princípios: `trim`, mínimo 1, máximo 128 e allowlist `^[A-Za-z0-9._:-]+$` aplicada no Zod e no JSON Schema da Tool. Letras, números, ponto, underscore, dois-pontos e hífen são aceitos; espaços internos, controles, aspas, barras, chaves e texto instrucional são rejeitados sem remoção ou normalização permissiva.
+
+Essa é apenas **sintaxe segura**: o valor tem forma adequada para um identificador opaco e não carrega texto livre. **Semântica segura** continua dependendo de igualdade exata com o único snapshot autorizado e das regras de acesso correspondentes. Um ID perfeitamente formatado, mas divergente, continua produzindo `POSITION_CONTEXT_NOT_AUTHORIZED` ou `GAME_CONTEXT_NOT_AUTHORIZED` e nunca provoca lookup ou fallback.
+
+Antes da execução, o servidor aplica esta matriz determinística:
+
+| Contexto autorizado | Decisão aceita |
+| --- | --- |
+| `game` | `get_game_context` ou nenhuma Tool |
+| `position` | `get_position_context` ou nenhuma Tool |
+| `none` | nenhuma Tool |
+
+Uma Tool incompatível produz `TOOL_CONTEXT_MISMATCH`. Não existe fallback para a outra Tool, transformação da escolha nem execução sem o snapshot correspondente.
+
+### Caminho com Tool
+
+Com exatamente uma chamada, o fluxo valida o nome, limita `call_id` a 256 caracteres não vazios, exige `arguments` string e interpreta o JSON como `unknown`. Depois da matriz, chama exclusivamente `executeGetGameContext` ou `executeGetPositionContext` com `rawArguments` e o snapshot da branch autorizada. O resultado determinístico é validado novamente pelo schema real antes de gerar um único item:
+
+```json
+{
+  "type": "function_call_output",
+  "call_id": "o mesmo call_id",
+  "output": "{\"success\":true,\"data\":{...}}"
+}
+```
+
+O envelope sofre uma única serialização. Ele não inclui snapshot, argumentos separados, IDs de usuário, dados da outra Tool, stack, `cause` ou objeto bruto do SDK.
+
+### Caminho sem Tool
+
+Zero `function_call` é uma decisão válida. Nenhum executor é chamado e nenhum `function_call_output` é criado. Todos os itens legítimos da primeira resposta, inclusive uma mensagem direta, continuam na entrada seguinte. Esse caminho não afirma que a decisão ou a resposta sejam semanticamente corretas; apenas preserva uma decisão válida do protocolo para avaliação futura.
+
+### Segunda interação e resultado público
+
+Nos dois caminhos ocorre sempre uma segunda interação. A entrada preserva, na ordem, a entrada original, todos os itens da primeira `response.output` e, somente no caminho com Tool, o `function_call_output` ao final. A conversão localizada entre as unions do SDK 6.47.0 acontece apenas depois da concatenação integral.
+
+A segunda chamada usa o mesmo modelo e prompt, `store: false`, `responses.parse`, `zodTextFormat` e `provisional-teacher-response-v1`. Ela não recebe `tools`, `tool_choice` ou `parallel_tool_calls`. O fluxo termina depois de `create + parse`, sem terceira interação.
+
+O resultado estrito expõe somente `data` e uma união coerente `toolDecision`:
+
+```json
+{
+  "data": {},
+  "toolDecision": {
+    "status": "called | not_called",
+    "name": "get_game_context | get_position_context | null",
+    "callCount": "0 | 1",
+    "executionStatus": "completed | not_executed"
+  }
+}
+```
+
+`called` exige nome, uma chamada e execução concluída. `not_called` exige nome nulo, zero chamadas e nenhuma execução. `call_id`, argumentos, snapshots, IDs internos, outputs intermediários e respostas brutas não integram o resultado.
+
+### Erros e rota técnica
+
+O fluxo classifica output malformado, chamadas múltiplas, nome desconhecido, incompatibilidade de contexto, `call_id`, JSON, argumentos, snapshots, autorização, falha da Tool, respostas incompletas, refusal, Structured Output ausente, provider e erro interno inesperado. Mensagens públicas são fixas e não contêm IDs, PGN, FEN, adversário, notas, tags, chave, mensagem bruta, stack ou `cause`. Somente `PROVIDER_ERROR` recebe o diagnóstico sanitizado do SDK.
+
+`POST /api/ai/test/tools/context-selection` usa runtime Node.js, permanece desabilitada sem `ENABLE_AI_TEST_ROUTE=true` e não possui link na interface. A ordem de validação é flag, prompt, `Content-Length`, leitura textual, medição real por `TextEncoder`, `JSON.parse`, Zod estrito, autorização owner-only, cliente e fluxo. O limite total é 262.144 bytes.
+
+O mapeamento HTTP é: `404` para rota desabilitada; `400` para JSON/body/mensagem/snapshot inválido; `403` para contexto não autorizado; `413` para body excessivo; `422` para refusal; `500` para erro interno local; `502` para protocolo, `TOOL_CONTEXT_MISMATCH`, falha da Tool, resposta incompleta, Structured Output ou provider; e `503` para chave ausente ou prompt desconhecido. O switch sobre erros do fluxo é exaustivo.
+
+### Testes offline e limitações
+
+`npm run test:professor-context-tool-flow` executa 119 testes offline do schema, fluxo e rota. Eles cobrem game, position e ausência de Tool; executor correto e exclusão do outro; minimização da primeira entrada; matriz completa de incompatibilidade; protocolo e argumentos; guards estruturais de output; preservação e ordem; serialização única; configuração das duas interações; falhas e ausência de vazamento; formato e limites do ID de posição; limite real e declarado do body; precedência antes do cliente; wiring; sucessos das três branches; mapeamento HTTP; logs sanitizados; restauração de ambiente e execução serial dos testes que alteram `process.env`.
+
+O agregado `npm run test:ai-tools` contém 415 testes únicos. Suítes específicas e agregada se sobrepõem e não devem ser somadas novamente.
+
+Esses testes comprovam a orquestração do código com transportes e executores simulados. Nenhuma chamada à OpenAI e nenhum eval real foram executados na Etapa 7C-A. Portanto, eles não demonstram que o modelo seleciona corretamente partida, posição ou ausência de Tool em mensagens reais. Essa qualidade deverá ser medida em uma etapa futura, separadamente da correção da infraestrutura.

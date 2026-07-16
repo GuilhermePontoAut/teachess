@@ -6,6 +6,7 @@ import type {
 } from "../../types/chess";
 
 export const POSITION_CONTEXT_ID_MAX_LENGTH = 128;
+export const POSITION_CONTEXT_ID_PATTERN = /^[A-Za-z0-9._:-]+$/;
 export const POSITION_CONTEXT_FEN_MAX_LENGTH = 256;
 
 const imageOrigins = [
@@ -34,7 +35,8 @@ const positionContextIdSchema = z
   .string()
   .trim()
   .min(1)
-  .max(POSITION_CONTEXT_ID_MAX_LENGTH);
+  .max(POSITION_CONTEXT_ID_MAX_LENGTH)
+  .regex(POSITION_CONTEXT_ID_PATTERN);
 
 const fenValueSchema = z
   .string()

@@ -13,7 +13,10 @@ import {
   provisionalTeacherResponseSchema,
   type ProvisionalTeacherResponse,
 } from "../schemas/provisional-teacher-response";
-import type { AuthorizedPositionSnapshot } from "./get-position-context.schemas";
+import {
+  authorizedPositionSnapshotSchema,
+  type AuthorizedPositionSnapshot,
+} from "./get-position-context.schemas";
 import {
   executeGetPositionContext,
   type ExecuteGetPositionContextInput,
@@ -307,9 +310,20 @@ export async function runAutoPositionContextToolFlow(
   input: PositionContextToolFlowInput,
   dependencies: AutoPositionContextToolFlowDependencies,
 ): Promise<AutoPositionContextToolFlowResult> {
+  const snapshotValidation = authorizedPositionSnapshotSchema.safeParse(
+    input.authorizedSnapshot,
+  );
+  if (!snapshotValidation.success) {
+    throw new AutoPositionContextToolFlowError(
+      input.authorizedSnapshot === undefined
+        ? "SNAPSHOT_MISSING"
+        : "SNAPSHOT_INVALID",
+    );
+  }
+
   const originalInput = buildOriginalInput(
     input.message,
-    input.authorizedSnapshot.positionContextId,
+    snapshotValidation.data.positionContextId,
   );
 
   let firstResponse: FirstProviderResponse;
@@ -343,7 +357,7 @@ export async function runAutoPositionContextToolFlow(
       ? null
       : buildFunctionCallOutput(
           call,
-          input.authorizedSnapshot,
+          snapshotValidation.data,
           dependencies.executeTool,
         );
   const finalInput = [
