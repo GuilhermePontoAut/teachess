@@ -252,7 +252,7 @@ O system prompt `professor-ia-v1` permanece preservado como baseline, e a compar
 
 #### Início da fase de Tools
 
-A comparação de prompts foi concluída, e o projeto iniciou a definição da fase de Tools. `get_position_context` foi escolhida como primeira Tool candidata, mas seu contrato ainda está em definição e nenhuma Tool está conectada ao modelo. Os detalhes estão em [`docs/llm-tools.md`](docs/llm-tools.md).
+A função interna determinística `get_position_context` foi implementada com validação estrita de argumentos, snapshot autorizado, correspondência do ID, estrutura do FEN, aceitação pelo `chess.js` e schema do resultado. A suíte local não usa LLM nem rede. A função ainda não foi registrada como Tool, não executa function calling e não está conectada à OpenAI ou à interface. Os detalhes estão em [`docs/llm-tools.md`](docs/llm-tools.md).
 
 #### Segurança e diagnóstico
 
@@ -260,7 +260,7 @@ A chave não é enviada ao frontend, e a rota técnica só pode ser habilitada p
 
 #### Limitações atuais
 
-Ainda não existem tools implementadas, RAG, integração real com a interface do Professor IA, autenticação, rate limiting do endpoint final ou validação por engine de xadrez. Também não há garantia de estabilidade nem medição sistemática de custo, tokens e latência.
+Ainda não existe Tool registrada no provedor, function calling, RAG, integração real com a interface do Professor IA, autenticação, rate limiting do endpoint final ou validação por engine de xadrez. A função interna determinística não altera esses limites. Também não há garantia de estabilidade nem medição sistemática de custo, tokens e latência.
 
 As decisões e evidências detalhadas estão em [`docs/llm-architecture.md`](docs/llm-architecture.md), [`docs/llm-provider-model-selection.md`](docs/llm-provider-model-selection.md), [`docs/llm-experiments.md`](docs/llm-experiments.md) e [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
 
@@ -465,9 +465,10 @@ npm run dev     # servidor local
 npm run lint    # ESLint
 npm run build   # build de produção, TypeScript e geração de páginas
 npm run start   # execução do build de produção
+npm run test:get-position-context # testes determinísticos da função interna
 ```
 
-A revisão integrada documentada em [`docs/qa-checklist.md`](docs/qa-checklist.md) verificou as rotas pelo código e obteve sucesso em lint, build e `git diff --check`. Não existe suíte de testes unitários, de integração ou end-to-end configurada no `package.json`; portanto, não se deve interpretar o build como cobertura funcional completa.
+A revisão integrada documentada em [`docs/qa-checklist.md`](docs/qa-checklist.md) verificou as rotas pelo código e obteve sucesso em lint, build e `git diff --check`. Existe uma suíte unitária direcionada ao runtime de `get_position_context`, executada com o test runner nativo do Node.js e sem rede. Ainda não há uma suíte automatizada ampla para os demais módulos, nem testes de integração ou end-to-end; portanto, não se deve interpretar o build ou a suíte específica como cobertura funcional completa.
 
 ### Testes manuais realizados
 

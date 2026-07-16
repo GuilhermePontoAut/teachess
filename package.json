@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:get-position-context": "tsc -p tsconfig.tools-tests.json && NODE_PATH=./node_modules node --test --test-isolation=none /tmp/teachess-get-position-context-tests/lib/ai/tools/get-position-context.test.js"
   },
   "dependencies": {
     "chess.js": "^1.4.0",

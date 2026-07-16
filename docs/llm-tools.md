@@ -1,6 +1,6 @@
 # Tools do Professor IA: contrato inicial de `get_position_context`
 
-Este documento registra a investigação da Etapa 6A e o contrato candidato da primeira Tool do TeaChess. Ele é exclusivamente documental: `get_position_context` ainda não foi implementada, registrada na Responses API nem conectada ao Professor IA. Nenhuma chamada ao provedor faz parte desta etapa.
+Este documento registra a investigação da Etapa 6A e a implementação determinística da Etapa 6B da primeira função candidata a Tool do TeaChess. `get_position_context` possui agora schemas, runtime interno e testes locais, mas ainda não foi registrada na Responses API nem conectada ao Professor IA. Nenhuma chamada ao provedor faz parte da Etapa 6B.
 
 ## 1. Classificação das definições
 
@@ -29,18 +29,14 @@ Este documento registra a investigação da Etapa 6A e o contrato candidato da p
 - Enviar a posição completa diretamente ao modelo, sem recuperá-la por Tool.
 - Enviar todo o estado da store ou todo o `localStorage`, alternativa descartada por violar minimização e isolamento entre posições.
 
-### Decisões ainda pendentes
+### Decisões ainda pendentes após a Etapa 6B
 
-- O schema definitivo de runtime e a biblioteca usada para validá-lo.
-- Os limites exatos de tamanho de identificadores, FEN, detalhes de origem e mensagens de erro.
 - A futura adição de um campo explícito de confirmação ao modelo de dados.
-- Os detalhes da checagem estrutural determinística usada para calcular `syntaxStatus`.
 - Se o contexto principal continuará sendo recuperado por Tool depois de medições de latência, custo e auditabilidade.
 - Autenticação, autorização verificável e recuperação a partir de uma fonte confiável de servidor.
 
 ### Fora do escopo atual
 
-- implementar a função TypeScript;
 - registrar a Tool na Responses API;
 - executar function calling ou chamar a OpenAI;
 - implementar `get_legal_moves`;
@@ -409,7 +405,7 @@ A Tool não recebe diretamente uma resposta natural do modelo. Ela recebe apenas
 
 ## 14. Cenários iniciais de avaliação
 
-Os casos abaixo são propostas; não foram executados nesta etapa.
+Os casos determinísticos de função, runtime e schemas abaixo foram implementados e executados na Etapa 6B. Os evals envolvendo o modelo continuam apenas propostos e não foram executados nesta etapa.
 
 ### Testes determinísticos da função e do runtime
 
@@ -472,3 +468,44 @@ flowchart LR
 ```
 
 O `localStorage` permanece dentro do navegador. Não existe seta do servidor, do runtime ou do LLM para o armazenamento local; somente o snapshot mínimo criado pela interface atravessa a fronteira.
+
+## 16. Implementação determinística da Etapa 6B
+
+### Caminhos implementados
+
+- `lib/ai/tools/get-position-context.schemas.ts`: schemas Zod estritos de argumentos, snapshot autorizado e resultado, com tipos TypeScript derivados;
+- `lib/ai/tools/tool-errors.ts`: erro tipado e códigos públicos controlados;
+- `lib/ai/tools/get-position-context.ts`: checagem estrutural de FEN, função pura `getPositionContext` e fronteira `executeGetPositionContext`;
+- `lib/ai/tools/get-position-context.test.ts`: testes determinísticos sem LLM e sem rede;
+- `tsconfig.tools-tests.json`: compilação isolada da suíte para diretório temporário;
+- `package.json`: script `npm run test:get-position-context`, baseado no test runner nativo do Node.js.
+
+### Contrato congelado da versão inicial
+
+Os argumentos aceitam somente `{ positionContextId: string }`. O valor recebe `trim`, precisa conter de 1 a 128 caracteres úteis e propriedades adicionais são rejeitadas. FEN, confirmação e quaisquer outros dados não podem ser escolhidos nos argumentos.
+
+O snapshot é uma allowlist estrita com todos os campos obrigatórios documentados. `positionContextId` usa as mesmas regras dos argumentos; `fen` aceita `null` ou uma string após `trim` de 1 a 256 caracteres. Os enums de origem, contexto e reconhecimento correspondem aos tipos exportados em `lib/types/chess.ts`. A entidade `UploadedPosition`, a store e a persistência não foram alteradas.
+
+O resultado também é estrito, exige todos os campos e limita cada mensagem de `limitations` a 160 caracteres, com no máximo oito itens. Além de validar tipos, campos e limites, o schema verifica as relações semânticas entre os estados: coerência entre presença e valor do FEN, validações sintática e pelo `chess.js`, lado a mover, confirmação, origem e `analysisReadiness`. Readiness suficiente é impossível sem confirmação e só é aceita quando o FEN está presente, possui valor, tem sintaxe válida e foi aceito pelo `chess.js`; quando todos esses requisitos e a confirmação estão presentes, readiness insuficiente também é rejeitada. Itens duplicados em `limitations` não são aceitos. O schema não tenta conferir se a função produziu todas as mensagens de limitação necessárias, pois essa composição permanece responsabilidade determinística da função.
+
+O schema não contém avaliação, melhor lance, variantes, engine, confidence, notas pessoais ou texto pedagógico.
+
+### FEN, lado a mover e suficiência
+
+A checagem estrutural própria exige exatamente seis campos separados por um espaço, oito fileiras, somente peças FEN e dígitos de 1 a 8 nas fileiras, exatamente oito casas por fileira, lado `w` ou `b`, roque em formato canônico, en passant `-` ou casa das fileiras 3/6, halfmove inteiro não negativo e fullmove inteiro a partir de 1. Ela verifica estrutura e não prova legalidade completa ou alcançabilidade histórica.
+
+Somente depois de a estrutura ser aceita, a função chama `validateFen` do `chess.js` 1.4.0 instalado. O resultado registra `accepted` ou `rejected`; ausência de FEN ou rejeição estrutural registra `not_verified` sem executar a validação da biblioteca. Mensagens brutas do `chess.js` não atravessam o contrato público.
+
+O lado a mover só é derivado depois de estrutura válida e aceitação pelo `chess.js`. `analysisReadiness` é `sufficient_for_position_context` somente com FEN presente, estrutura válida, aceitação pela biblioteca e `confirmationStatus: "confirmed"`. Reconhecimento, natureza simulada e confiança mockada não promovem confirmação.
+
+### Limitações e erros
+
+`limitations` usa mensagens fixas, sem duplicações e nesta ordem: ausência do FEN, estrutura inválida, rejeição pelo `chess.js`, confirmação não registrada, não confirmação explícita, reconhecimento não processado, natureza demonstrativa/simulada e lado a mover indisponível. A natureza `simulated_demo` permanece explícita inclusive em um resultado suficiente, pois suficiência para descrever a posição não transforma o dado demonstrativo em reconhecimento real.
+
+O runtime verifica, nesta ordem, presença do snapshot, schema do snapshot, schema dos argumentos, correspondência exata do ID, execução e schema do resultado. Os erros públicos são `SNAPSHOT_MISSING`, `SNAPSHOT_INVALID`, `TOOL_ARGUMENTS_INVALID`, `POSITION_CONTEXT_NOT_AUTHORIZED` e `INTERNAL_TOOL_ERROR`. Eles não incluem FEN, snapshot, IDs divergentes, stack trace ou valores brutos. O runtime recebe somente um snapshot e nunca procura IDs alternativos.
+
+### Testes e limitações atuais
+
+O projeto não possuía runner de testes. Sem instalar dependências, a suíte usa `node:test`: o TypeScript compila apenas os arquivos desta função para `/tmp`, e o Node executa o JavaScript gerado. Foram executados 28 testes: os 18 casos originais continuam cobrindo função, runtime e contratos estruturais; dez casos adicionais confirmam que resultados reais permanecem aceitos e que combinações semanticamente incoerentes de FEN, validações, confirmação, readiness, origem e limitações são rejeitadas. O comando concluiu com 28 aprovações e nenhuma falha.
+
+Esta etapa não cria normalizador de `UploadedPosition`, campo persistido de confirmação, autenticação ou autorização real de servidor. Também não implementa JSON Schema para o provedor, definição de Tool, function calling, orquestração com modelo nem qualquer chamada à OpenAI.

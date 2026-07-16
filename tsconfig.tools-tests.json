@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "isolatedModules": false,
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "noEmit": false,
+    "outDir": "/tmp/teachess-get-position-context-tests",
+    "rootDir": ".",
+    "target": "ES2022"
+  },
+  "include": [
+    "lib/ai/tools/**/*.ts",
+    "lib/types/chess.ts"
+  ]
+}
