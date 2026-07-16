@@ -485,3 +485,53 @@ Esse resultado não permite concluir que a v2 seja pior em geral, pois somente u
 Como hipótese, e não como conclusão, o prompt v2 pode ter sido prejudicado por ser maior e conter mais regras. As instruções de utilidade pedagógica podem estar competindo com as regras de resposta mínima, e mais instruções não garantem maior aderência.
 
 Depois da execução dos demais casos, poderá ser necessário simplificar o prompt, usar exemplos *few-shot*, alterar o schema ou aplicar pós-validação determinística. Nenhuma dessas alternativas foi implementada neste momento.
+
+## E-012 — execução do caso EV-002 com o prompt v2
+
+### Configuração executada
+
+- **caso:** `EV-002`;
+- **conjunto de evals:** `professor-ia-evals-v1`;
+- **modelo:** `gpt-5-mini`;
+- **prompt:** `professor-ia-v2`;
+- **schema:** `provisional-teacher-response-v1`;
+- **endpoint:** `POST /api/ai/test/structured`;
+- **execução:** 1 de 1;
+- **tools:** não utilizadas;
+- **entrada:** “Dados disponíveis: ganhei uma torre com um garfo no lance 10, mas no lance 18 deixei minha dama sem proteção e ela foi capturada. Não há PGN nem FEN.”
+
+### Resultado observado
+
+- HTTP `200`;
+- `success: true`;
+- `promptVersion: "professor-ia-v2"`;
+- `schemaVersion: "provisional-teacher-response-v1"`;
+- `evidenceStatus` retornou `"partial"`;
+- `strengths` mencionou somente o garfo e o ganho da torre;
+- `improvements` mencionou a dama deixada sem proteção e sua captura;
+- `evidenceUsed` preservou somente os fatos fornecidos;
+- `limitations` mencionou a ausência de PGN, FEN e posição reconstruível;
+- não foram inventadas as peças participantes do garfo;
+- não foram inventados lances intermediários;
+- não foram inventados posição concreta, melhor lance ou avaliação de engine;
+- `studyRecommendations` apresentou três recomendações relacionadas:
+  - reforço de garfos;
+  - verificação de peças desprotegidas;
+  - fornecimento de PGN ou FEN;
+- o tempo observado no servidor de desenvolvimento foi de aproximadamente 28,9 segundos.
+
+Tokens e custo não foram registrados porque não foram medidos.
+
+### Classificação
+
+- **rubrica completa do EV-002:** aprovada integralmente nesta execução.
+
+Houve separação correta entre o ponto forte e o erro, todos os conteúdos principais estavam sustentados pela entrada, detalhes ausentes não foram completados, `evidenceStatus` foi coerente e as limitações foram reconhecidas. Uma execução aprovada não comprova estabilidade do modelo, do prompt ou do fluxo.
+
+### Comparação com o baseline v1
+
+As duas versões foram aprovadas integralmente no `EV-002`, retornaram `evidenceStatus: "partial"`, separaram corretamente o garfo da perda da dama e não inventaram peças ou lances ausentes. A resposta da v2 utilizou menos recomendações e ficou um pouco mais concentrada.
+
+A primeira tentativa do `EV-002` com v1 permanece inconclusiva por `provider_error`, pois não produziu output do modelo. A comparação semântica considera somente a segunda tentativa da v1 e a execução da v2, que produziram respostas estruturadas.
+
+Não há evidência suficiente para declarar superioridade geral da v2. Os tempos observados — aproximadamente 27,4 segundos com v1 e 28,9 segundos com v2 — foram semelhantes, mas são observações individuais e não representam médias.

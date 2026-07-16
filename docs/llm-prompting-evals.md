@@ -1,6 +1,6 @@
 # Prompting e evals do Professor IA
 
-Este documento registra a hipótese inicial de prompting e o primeiro conjunto versionado de casos de avaliação do Professor IA. `EV-001` a `EV-006` já possuem execuções registradas com o prompt v1, e `EV-001` possui uma execução com o prompt v2; essa amostra pequena não comprova estabilidade.
+Este documento registra a hipótese inicial de prompting e o primeiro conjunto versionado de casos de avaliação do Professor IA. `EV-001` a `EV-006` já possuem execuções registradas com o prompt v1, e `EV-001` e `EV-002` possuem uma execução com o prompt v2; essa amostra pequena não comprova estabilidade.
 
 ## Por que o prompt é versionado
 
@@ -151,7 +151,9 @@ A única variável deliberadamente alterada é o system prompt. A rota usa `AI_T
 
 ## Comparação v1 versus v2
 
-O `EV-001` foi executado uma vez com `professor-ia-v2`, mantendo `gpt-5-mini`, `provisional-teacher-response-v1`, `professor-ia-evals-v1`, a mesma entrada, a mesma rota e a mesma rubrica usadas no baseline v1.
+`EV-001` e `EV-002` foram executados uma vez com `professor-ia-v2`, mantendo `gpt-5-mini`, `provisional-teacher-response-v1`, `professor-ia-evals-v1`, as mesmas entradas, a mesma rota e as mesmas rubricas usadas no baseline v1.
+
+### EV-001
 
 - **objetivo central do EV-001:** aprovado;
 - **rubrica completa:** parcialmente aprovada;
@@ -159,7 +161,20 @@ O `EV-001` foi executado uma vez com `professor-ia-v2`, mantendo `gpt-5-mini`, `
 - a v1 retornou `evidenceStatus: "insufficient"`;
 - a v2 retornou `evidenceStatus: "partial"` e continuou preenchendo extensamente `improvements` e `studyRecommendations`.
 
-A v2 ainda não demonstrou melhoria sobre a v1 nesse caso. `EV-002` a `EV-006` ainda não foram executados com v2, portanto nenhuma conclusão geral sobre superioridade pode ser feita. A versão v2 continuará imutável durante essas execuções para evitar mudanças intermediárias que prejudiquem a comparação.
+A v2 não demonstrou melhoria sobre a v1 nesse caso.
+
+### EV-002
+
+- **rubrica completa:** aprovada integralmente;
+- ambas as versões retornaram `evidenceStatus: "partial"`;
+- ambas separaram corretamente o garfo e o ganho da torre da dama deixada sem proteção e capturada;
+- nenhuma das versões inventou as peças participantes do garfo nem lances ausentes;
+- a v2 preservou o bom comportamento observado na execução do baseline v1 que produziu output;
+- a v2 apresentou menos recomendações e ficou ligeiramente mais enxuta e concentrada.
+
+A primeira tentativa do `EV-002` com v1 permanece registrada como inconclusiva por `provider_error`, sem output do modelo. A comparação semântica considera apenas a execução posterior da v1 e a execução da v2 que produziram resposta estruturada. A latência observada foi semelhante, mas os tempos individuais não representam média.
+
+Não há evidência suficiente para declarar superioridade geral da v2. Uma execução aprovada não comprova estabilidade, e `EV-003` a `EV-006` ainda não foram executados com essa versão. A v2 continuará imutável durante essas execuções para evitar mudanças intermediárias que prejudiquem a comparação. Não será calculada taxa geral de aprovação com a amostra atual.
 
 ## Rubrica inicial
 
