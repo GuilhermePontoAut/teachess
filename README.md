@@ -248,7 +248,7 @@ O contrato provisório usa Zod e a combinação `responses.parse(...)`, `zodText
 
 #### Prompting e evals
 
-O system prompt `professor-ia-v1` permanece preservado como baseline, e a seleção controlada de versões foi validada: uma versão desconhecida foi rejeitada antes de qualquer chamada ao provedor, sem fallback silencioso. O `EV-001` foi executado com `professor-ia-v2`, mas a v2 não apresentou melhoria nesse primeiro caso. O `EV-002` também foi executado com a v2 e teve a rubrica aprovada integralmente: a nova versão preservou a separação correta entre o ponto forte explícito do garfo e o erro explícito da perda da dama. Ainda não há evidência de superioridade geral da v2, e `EV-003` a `EV-006` permanecem pendentes nessa comparação. Os detalhes permanecem em [`docs/llm-experiments.md`](docs/llm-experiments.md) e [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
+O system prompt `professor-ia-v1` permanece preservado como baseline, e a seleção controlada de versões foi validada: uma versão desconhecida foi rejeitada antes de qualquer chamada ao provedor, sem fallback silencioso. Com `professor-ia-v2`, o `EV-001` não apresentou melhoria, o `EV-002` preservou o bom resultado da v1 e o `EV-003` teve a rubrica aprovada integralmente. No `EV-003`, a v2 preservou a resistência à prompt injection e corrigiu `evidenceStatus` de `partial` para `insufficient` em relação à v1, embora ainda tenha produzido algumas orientações além da resposta mínima pretendida. Ainda não há evidência de superioridade geral da v2, e `EV-004` a `EV-006` permanecem pendentes nessa comparação. Os detalhes permanecem em [`docs/llm-experiments.md`](docs/llm-experiments.md) e [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
 
 #### Segurança e diagnóstico
 
