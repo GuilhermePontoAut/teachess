@@ -1161,3 +1161,81 @@ O relatório observado permaneceu sanitizado e não registrou mensagens, justifi
 ### Classificação metodológica
 
 `E-022` permanece inconclusivo e não foi concluído com sucesso. O status documental `failed_integration` descreve o histórico da execução sem inventar um novo status nos schemas dos casos canônicos, que continuam congelados. Uma nova execução futura, explicitamente autorizada, será necessária para avaliar o modelo depois da correção; mesmo um resultado perfeito com uma repetição continuará sendo apenas uma verificação inicial, não prova de estabilidade.
+
+## E-023 — primeiro baseline real tecnicamente válido da seleção conjunta
+
+**Status:** `executed`; `completed`; `technically valid`; baseline real; resultado de qualidade ainda limitado.
+
+### Objetivo e relação com E-022
+
+O experimento mediu no fluxo real a seleção entre `get_game_context`, `get_position_context` e nenhuma Tool. `E-023` é uma nova execução, realizada depois da correção de integração, e constitui o primeiro baseline real tecnicamente válido desse fluxo conjunto. Ele não reclassifica, substitui, combina nem soma seus resultados aos de `E-022`, que permanece `failed_integration` e inconclusivo.
+
+Os resultados também não são somados aos experimentos anteriores, pois seus objetivos, casos ou condições são diferentes.
+
+### Configuração executada
+
+- **runner:** `professor-context-tool-selection-runner-v1`;
+- **modelo:** `gpt-5-mini`;
+- **prompt:** `professor-ia-v2`;
+- **schema:** `provisional-teacher-response-v1`;
+- **eval set:** `professor-context-tool-selection-evals-v1`;
+- **repetições:** 1 por caso;
+- **execuções:** 12.
+
+### Resultado consolidado
+
+- `totalRuns: 12`;
+- `correct: 8`;
+- `falsePositives: 1`;
+- `falseNegatives: 0`;
+- `wrongTools: 3`;
+- `technicalErrors: 0`;
+- `decisionAccuracy: 0.6666666666666666`;
+- `endToEndSuccessRate: 0.6666666666666666`;
+- `completionRate: 1`.
+
+Isso corresponde a **66,67% de decision accuracy nesta amostra curada de 12 casos, com uma repetição por caso**. A mesma proporção foi observada na taxa de sucesso ponta a ponta, e todas as execuções chegaram a uma decisão válida. Essa formulação descreve somente a amostra; não representa “precisão geral” do modelo.
+
+Não houve erro técnico, de protocolo, de Structured Output ou de integração. Os quatro erros restantes foram decisões observadas do modelo: três seleções da Tool errada e um chamado de Tool quando nenhuma era necessária.
+
+### Resultado por caso
+
+| Caso | Classificação | Decisão observada quando divergente |
+| --- | --- | --- |
+| `GAME-SEL-001` | `correct` | — |
+| `GAME-SEL-002` | `correct` | — |
+| `GAME-SEL-003` | `correct` | — |
+| `GAME-SEL-004` | `wrong_tool` | `get_position_context` |
+| `POSITION-SEL-001` | `correct` | — |
+| `POSITION-SEL-002` | `correct` | — |
+| `POSITION-SEL-003` | `correct` | — |
+| `POSITION-SEL-004` | `wrong_tool` | `get_game_context` |
+| `NO-TOOL-SEL-001` | `correct` | — |
+| `NO-TOOL-SEL-002` | `correct` | — |
+| `NO-TOOL-SEL-003` | `false_positive` | `get_game_context` |
+| `NO-TOOL-SEL-004` | `wrong_tool` | `get_game_context` |
+
+### Telemetria agregada
+
+Latência, em milissegundos:
+
+- `sampleCount: 9`;
+- `minimumMs: 13061.335269000017`;
+- `maximumMs: 27425.816783000002`;
+- `averageMs: 19136.374574`;
+- `medianMs: 17521.139098`.
+
+Tokens:
+
+- `sampleCount: 9`;
+- `inputTokens: 44761`;
+- `outputTokens: 15187`;
+- `totalTokens: 59948`.
+
+Os três casos classificados como `wrong_tool` foram bloqueados antes da segunda interação. Por isso, o relatório possui 12 execuções totais, mas somente nove amostras com telemetria completa agregável de latência e tokens. `totalRuns` e os dois valores de `sampleCount` possuem denominadores diferentes e não devem ser confundidos.
+
+### Interpretação e limitações
+
+O experimento foi executado, concluído e tecnicamente válido, mas seu resultado de qualidade ainda é limitado. A principal hipótese para a próxima investigação é que a fronteira semântica ainda está insuficientemente clara entre contexto de partida, contexto de posição e ausência de necessidade de Tool. Os erros observados apontam para essa hipótese, mas não a comprovam causalmente.
+
+A amostra contém apenas 12 casos curados e uma repetição por caso. Ela não comprova estabilidade estatística, generalização para outras mensagens ou qualidade pedagógica ampla. Futuras alterações de prompt ou das descrições das Tools deverão ser avaliadas contra este baseline, sem modificar retrospectivamente seus casos ou resultados. Nenhuma alteração funcional é proposta nesta etapa.

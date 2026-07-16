@@ -500,6 +500,8 @@ Esses testes offline comprovam a lógica e a orquestração da infraestrutura. S
 
 Os casos canônicos de `E-022` conservam seu `status: "not_executed"` declarativo porque a definição congelada não é reescrita pelo histórico. Separadamente, a primeira execução real está registrada como `failed_integration` e inconclusiva: 12 erros técnicos, dez `FINAL_RESPONSE_OUTPUT_INVALID`, dois `TOOL_CONTEXT_MISMATCH`, `decisionAccuracy: null` e `completionRate: 0`. Não há accuracy observada nem conclusão sobre a capacidade do modelo.
 
+Separadamente, `E-023` estabeleceu o primeiro baseline real tecnicamente válido da seleção conjunta: 12 execuções concluídas, 8 decisões corretas, 3 `wrong_tool`, 1 `false_positive` e 0 erros técnicos, correspondendo a 66,67% de `decision accuracy` nesta amostra curada, com uma repetição por caso. A qualidade ainda é limitada e indica a necessidade de iteração posterior de prompting e das descrições das Tools.
+
 A revisão integrada documentada em [`docs/qa-checklist.md`](docs/qa-checklist.md) verificou as rotas pelo código e obteve sucesso em lint, build e `git diff --check`. Existem suítes unitárias direcionadas aos runtimes de `get_position_context` e `get_game_context`, executadas com o test runner nativo do Node.js e sem rede. Ainda não há uma suíte automatizada ampla para os demais módulos, nem testes de integração ou end-to-end; portanto, não se deve interpretar o build ou as suítes específicas como cobertura funcional completa.
 
 ### Testes manuais realizados
