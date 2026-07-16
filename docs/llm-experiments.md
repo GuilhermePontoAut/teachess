@@ -1124,3 +1124,31 @@ Nas três repetições de cada um dos seis casos, o modelo manteve a decisão es
 - medir tokens e custo;
 - avaliar a qualidade pedagógica separadamente;
 - comparar modelos ou prompts somente com controle de variáveis.
+
+## E-022 — seleção conjunta entre contexto de partida, posição ou nenhuma Tool
+
+**Status:** `not_executed`
+
+### Plano
+
+O experimento medirá exclusivamente a decisão pública `toolDecision` do fluxo real `runProfessorContextToolFlow`: `get_game_context`, `get_position_context` ou `not_called`. A configuração preparada usa `gpt-5-mini`, prompt `professor-ia-v2`, schema `provisional-teacher-response-v1` e eval set `professor-context-tool-selection-evals-v1`.
+
+O conjunto possui 12 casos sintéticos e congelados, igualmente distribuídos entre as três decisões. O plano inicial é uma repetição por caso, com possibilidade posterior de três repetições para observar variabilidade. A execução será estritamente sequencial.
+
+Serão registrados `correct`, `false_positive`, `false_negative`, `wrong_tool` e `technical_error`; `decisionAccuracy`, `endToEndSuccessRate` e `completionRate`; matriz de confusão 3 × 3; accuracy e quantidade por classe; latências; e tokens quando o SDK fornecer `usage`. Não haverá cálculo de custo.
+
+`wrong_tool` faz parte da taxonomia e pode ser produzido em testes offline por executores injetados. No fluxo real, uma solicitação da Tool oposta ao contexto autorizado é bloqueada pela matriz server-side antes da execução e emerge como `TOOL_CONTEXT_MISMATCH`/`technical_error`, sem decisão pública `wrong_tool`. Isso preserva a autorização, mas impede observar diretamente algumas células da matriz de confusão nesse caminho. Esta limitação não altera o estado do experimento: `E-022` continua `not_executed`.
+
+O relatório será sanitizado e gravado somente em `/tmp/teachess-professor-context-tool-selection-evals.json`. Ele não conterá mensagens, justificativas, snapshots, PGN, FEN, identificadores internos, argumentos, respostas textuais nem objetos do provider.
+
+### Critério inicial de aprovação
+
+Para a verificação inicial com uma repetição, o critério planejado é:
+
+- zero `technical_error`;
+- zero `wrong_tool`;
+- zero `false_positive`;
+- zero `false_negative`;
+- 12/12 classificações `correct`.
+
+O runner não foi executado nesta etapa. Portanto, não há resultado real, accuracy observada nem conclusão sobre a capacidade do modelo. Mesmo uma futura execução perfeita com uma repetição será apenas uma verificação inicial, não prova de estabilidade.

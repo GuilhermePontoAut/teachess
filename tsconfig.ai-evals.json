@@ -13,12 +13,15 @@
   "include": [
     "lib/ai/evals/position-context-tool-selection-cases.ts",
     "lib/ai/evals/run-position-context-tool-selection-evals.ts",
+    "lib/ai/evals/professor-context-tool-selection-cases.ts",
+    "lib/ai/evals/run-professor-context-tool-selection-evals.ts",
     "lib/ai/openai-client.ts",
     "lib/ai/prompts/**/*.ts",
     "lib/ai/schemas/provisional-teacher-response.ts",
     "lib/ai/tools/**/*.ts",
     "lib/types/chess.ts",
-    "scripts/run-position-context-tool-selection-evals.ts"
+    "scripts/run-position-context-tool-selection-evals.ts",
+    "scripts/run-professor-context-tool-selection-evals.ts"
   ],
   "exclude": ["**/*.test.ts"]
 }

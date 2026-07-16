@@ -531,3 +531,23 @@ Próximos passos possíveis, sem alterar o eval set v1, incluem ampliar a cobert
 - não há avaliação humana das respostas pedagógicas completas desta execução.
 
 O runner controlado continua coberto por testes offline com transportes simulados e possui `E-020` e `E-021` documentados separadamente. Os seis casos continuam com `status: "not_executed"` apenas na definição canônica imutável; o relatório temporário e os experimentos registram o histórico real. Resultados futuros deverão registrar, no mínimo, modelo, versões do prompt, schema e eval set, repetições e IDs dos casos.
+
+## Avaliação conjunta planejada: partida, posição ou nenhuma Tool
+
+Os testes offline de orquestração verificam que o código respeita a matriz de autorização, chama o executor correto, preserva o protocolo e sanitiza falhas. Como a decisão do modelo é simulada nesses testes, eles não avaliam a inteligência nem a confiabilidade comportamental do modelo. O eval real planejado em `E-022` usará o mesmo `runProfessorContextToolFlow`, mas deixará o modelo produzir `toolDecision` diante dos 12 casos canônicos.
+
+A taxonomia separa os resultados em:
+
+- `correct`: decisão observada igual à esperada;
+- `false_positive`: alguma Tool foi chamada quando se esperava `not_called`;
+- `false_negative`: nenhuma Tool foi chamada quando uma Tool era esperada;
+- `wrong_tool`: foi chamada a Tool oposta à esperada;
+- `technical_error`: não houve decisão pública válida por falha de protocolo, provider, refusal, Structured Output ou fluxo.
+
+`wrong_tool` permanece útil na taxonomia e é testável com executores injetados, que conseguem devolver uma decisão pública oposta. No fluxo real, a matriz de autorização server-side bloqueia a Tool incompatível antes da execução: o runner observa `TOOL_CONTEXT_MISMATCH` como `technical_error`, e não uma decisão pública `wrong_tool`. A proteção evita atravessar o contexto autorizado, mas limita a observabilidade de algumas células da matriz de confusão. `E-022` permanece `not_executed`.
+
+A matriz de confusão 3 × 3 cruza as três decisões esperadas com as três decisões observadas. Ela torna visível qual classe foi confundida com qual, enquanto a accuracy por classe evita que um total agregado esconda uma classe fraca. Os casos são balanceados — quatro por classe — para facilitar essa interpretação; isso não torna a amostra estatisticamente conclusiva.
+
+`decisionAccuracy` divide os acertos apenas pelas execuções que chegaram a uma decisão válida. `endToEndSuccessRate` divide os acertos por todas as execuções, incluindo erros técnicos. `completionRate` mostra a fração que produziu decisão válida. Assim, falhas técnicas não desaparecem do relatório: elas ficam fora do denominador da primeira métrica, mas reduzem as duas métricas ponta a ponta pertinentes.
+
+Repetições futuras ajudam a observar variabilidade. Uma execução perfeita de 12/12, especialmente com uma única repetição, será uma verificação inicial e não prova estabilidade, generalização ou qualidade pedagógica. O status atual de `E-022` é `not_executed`.

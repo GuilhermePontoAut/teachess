@@ -931,6 +931,12 @@ O mapeamento HTTP é: `404` para rota desabilitada; `400` para JSON/body/mensage
 
 `npm run test:professor-context-tool-flow` executa 119 testes offline do schema, fluxo e rota. Eles cobrem game, position e ausência de Tool; executor correto e exclusão do outro; minimização da primeira entrada; matriz completa de incompatibilidade; protocolo e argumentos; guards estruturais de output; preservação e ordem; serialização única; configuração das duas interações; falhas e ausência de vazamento; formato e limites do ID de posição; limite real e declarado do body; precedência antes do cliente; wiring; sucessos das três branches; mapeamento HTTP; logs sanitizados; restauração de ambiente e execução serial dos testes que alteram `process.env`.
 
-O agregado `npm run test:ai-tools` contém 415 testes únicos. Suítes específicas e agregada se sobrepõem e não devem ser somadas novamente.
+O agregado `npm run test:ai-tools` contém 465 testes únicos após a revisão final da Etapa 7C-B. Suítes específicas e agregada se sobrepõem e não devem ser somadas novamente.
 
 Esses testes comprovam a orquestração do código com transportes e executores simulados. Nenhuma chamada à OpenAI e nenhum eval real foram executados na Etapa 7C-A. Portanto, eles não demonstram que o modelo seleciona corretamente partida, posição ou ausência de Tool em mensagens reais. Essa qualidade deverá ser medida em uma etapa futura, separadamente da correção da infraestrutura.
+
+## Runner conjunto de seleção
+
+Foi preparado um runner opt-in para avaliar futuramente se o modelo escolhe `get_game_context`, `get_position_context` ou nenhuma Tool no fluxo conjunto real. Seleção correta é diferente de execução correta: a primeira é uma decisão probabilística do modelo; a segunda permanece uma operação determinística validada pelo servidor.
+
+A matriz server-side continua sendo a autoridade final. Uma escolha errada do modelo não concede acesso, não troca o contexto autorizado e não cria fallback; incompatibilidades continuam sendo erros técnicos sanitizados. O runner está preparado e coberto offline, mas não foi executado nesta etapa, portanto não há resultado real sobre a qualidade da seleção.
