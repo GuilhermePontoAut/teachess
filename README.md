@@ -8,7 +8,7 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat-square&logo=tailwindcss)
 ![Status](https://img.shields.io/badge/status-protótipo_acadêmico-6B7280?style=flat-square)
 
-> **Aviso:** o TeaChess é um protótipo acadêmico. A experiência pública do produto continua baseada em dados, análises, adversários, professores e respostas simulados. Rotas técnicas isoladas validam a integração server-side com LLM, mas não estão conectadas à interface do Professor IA nem representam uma plataforma de xadrez em produção.
+> **Aviso:** o TeaChess é um protótipo acadêmico. Dados, análises técnicas, adversários e professores humanos continuam simulados. O Professor IA possui uma integração funcional server-side com a OpenAI, mas ainda não representa uma plataforma de xadrez em produção.
 
 **Endpoint público:** [Acessar o TeaChess](https://teachess.vercel.app/)
 
@@ -153,11 +153,11 @@ A complexidade não está apenas na quantidade de telas. Ela aparece na coordena
 
 ### Professor IA
 
-**O que funciona:** na rota histórica `/futura-ia`, o usuário pode explorar capacidades, arquitetura, roadmap e uma conversa demonstrativa contextualizada por uma partida ou posição privada. Perguntas livres ou sugeridas selecionam templates locais; as 30 interações mais recentes são persistidas.
+**O que funciona:** na rota histórica `/futura-ia`, o usuário pode explorar capacidades, arquitetura, roadmap e conversar com o Professor IA sobre uma partida ou posição selecionada. Perguntas livres ou sugeridas passam pela rota pública server-side, pelo fluxo de Tools e pelo Structured Output; as 30 interações mais recentes continuam persistidas localmente.
 
-**O que é mockado:** todas as respostas dessa interface. A seleção usa correspondência simples de termos e templates determinísticos, não compreensão semântica. A rota `/futura-ia` não chama LLM, OpenAI API, motor, OCR, visão computacional ou outro serviço de rede.
+**O que é mockado:** os dados iniciais, as análises técnicas e os FENs originados de imagem. A resposta textual usa a OpenAI, mas não há motor, OCR ou visão computacional; portanto, o Professor IA não calcula melhores lances nem valida avaliações técnicas.
 
-**Futuro:** conectar de forma segura a integração técnica já iniciada à interface, separando reconhecimento visual, avaliação do motor e explicação do modelo; aplicar consentimento, rastreabilidade, indicação de fontes, incerteza e revisão humana. A OpenAI foi escolhida como primeiro provedor e o `gpt-5-mini` como modelo inicial sujeito a avaliação.
+**Futuro:** adicionar autenticação e autorização confiáveis no servidor, além de separar reconhecimento visual, avaliação por motor e explicação do modelo. A OpenAI é o primeiro provedor e o `gpt-5-mini`, o modelo inicial sujeito a avaliação.
 
 ![Demonstração do Professor IA](docs/screenshots/ai-professor-demo.png)
 
@@ -240,7 +240,7 @@ A OpenAI foi escolhida como provedora da primeira integração, e o `gpt-5-mini`
 
 #### Integração implementada
 
-A integração técnica usa o SDK oficial da OpenAI, exclusivamente no servidor, pela Responses API. `OPENAI_API_KEY` permanece em variável de ambiente não pública. As rotas técnicas são protegidas por uma flag server-side, ficam desabilitadas por padrão e incluem uma chamada textual mínima e uma rota com Structured Outputs. Nenhuma delas está conectada à interface do Professor IA.
+A integração usa o SDK oficial da OpenAI, exclusivamente no servidor, pela Responses API. `OPENAI_API_KEY` permanece em variável de ambiente não pública. A interface chama somente `POST /api/ai/professor`, que reutiliza o fluxo validado de seleção de contexto e Structured Outputs; as rotas técnicas continuam protegidas por flag e separadas da experiência pública.
 
 #### Structured Outputs
 
@@ -252,13 +252,13 @@ O system prompt `professor-ia-v1` permanece preservado como baseline histórico,
 
 #### Fase de Tools
 
-A função interna determinística `get_position_context` possui uma definição estrita de Tool para a Responses API e um fluxo técnico controlado de function calling em rota isolada. O primeiro ciclo real foi validado localmente: a Tool foi executada no servidor sobre um snapshot autorizado, e uma comparação entre o mesmo contexto `confirmed` e `unconfirmed` preservou a diferença de suficiência esperada. A integração pública com a interface do Professor IA ainda não foi implementada. Os detalhes estão em [`docs/llm-tools.md`](docs/llm-tools.md), [`docs/llm-experiments.md`](docs/llm-experiments.md) e [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
+A função interna determinística `get_position_context` possui uma definição estrita de Tool para a Responses API e um fluxo técnico controlado de function calling. O primeiro ciclo real foi validado localmente: a Tool foi executada no servidor sobre um snapshot autorizado, e uma comparação entre o mesmo contexto `confirmed` e `unconfirmed` preservou a diferença de suficiência esperada. O fluxo conjunto agora é reutilizado pela integração pública do Professor IA. Os detalhes estão em [`docs/llm-tools.md`](docs/llm-tools.md), [`docs/llm-experiments.md`](docs/llm-experiments.md) e [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
 
 A segunda função determinística, `get_game_context`, agora também possui definição estrita de Tool para a Responses API e um fluxo forçado em rota técnica isolada. O ciclo possui exatamente duas chamadas lógicas: a primeira força a solicitação da Tool usando somente o `gameContextId` opaco, cujo formato é restrito a letras, números, ponto, underscore, dois-pontos e hífen; o servidor valida a chamada, cruza o ID com o snapshot owner-only e devolve o resultado como `function_call_output`; a segunda chamada, sem Tools, produz o Structured Output existente. O snapshot completo permanece server-side no fluxo, e a resposta pública não inclui IDs internos de autorização, argumentos, objetos brutos do SDK ou o output intermediário.
 
-Essa infraestrutura continua desabilitada por padrão e não foi conectada à interface pública. A rota técnica limita a requisição completa a 262.144 bytes, conferindo o `Content-Length` disponível e os bytes efetivamente lidos antes do parsing. Toda a implementação e validação desta etapa usaram transportes simulados e testes offline; nenhuma chamada real à OpenAI foi realizada. Os contratos, erros e limites estão em [`docs/llm-tools.md`](docs/llm-tools.md).
+Os baselines técnicos continuam desabilitados por padrão. O mesmo handler compartilhado limita a requisição completa a 262.144 bytes, conferindo o `Content-Length` disponível e os bytes efetivamente lidos antes do parsing. Os contratos, erros e limites estão em [`docs/llm-tools.md`](docs/llm-tools.md).
 
-A Etapa 7C-A acrescentou um fluxo técnico separado no qual `get_game_context` e `get_position_context` são disponibilizadas simultaneamente, em ordem estável sem prioridade semântica. A aplicação autoriza no máximo um contexto discriminado por requisição — partida, posição ou nenhum — e envia ao provider somente o tipo e o ID opaco derivado do snapshot quando ele existe. Os dois IDs técnicos usam `trim`, limite de 128 caracteres e a mesma allowlist `^[A-Za-z0-9._:-]+$`; formato seguro não substitui a correlação e a autorização server-side. Com `tool_choice: "auto"`, o modelo pode solicitar a Tool compatível ou nenhuma Tool; o código valida nome, argumentos, correlação e a matriz Tool versus contexto antes de qualquer execução. Antes de preservar ou reenviar `response.output`, o fluxo valida em runtime a estrutura real de `reasoning`, `message` e `function_call` segundo o SDK instalado, não apenas o discriminador `type`. Escolhas incompatíveis ou itens malformados são rejeitados sem correção ou fallback. Os caminhos com e sem Tool realizam exatamente duas interações lógicas e terminam no mesmo Structured Output validado. Esse fluxo permanece isolado, offline e sem integração com a interface pública; nenhum eval real de qualidade da seleção entre as duas Tools foi executado.
+A Etapa 7C-A acrescentou um fluxo no qual `get_game_context` e `get_position_context` são disponibilizadas simultaneamente, em ordem estável sem prioridade semântica. A aplicação autoriza no máximo um contexto discriminado por requisição — partida, posição ou nenhum — e envia ao provider somente o tipo e o ID opaco derivado do snapshot quando ele existe. Os dois IDs técnicos usam `trim`, limite de 128 caracteres e a mesma allowlist `^[A-Za-z0-9._:-]+$`; formato seguro não substitui a correlação e a autorização server-side. Com `tool_choice: "auto"`, o modelo pode solicitar a Tool compatível ou nenhuma Tool; o código valida nome, argumentos, correlação e a matriz Tool versus contexto antes de qualquer execução. Antes de preservar ou reenviar `response.output`, o fluxo valida em runtime a estrutura real de `reasoning`, `message` e `function_call` segundo o SDK instalado, não apenas o discriminador `type`. Escolhas incompatíveis ou itens malformados são rejeitados sem correção ou fallback. Os caminhos com e sem Tool realizam exatamente duas interações lógicas e terminam no mesmo Structured Output validado. Esse fluxo é agora a base da rota pública.
 
 A suíte da Etapa 7B também verifica explicitamente a fronteira entre protocolo e execução determinística: chamadas malformadas não alcançam o executor, enquanto argumentos JSON já interpretados que dependem do contrato da Tool chegam ao executor exatamente uma vez. Os testes da rota conferem o input completo e o transporte entregues ao orquestrador, além da sanitização exata dos logs.
 
@@ -276,7 +276,7 @@ A chave não é enviada ao frontend, e a rota técnica só pode ser habilitada p
 
 #### Limitações atuais
 
-A avaliação real da seleção automática inclui o histórico inicial `E-020` e a execução de consistência `E-021`, com três repetições de cada um dos seis casos curados sobre o mesmo snapshot. Esse resultado aumenta a evidência operacional nessa configuração, mas a baixa diversidade de mensagens, snapshots, modelos e prompts não permite generalização nem garantia estatística. `E-022` não acrescentou evidência sobre qualidade do modelo porque sua primeira execução foi invalidada pela integração. `E-023` e `E-024` registram separadamente a comparação inicial entre v2 e v3 no fluxo conjunto, ainda com apenas uma repetição dos 12 casos; a melhora da v3 nessa amostra não comprova estabilidade nem promove o prompt. Não existem RAG, integração real com a interface do Professor IA, autenticação, rate limiting do endpoint final ou validação por engine de xadrez. Os fluxos de function calling permanecem restritos a rotas técnicas. Tokens e custos não foram medidos em `E-020` ou `E-021`; os experimentos conjuntos posteriores registraram `usage`, mas não calcularam custo financeiro. As latências observadas não constituem SLA ou benchmark definitivo.
+A avaliação real da seleção automática inclui o histórico inicial `E-020` e a execução de consistência `E-021`, com três repetições de cada um dos seis casos curados sobre o mesmo snapshot. Esse resultado aumenta a evidência operacional nessa configuração, mas a baixa diversidade de mensagens, snapshots, modelos e prompts não permite generalização nem garantia estatística. `E-022` não acrescentou evidência sobre qualidade do modelo porque sua primeira execução foi invalidada pela integração. `E-023` e `E-024` registram separadamente a comparação inicial entre v2 e v3 no fluxo conjunto, ainda com apenas uma repetição dos 12 casos; a melhora da v3 nessa amostra não comprova estabilidade. Não existem RAG, autenticação, rate limiting completo ou validação por engine de xadrez. A rota pública reutiliza o fluxo de function calling validado, mas a autorização baseada no snapshot do navegador continua adequada somente ao protótipo local. Tokens e custos não foram medidos em `E-020` ou `E-021`; os experimentos conjuntos posteriores registraram `usage`, mas não calcularam custo financeiro. As latências observadas não constituem SLA ou benchmark definitivo.
 
 As decisões e evidências detalhadas estão em [`docs/llm-architecture.md`](docs/llm-architecture.md), [`docs/llm-provider-model-selection.md`](docs/llm-provider-model-selection.md), [`docs/llm-experiments.md`](docs/llm-experiments.md) e [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
 
@@ -314,7 +314,7 @@ teachess/
 ├── lib/
 │   ├── ai/              # integração técnica, prompts, schema e evals versionados
 │   ├── data/            # mocks e catálogos determinísticos
-│   ├── future-ai/       # templates locais do Professor IA
+│   ├── future-ai/       # interface e snapshots do Professor IA
 │   ├── storage/         # adaptação segura de armazenamento
 │   ├── types/           # modelos TypeScript
 │   └── utils/           # regras e cálculos de domínio
@@ -571,7 +571,9 @@ npm run build
 npm run start
 ```
 
-Não são necessárias variáveis de ambiente ou credenciais para navegar pela interface simulada. As rotas técnicas de LLM permanecem desabilitadas por padrão e só funcionam, em ambiente de desenvolvimento autorizado, com `OPENAI_API_KEY` e a flag server-side correspondente; elas não são necessárias para executar a experiência pública do protótipo.
+As páginas locais podem ser navegadas sem credenciais, mas respostas do Professor IA exigem `OPENAI_API_KEY` no ambiente do servidor. Opcionalmente, `AI_PROFESSOR_PROMPT_VERSION` seleciona uma versão registrada; na ausência da variável, a rota pública usa `professor-ia-v3`. As rotas técnicas de LLM continuam desabilitadas por padrão e exigem a flag server-side correspondente.
+
+A integração do Professor IA é funcional e a chave permanece no servidor. A autorização atual, baseada na identidade demonstrativa estável e em snapshots mínimos do item selecionado, é adequada somente ao protótipo local; autenticação real e autorização server-side confiável permanecem trabalho futuro.
 
 
 ## 13. Dados simulados
@@ -582,7 +584,7 @@ demonstrar seus fluxos de interface. Nesta versão:
 - partidas, adversários e jogadores iniciais são fictícios;
 - análises, precisões, erros e recomendações são simulados;
 - o ranking não utiliza um sistema Elo real;
-- o Professor IA utiliza templates locais, sem LLM;
+- o Professor IA usa LLM real, mas recebe dados de partida e posição ainda demonstrativos;
 - posições apresentadas após o envio de imagens não foram reconhecidas;
 - professores, avaliações, preços e horários são fictícios;
 - agendamentos não representam reservas reais;
@@ -597,11 +599,10 @@ originais e apagam as alterações locais daquele módulo.
 
 O TeaChess **ainda não possui**:
 
-- integração de LLM com a interface real do Professor IA;
-- endpoint final de IA com autenticação e rate limiting;
+- autenticação e rate limiting completo no endpoint do Professor IA;
 - Stockfish ou qualquer motor de xadrez;
 - OCR, visão computacional ou reconhecimento real de posições;
-- backend de produto ou banco de dados; as APIs existentes são somente rotas técnicas isoladas;
+- backend de produto ou banco de dados; a API pública atual apenas orquestra a consulta de IA;
 - autenticação, autorização ou segurança real;
 - multiplayer, matchmaking, presença ou chat em rede;
 - cálculo Elo real ou validação competitiva;
