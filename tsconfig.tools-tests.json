@@ -11,6 +11,8 @@
     "target": "ES2022"
   },
   "include": [
+    "app/api/ai/test/tools/position-context/route.ts",
+    "app/api/ai/test/tools/position-context/route.test.ts",
     "lib/ai/tools/**/*.ts",
     "lib/types/chess.ts"
   ]

@@ -250,9 +250,9 @@ O contrato provisório usa Zod e a combinação `responses.parse(...)`, `zodText
 
 O system prompt `professor-ia-v1` permanece preservado como baseline, e a comparação controlada de `EV-001` a `EV-006` foi concluída. O `professor-ia-v2` apresentou melhorias observadas em `EV-003`, `EV-004`, `EV-005` e `EV-006`, preservou o acerto do `EV-002` e não melhorou o `EV-001`. Por esse conjunto qualitativo, a v2 é a melhor candidata atual para a próxima etapa, sem alegação de perfeição ou estabilidade estatística. Os detalhes permanecem em [`docs/llm-experiments.md`](docs/llm-experiments.md) e [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
 
-#### Início da fase de Tools
+#### Fase de Tools
 
-A função interna determinística `get_position_context` foi implementada com validação estrita de argumentos, snapshot autorizado, correspondência do ID, estrutura do FEN, aceitação pelo `chess.js` e schema do resultado. A suíte local não usa LLM nem rede. A função ainda não foi registrada como Tool, não executa function calling e não está conectada à OpenAI ou à interface. Os detalhes estão em [`docs/llm-tools.md`](docs/llm-tools.md).
+A função interna determinística `get_position_context` agora possui uma definição estrita de Tool para a Responses API e um fluxo técnico controlado de function calling em rota isolada. A aplicação continua executando a função somente no servidor sobre o snapshot autorizado, e os testes do ciclo de duas interações usam transporte simulado, sem rede. A interface real do Professor IA ainda não foi integrada, e nenhuma chamada à OpenAI foi feita nesta etapa. Os detalhes estão em [`docs/llm-tools.md`](docs/llm-tools.md).
 
 #### Segurança e diagnóstico
 
@@ -466,6 +466,8 @@ npm run lint    # ESLint
 npm run build   # build de produção, TypeScript e geração de páginas
 npm run start   # execução do build de produção
 npm run test:get-position-context # testes determinísticos da função interna
+npm run test:position-context-tool-flow # testes offline de function calling
+npm run test:ai-tools # executa as duas suítes relacionadas à Tool
 ```
 
 A revisão integrada documentada em [`docs/qa-checklist.md`](docs/qa-checklist.md) verificou as rotas pelo código e obteve sucesso em lint, build e `git diff --check`. Existe uma suíte unitária direcionada ao runtime de `get_position_context`, executada com o test runner nativo do Node.js e sem rede. Ainda não há uma suíte automatizada ampla para os demais módulos, nem testes de integração ou end-to-end; portanto, não se deve interpretar o build ou a suíte específica como cobertura funcional completa.

@@ -1,6 +1,6 @@
 # Tools do Professor IA: contrato inicial de `get_position_context`
 
-Este documento registra a investigação da Etapa 6A e a implementação determinística da Etapa 6B da primeira função candidata a Tool do TeaChess. `get_position_context` possui agora schemas, runtime interno e testes locais, mas ainda não foi registrada na Responses API nem conectada ao Professor IA. Nenhuma chamada ao provedor faz parte da Etapa 6B.
+Este documento registra a investigação da Etapa 6A, a implementação determinística da Etapa 6B e o fluxo técnico de function calling da Etapa 6C-A. `get_position_context` possui schemas, runtime interno, definição compatível com a Responses API e um orquestrador testado sem rede. A Tool continua sem integração com a interface real do Professor IA, e nenhuma chamada ao provedor foi feita na Etapa 6C-A.
 
 ## 1. Classificação das definições
 
@@ -37,8 +37,7 @@ Este documento registra a investigação da Etapa 6A e a implementação determi
 
 ### Fora do escopo atual
 
-- registrar a Tool na Responses API;
-- executar function calling ou chamar a OpenAI;
+- executar chamadas reais de function calling contra a OpenAI;
 - implementar `get_legal_moves`;
 - usar Stockfish ou qualquer engine;
 - usar RAG;
@@ -389,17 +388,17 @@ Não se deve usar uma única exceção genérica para ausência de FEN, não con
 - Validar no servidor argumentos, snapshot, correspondência do ID e resultado.
 - O protótipo sem autenticação não oferece autorização real; produção exigirá identidade e fonte confiável no backend.
 
-## 13. Relação futura com function calling
+## 13. Fluxo técnico de function calling
 
-Fluxo planejado, ainda não implementado:
+Fluxo implementado e testado com transporte simulado:
 
 1. O Route Handler recebe a pergunta e o snapshot autorizado.
-2. O servidor chama o modelo com a definição de `get_position_context`.
+2. O servidor prepara a primeira chamada lógica com a definição de `get_position_context`.
 3. O modelo solicita a Tool com o `positionContextId` autorizado.
 4. A aplicação valida nome, schema dos argumentos e correspondência com o snapshot.
 5. A função determinística consulta somente o snapshot autorizado.
 6. O resultado estruturado é enviado ao modelo.
-7. O modelo produz a resposta final conforme o schema do Professor IA.
+7. Uma segunda chamada lógica produz a resposta final conforme o schema provisório do Professor IA.
 
 A Tool não recebe diretamente uma resposta natural do modelo. Ela recebe apenas os argumentos mínimos do contrato. Pergunta do usuário, resultado da Tool e resposta final são artefatos diferentes.
 
@@ -444,30 +443,20 @@ Os casos determinísticos de função, runtime e schemas abaixo foram implementa
 
 ```mermaid
 flowchart LR
-    U[Usuário] --> UI[Interface no navegador]
+    R[Route Handler] --> C1[Primeira Responses API]
+    C1 --> FC[function_call]
+    FC --> D[Runtime determinístico<br/>executeGetPositionContext]
+    D --> FO[function_call_output<br/>mesmo call_id]
+    FO --> C2[Segunda Responses API]
+    C2 --> SO[Structured Output]
 
-    subgraph B[Navegador]
-      UI <--> LS[(localStorage)]
-      UI --> S[Snapshot mínimo autorizado]
-    end
-
-    S --> R[Route Handler no servidor]
-    R --> T[Runtime de Tools]
-    T --> G[get_position_context]
-    G --> O[Resultado estruturado]
-    O --> L[LLM]
-    L --> F[Resposta estruturada]
-    F --> UI
-
-    classDef browser fill:#eef6ff,stroke:#2563eb,color:#172554;
     classDef server fill:#f5f5f5,stroke:#404040,color:#171717;
     classDef model fill:#fff7ed,stroke:#ea580c,color:#431407;
-    class LS,UI,S browser;
-    class R,T,G,O server;
-    class L,F model;
+    class R,D,FO server;
+    class C1,FC,C2,SO model;
 ```
 
-O `localStorage` permanece dentro do navegador. Não existe seta do servidor, do runtime ou do LLM para o armazenamento local; somente o snapshot mínimo criado pela interface atravessa a fronteira.
+O modelo solicita a função, mas a aplicação valida e executa o código. O modelo nunca acessa diretamente o snapshot: ele recebe somente o identificador de correlação e, depois, os fatos produzidos pelo runtime. Nesta rota técnica, a Tool é forçada para validar a infraestrutura; a seleção automática será avaliada posteriormente.
 
 ## 16. Implementação determinística da Etapa 6B
 
@@ -508,4 +497,82 @@ O runtime verifica, nesta ordem, presença do snapshot, schema do snapshot, sche
 
 O projeto não possuía runner de testes. Sem instalar dependências, a suíte usa `node:test`: o TypeScript compila apenas os arquivos desta função para `/tmp`, e o Node executa o JavaScript gerado. Foram executados 28 testes: os 18 casos originais continuam cobrindo função, runtime e contratos estruturais; dez casos adicionais confirmam que resultados reais permanecem aceitos e que combinações semanticamente incoerentes de FEN, validações, confirmação, readiness, origem e limitações são rejeitadas. O comando concluiu com 28 aprovações e nenhuma falha.
 
-Esta etapa não cria normalizador de `UploadedPosition`, campo persistido de confirmação, autenticação ou autorização real de servidor. Também não implementa JSON Schema para o provedor, definição de Tool, function calling, orquestração com modelo nem qualquer chamada à OpenAI.
+Esta etapa não cria normalizador de `UploadedPosition`, campo persistido de confirmação, autenticação ou autorização real de servidor. A interface e a persistência continuam inalteradas.
+
+## 17. Definição OpenAI e orquestração da Etapa 6C-A
+
+### Definição da Tool
+
+`lib/ai/tools/get-position-context.openai.ts` exporta a constante única `GET_POSITION_CONTEXT_TOOL_NAME`, a descrição pública, a definição e a lista com somente uma Tool. A definição usa o tipo oficial `FunctionTool` do SDK `openai` 6.47.0 e `satisfies` para verificar o formato achatado da Responses API:
+
+- `type: "function"`;
+- `name: "get_position_context"`;
+- `strict: true`;
+- objeto com somente `positionContextId`;
+- string obrigatória de 1 a 128 caracteres;
+- `additionalProperties: false`;
+- nenhum FEN, snapshot, confirmação ou flag de autorização.
+
+O helper `zodFunction` existe na versão instalada, mas cria a estrutura aninhada de Chat Completions (`function: { name, parameters, strict }`), incompatível com `FunctionTool` da Responses API. O SDK também exporta `zodResponsesFunction`, mas a definição manual foi mantida para tornar o contrato público inspecionável, preservar explicitamente os limites e não depender de conversão implícita. Os testes cruzam o limite compartilhado e as rejeições essenciais com `getPositionContextArgumentsSchema`, reduzindo risco de divergência.
+
+### Primeira interação
+
+`runPositionContextToolFlow` recebe mensagem e snapshot já validados, além do prompt selecionado pelo registro existente. A entrada contém a mensagem original e um pequeno contexto técnico confiável gerado no servidor com o `positionContextId` derivado exclusivamente do snapshot. A primeira requisição usa:
+
+- `model: "gpt-5-mini"`;
+- `instructions` com o prompt versionado;
+- somente `get_position_context` em `tools`;
+- `tool_choice: { type: "function", name: "get_position_context" }`;
+- `parallel_tool_calls: false`;
+- `store: false`.
+
+A chamada forçada valida o encadeamento técnico e não demonstra que o modelo seleciona autonomamente a Tool correta.
+
+### Validação e execução
+
+`response.output` é tratado como não confiável. O fluxo exige exatamente um item `type: "function_call"`, confere o nome, exige `call_id` não vazio, exige `arguments` string e aplica `JSON.parse` para obter `unknown`. O valor é entregue exclusivamente a `executeGetPositionContext({ rawArguments, authorizedSnapshot })`; a orquestração não chama diretamente `getPositionContext`, não consulta store e não usa fallback de ID.
+
+Falhas de contrato, snapshot ou autorização encerram o fluxo antes da segunda interação. Elas não são devolvidas ao modelo para reinterpretação. Ausência normal de FEN permanece um resultado bem-sucedido da função.
+
+Em sucesso, o item associado à chamada é:
+
+```json
+{
+  "type": "function_call_output",
+  "call_id": "o mesmo identificador recebido",
+  "output": "{\"success\":true,\"data\":{...}}"
+}
+```
+
+`output` recebe uma única serialização com `JSON.stringify`. Snapshot bruto, argumentos brutos, stack trace, detalhes do Zod e mensagens internas do `chess.js` não são incluídos.
+
+### Segunda interação e preservação do protocolo
+
+A entrada final concatena, nesta ordem:
+
+1. a entrada original;
+2. todos os itens da primeira `response.output`, sem filtragem ou reordenação;
+3. o `function_call_output`.
+
+O SDK 6.47.0 possui uma divergência de união entre `ResponseOutputItem` e `ResponseInputItem` para estados de algumas tools embutidas. Por isso, há uma conversão de tipo localizada depois da concatenação integral; nenhum item é removido. A segunda chamada não disponibiliza `tools` nem `tool_choice`, usa novamente o prompt, `store: false`, `responses.parse(...)`, `zodTextFormat(...)` e `provisionalTeacherResponseSchema`. O fluxo exige `status: "completed"` e valida novamente `output_parsed` com o schema Zod.
+
+O teste de preservação cobre, na mesma resposta, uma variante real `reasoning` (`ResponseReasoningItem`), uma `message` e a `function_call`. Ele confirma a mesma ordem, as mesmas referências e o `function_call_output` somente depois de todos os itens, evitando que uma evolução do protocolo seja filtrada ou modificada silenciosamente.
+
+O ciclo possui limite fixo de duas interações lógicas: uma para solicitar a Tool e outra para produzir o Structured Output. Não há loop, retry, streaming, execução paralela, terceira rodada ou múltiplas Tools.
+
+### Rota técnica e testes sem rede
+
+`POST /api/ai/test/tools/position-context` usa runtime Node.js e fica desabilitada por padrão. A flag `ENABLE_AI_TEST_ROUTE` é verificada antes da leitura do body. Depois dela, a versão de prompt é selecionada por `AI_TEST_PROMPT_VERSION`; somente então o JSON e o schema estrito do body são validados. O body aceita apenas `message` com trim, de 1 a 2.000 caracteres, e `authorizedSnapshot` validado pelo schema compartilhado. A chave e o cliente OpenAI só são consultados/criados depois de todas essas validações locais.
+
+A resposta pública de sucesso contém modelo, versões, resumo da execução da Tool e o objeto pedagógico final. Ela não contém `call_id`, argumentos, output bruto do provedor, snapshot ou objetos do SDK. Erros públicos usam códigos e mensagens controlados. Falhas do provedor ou do protocolo recebido usam HTTP `502`; falhas internas do runtime/snapshot posteriores à validação da rota usam `500`; autorização divergente usa `403`; configuração ausente ou inválida usa `503`. Um erro inesperado da aplicação usa `internal_error`/`500`, nunca é atribuído automaticamente ao provedor e não recebe diagnóstico de provedor. Logs registram somente a classificação segura, acrescentando diagnóstico filtrado apenas ao erro já classificado como `PROVIDER_ERROR`.
+
+Os testes do orquestrador usam transporte injetável e objetos limitados aos campos consumidos. Testes adicionais chamam o handler `POST` real com a Web API `Request`, sem monkey patch global e sem rede. Eles cobrem a rota desabilitada, prompt desconhecido, JSON inválido, mensagem ou snapshot inválido e chave ausente depois de um body válido; também confirmam que as variáveis de ambiente são restauradas e que a execução é serial. O mapeamento HTTP possui teste exaustivo sobre o union type, além da cobertura de definição, schema HTTP, sucesso com duas chamadas, preservação integral, autorização, argumentos inválidos, respostas ausentes/múltiplas/recusadas/incompletas, output estruturado inválido, configuração das chamadas e sanitização.
+
+### Limitações
+
+- a rota é técnica, forçada e não é endpoint de produto;
+- nenhuma chamada real foi feita nesta etapa;
+- seleção automática de Tool ainda não foi avaliada;
+- a interface real do Professor IA, stores e persistência não foram alteradas;
+- o snapshot vindo do navegador continua sem autenticação ou autorização real;
+- não há engine, OCR, visão computacional, backend de produto, retries ou streaming.
