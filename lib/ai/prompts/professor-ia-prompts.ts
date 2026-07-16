@@ -6,10 +6,15 @@ import {
   PROFESSOR_IA_PROMPT_VERSION_V2,
   PROFESSOR_IA_SYSTEM_PROMPT_V2,
 } from "@/lib/ai/prompts/professor-ia-system-prompt-v2";
+import {
+  PROFESSOR_IA_PROMPT_VERSION_V3,
+  PROFESSOR_IA_SYSTEM_PROMPT_V3,
+} from "@/lib/ai/prompts/professor-ia-system-prompt-v3";
 
 const PROFESSOR_IA_PROMPTS = {
   [PROFESSOR_IA_PROMPT_VERSION]: PROFESSOR_IA_SYSTEM_PROMPT,
   [PROFESSOR_IA_PROMPT_VERSION_V2]: PROFESSOR_IA_SYSTEM_PROMPT_V2,
+  [PROFESSOR_IA_PROMPT_VERSION_V3]: PROFESSOR_IA_SYSTEM_PROMPT_V3,
 } as const;
 
 export type ProfessorIaPromptVersion = keyof typeof PROFESSOR_IA_PROMPTS;

@@ -135,15 +135,18 @@ function cloneReport(
   return structuredClone(report);
 }
 
-test("configuração aceita somente professor-ia-v2 e repetições de 1 a 5", () => {
-  for (const repetitions of [1, 5]) {
-    assert.equal(
-      professorContextToolSelectionEvalRunConfigSchema.safeParse({
-        ...baseConfig,
-        repetitions,
-      }).success,
-      true,
-    );
+test("configuração aceita professor-ia-v2 e v3 com repetições de 1 a 5", () => {
+  for (const promptVersion of ["professor-ia-v2", "professor-ia-v3"]) {
+    for (const repetitions of [1, 5]) {
+      assert.equal(
+        professorContextToolSelectionEvalRunConfigSchema.safeParse({
+          ...baseConfig,
+          promptVersion,
+          repetitions,
+        }).success,
+        true,
+      );
+    }
   }
   for (const repetitions of [0, -1, 1.5, 6]) {
     assert.equal(
@@ -160,6 +163,25 @@ test("configuração aceita somente professor-ia-v2 e repetições de 1 a 5", ()
       promptVersion: "professor-ia-v1",
     }).success,
     false,
+  );
+});
+
+test("relatório preserva professor-ia-v3 efetivamente selecionado", async () => {
+  const selectedPrompt = {
+    version: "professor-ia-v3",
+    systemPrompt: "Prompt v3 simulado e selecionado.",
+  } as const;
+  const report = await runProfessorContextToolSelectionEvals({
+    cases: professorContextToolSelectionCases,
+    config: { ...baseConfig, promptVersion: "professor-ia-v3" },
+    prompt: selectedPrompt,
+    executeCase: async (input) => success(caseForInput(input).expectedDecision),
+    clock: deterministicClock(),
+  });
+  assert.equal(report.promptVersion, "professor-ia-v3");
+  assert.equal(
+    professorContextToolSelectionEvalReportSchema.safeParse(report).success,
+    true,
   );
 });
 

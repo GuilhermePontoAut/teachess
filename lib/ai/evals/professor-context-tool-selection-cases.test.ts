@@ -22,6 +22,21 @@ const canonicalIds = [
   "NO-TOOL-SEL-004",
 ] as const;
 
+const canonicalExpectedDecisions = [
+  "get_game_context",
+  "get_game_context",
+  "get_game_context",
+  "get_game_context",
+  "get_position_context",
+  "get_position_context",
+  "get_position_context",
+  "get_position_context",
+  "not_called",
+  "not_called",
+  "not_called",
+  "not_called",
+] as const;
+
 test("conjunto v1 contém exatamente os doze IDs canônicos na ordem fixa", () => {
   assert.equal(
     PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_SET_VERSION,
@@ -36,6 +51,12 @@ test("conjunto v1 contém exatamente os doze IDs canônicos na ordem fixa", () =
     new Set(professorContextToolSelectionCases.map((evalCase) => evalCase.id))
       .size,
     12,
+  );
+  assert.deepEqual(
+    professorContextToolSelectionCases.map(
+      (evalCase) => evalCase.expectedDecision,
+    ),
+    canonicalExpectedDecisions,
   );
 });
 

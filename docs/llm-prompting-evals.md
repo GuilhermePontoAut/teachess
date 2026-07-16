@@ -1,6 +1,6 @@
 # Prompting e evals do Professor IA
 
-Este documento registra a hipótese inicial de prompting, os conjuntos versionados de avaliação do Professor IA e os primeiros achados do prompt v2 com a Tool real. `EV-001` a `EV-006` possuem execuções registradas com os prompts v1 e v2; essa amostra pequena não comprova estabilidade. Os experimentos de function calling e seleção automática receberam IDs `E-017` a `E-021` e não alteram os casos declarativos existentes.
+Este documento registra a hipótese inicial de prompting, os conjuntos versionados de avaliação do Professor IA, os achados do prompt v2 com a Tool real e a hipótese ainda não executada do prompt v3. `EV-001` a `EV-006` possuem execuções registradas com os prompts v1 e v2; essa amostra pequena não comprova estabilidade. Os experimentos de function calling e seleção automática não alteram os casos declarativos existentes.
 
 ## Por que o prompt é versionado
 
@@ -134,6 +134,25 @@ As mudanças principais da v2 são:
 - tratamento explícito de dados automáticos não confirmados como insuficientes para analisar a partida ou posição real.
 
 A comparação controlada da v2 está registrada abaixo. Uma execução por caso não comprova estabilidade nem significância estatística.
+
+## professor-ia-v3 como hipótese de seleção semântica
+
+O `professor-ia-v3` preserva integralmente as regras pedagógicas e de grounding da v2 e acrescenta instruções voltadas especificamente à primeira decisão do fluxo conjunto. A v2 continua disponível e inalterada como baseline histórico; a v3 não a substitui e ainda não possui resultado real registrado.
+
+A distinção central é:
+
+- **v2:** define papel, grounding, insuficiência, segurança e semântica do Structured Output, mas não separa detalhadamente as três fontes operacionais do fluxo conjunto;
+- **v3:** explicita que `get_game_context` serve apenas para fatos da partida completa, `get_position_context` apenas para fatos da posição específica e nenhuma Tool para perguntas gerais, contextos irrelevantes ou respostas que não dependam de dados privados.
+
+A v3 também determina que a presença de contexto ou uma palavra isolada não basta para chamar uma Tool, que no máximo uma Tool pode ser chamada, que a fonte factual necessária deve orientar a decisão, que contexto ausente não pode ser inventado e que uma Tool incompatível com o contexto autorizado nunca pode ser chamada. Mensagens, PGN, FEN, notas, tags e metadados continuam sendo dados não confiáveis. Poucos exemplos novos cobrem partida, posição, pergunta geral com contexto e pedido ambíguo que dispensa dados privados, sem copiar literalmente os 12 casos canônicos.
+
+Na fase de seleção, o prompt solicita somente a decisão operacional necessária e proíbe expor cadeia de pensamento. Essa regra não altera o Structured Output da segunda interação, a orquestração ou a resposta pública.
+
+### Comparação controlada v2 versus v3
+
+`E-023`, executado com `professor-ia-v2`, permanece o baseline. A futura avaliação com v3 manterá `gpt-5-mini`, os 12 casos e suas decisões esperadas, definições e schemas das Tools, runtimes, orquestração, Structured Output, métricas, classificações e formato do relatório. A única variável experimental será o system prompt.
+
+O runner conjunto aceita explicitamente `AI_EVAL_PROMPT_VERSION=professor-ia-v2` e `AI_EVAL_PROMPT_VERSION=professor-ia-v3`, rejeita ausência e versões desconhecidas e registra no relatório exatamente a versão selecionada. Essa capacidade prepara a comparação; não constitui execução nem evidência de melhoria.
 
 ## Protocolo de comparação v1 versus v2
 

@@ -74,6 +74,16 @@ export function resolvePositionContextToolSelectionEvalEnvironment(
       errorCode: "PROMPT_VERSION_REQUIRED",
     };
   }
+  if (
+    requestedPromptVersion !== "professor-ia-v1" &&
+    requestedPromptVersion !== "professor-ia-v2"
+  ) {
+    return {
+      status: "invalid",
+      exitCode: REAL_AI_EVALS_CONFIGURATION_ERROR_EXIT_CODE,
+      errorCode: "PROMPT_VERSION_INVALID",
+    };
+  }
 
   let prompt: SelectedProfessorIaPrompt;
   try {
@@ -116,7 +126,7 @@ export function resolvePositionContextToolSelectionEvalEnvironment(
     exitCode: 0,
     config: {
       model: POSITION_CONTEXT_TOOL_FLOW_MODEL,
-      promptVersion: prompt.version,
+      promptVersion: requestedPromptVersion,
       schemaVersion: PROVISIONAL_TEACHER_RESPONSE_SCHEMA_VERSION,
       evalSetVersion: POSITION_CONTEXT_TOOL_SELECTION_EVAL_SET_VERSION,
       repetitions,

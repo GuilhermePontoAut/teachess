@@ -1,6 +1,12 @@
 import { z } from "zod";
 import type { ResponseUsage } from "openai/resources/responses/responses";
 import type { SelectedProfessorIaPrompt } from "../prompts/professor-ia-prompts";
+import {
+  PROFESSOR_IA_PROMPT_VERSION_V2,
+} from "../prompts/professor-ia-system-prompt-v2";
+import {
+  PROFESSOR_IA_PROMPT_VERSION_V3,
+} from "../prompts/professor-ia-system-prompt-v3";
 import { PROVISIONAL_TEACHER_RESPONSE_SCHEMA_VERSION } from "../schemas/provisional-teacher-response";
 import {
   getProfessorContextToolFlowObservedToolName,
@@ -55,6 +61,10 @@ const sanitizedErrorCodeSchema = z
   .regex(/^[A-Z][A-Z0-9_]{0,63}$/);
 const nonnegativeIntegerSchema = z.number().int().nonnegative();
 const latencySchema = z.number().finite().nonnegative();
+const comparablePromptVersionSchema = z.enum([
+  PROFESSOR_IA_PROMPT_VERSION_V2,
+  PROFESSOR_IA_PROMPT_VERSION_V3,
+]);
 
 export type ProfessorContextToolSelectionDecision = z.infer<
   typeof decisionSchema
@@ -99,7 +109,7 @@ export type ProfessorContextToolSelectionTelemetry = z.infer<
 export const professorContextToolSelectionEvalRunConfigSchema = z
   .object({
     model: z.literal(PROFESSOR_CONTEXT_TOOL_FLOW_MODEL),
-    promptVersion: z.literal("professor-ia-v2"),
+    promptVersion: comparablePromptVersionSchema,
     schemaVersion: z.literal(PROVISIONAL_TEACHER_RESPONSE_SCHEMA_VERSION),
     evalSetVersion: z.literal(
       PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_SET_VERSION,
@@ -345,7 +355,7 @@ export const professorContextToolSelectionEvalReportSchema = z
       PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_RUNNER_VERSION,
     ),
     model: z.literal(PROFESSOR_CONTEXT_TOOL_FLOW_MODEL),
-    promptVersion: z.literal("professor-ia-v2"),
+    promptVersion: comparablePromptVersionSchema,
     schemaVersion: z.literal(PROVISIONAL_TEACHER_RESPONSE_SCHEMA_VERSION),
     evalSetVersion: z.literal(
       PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_SET_VERSION,

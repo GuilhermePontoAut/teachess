@@ -27,6 +27,7 @@
     "lib/ai/evals/professor-context-tool-selection-cases.test.ts",
     "lib/ai/evals/run-professor-context-tool-selection-evals.ts",
     "lib/ai/evals/run-professor-context-tool-selection-evals.test.ts",
+    "lib/ai/prompts/professor-ia-prompts.test.ts",
     "lib/ai/tools/**/*.ts",
     "lib/types/chess.ts",
     "scripts/run-position-context-tool-selection-evals.ts",

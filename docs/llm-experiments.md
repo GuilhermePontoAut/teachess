@@ -1239,3 +1239,27 @@ Os três casos classificados como `wrong_tool` foram bloqueados antes da segunda
 O experimento foi executado, concluído e tecnicamente válido, mas seu resultado de qualidade ainda é limitado. A principal hipótese para a próxima investigação é que a fronteira semântica ainda está insuficientemente clara entre contexto de partida, contexto de posição e ausência de necessidade de Tool. Os erros observados apontam para essa hipótese, mas não a comprovam causalmente.
 
 A amostra contém apenas 12 casos curados e uma repetição por caso. Ela não comprova estabilidade estatística, generalização para outras mensagens ou qualidade pedagógica ampla. Futuras alterações de prompt ou das descrições das Tools deverão ser avaliadas contra este baseline, sem modificar retrospectivamente seus casos ou resultados. Nenhuma alteração funcional é proposta nesta etapa.
+
+## Etapa 7F-A — plano do experimento controlado de prompting
+
+**Status:** planejado e preparado; avaliação real ainda não executada.
+
+### Objetivo e hipótese
+
+A Etapa 7F-A comparará `professor-ia-v3` com o baseline `professor-ia-v2` registrado em `E-023`. A hipótese é que instruções semânticas mais explícitas sobre quando fatos da partida completa, fatos da posição específica ou nenhum dado privado são realmente necessários podem melhorar a seleção entre `get_game_context`, `get_position_context` e nenhuma Tool.
+
+A v3 explicita que a disponibilidade de contexto e palavras isoladas não determinam uma chamada, limita a decisão a no máximo uma Tool, proíbe contexto inventado e Tool incompatível e inclui poucos exemplos novos das três decisões. O conteúdo não confiável continua sendo tratado como dado, e o prompt solicita somente a decisão operacional, sem cadeia de pensamento.
+
+### Controle experimental
+
+A única variável deliberadamente alterada será o system prompt, de `professor-ia-v2` para `professor-ia-v3`. Permanecerão congelados:
+
+- modelo `gpt-5-mini`;
+- os 12 casos de `professor-context-tool-selection-evals-v1`, inclusive mensagens e `expectedDecision`;
+- descrições, nomes e schemas das duas Tools;
+- runtimes determinísticos e orquestração do fluxo;
+- Structured Output `provisional-teacher-response-v1`;
+- runner, formato do relatório, métricas e classificações;
+- interface pública, stores e persistência.
+
+O runner continuará registrando a versão efetivamente escolhida. `E-023` permanece o baseline de comparação e seus resultados não serão reescritos ou combinados antecipadamente com a futura execução. Esta seção não registra accuracy, resultado ou conclusão da v3, pois nenhuma avaliação real da Etapa 7F foi executada.

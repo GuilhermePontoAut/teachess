@@ -89,7 +89,10 @@ export function resolveProfessorContextToolSelectionEvalEnvironment(
       errorCode: "PROMPT_VERSION_REQUIRED",
     };
   }
-  if (promptVersion !== "professor-ia-v2") {
+  if (
+    promptVersion !== "professor-ia-v2" &&
+    promptVersion !== "professor-ia-v3"
+  ) {
     return {
       status: "invalid",
       exitCode: PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_ERROR_EXIT_CODE,
@@ -132,7 +135,7 @@ export function resolveProfessorContextToolSelectionEvalEnvironment(
     exitCode: 0,
     config: {
       model: PROFESSOR_CONTEXT_TOOL_FLOW_MODEL,
-      promptVersion: "professor-ia-v2",
+      promptVersion,
       schemaVersion: PROVISIONAL_TEACHER_RESPONSE_SCHEMA_VERSION,
       evalSetVersion: PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_SET_VERSION,
       repetitions,
