@@ -250,6 +250,10 @@ O contrato provisório usa Zod e a combinação `responses.parse(...)`, `zodText
 
 O system prompt `professor-ia-v1` permanece preservado como baseline, e a comparação controlada de `EV-001` a `EV-006` foi concluída. O `professor-ia-v2` apresentou melhorias observadas em `EV-003`, `EV-004`, `EV-005` e `EV-006`, preservou o acerto do `EV-002` e não melhorou o `EV-001`. Por esse conjunto qualitativo, a v2 é a melhor candidata atual para a próxima etapa, sem alegação de perfeição ou estabilidade estatística. Os detalhes permanecem em [`docs/llm-experiments.md`](docs/llm-experiments.md) e [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
 
+#### Início da fase de Tools
+
+A comparação de prompts foi concluída, e o projeto iniciou a definição da fase de Tools. `get_position_context` foi escolhida como primeira Tool candidata, mas seu contrato ainda está em definição e nenhuma Tool está conectada ao modelo. Os detalhes estão em [`docs/llm-tools.md`](docs/llm-tools.md).
+
 #### Segurança e diagnóstico
 
 A chave não é enviada ao frontend, e a rota técnica só pode ser habilitada por flag server-side. A resposta pública de erro permanece genérica. O diagnóstico no servidor registra apenas campos seguros para distinguir erros HTTP, conexão, timeout e falhas inesperadas. Prompts, entrada do usuário, headers completos, chave e objeto bruto do erro não devem ser registrados.
