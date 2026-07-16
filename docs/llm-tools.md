@@ -1,6 +1,6 @@
 # Tools do Professor IA: contrato inicial de `get_position_context`
 
-Este documento registra a investigação da Etapa 6A, a implementação determinística da Etapa 6B, o fluxo técnico forçado da Etapa 6C-A, suas primeiras execuções reais locais e o fluxo separado de seleção automática da Etapa 6D-A. `get_position_context` possui schemas, runtime interno, definição compatível com a Responses API, um baseline forçado e um orquestrador automático testado offline e executado uma vez contra o modelo real. A Tool continua sem integração com a interface real do Professor IA.
+Este documento registra a investigação da Etapa 6A, a implementação determinística da Etapa 6B, o fluxo técnico forçado da Etapa 6C-A, suas primeiras execuções reais locais e o fluxo separado de seleção automática da Etapa 6D-A. `get_position_context` possui schemas, runtime interno, definição compatível com a Responses API, um baseline forçado e um orquestrador automático testado offline e avaliado em execuções reais controladas. A Tool continua sem integração com a interface real do Professor IA.
 
 ## 1. Classificação das definições
 
@@ -572,7 +572,7 @@ Os testes do orquestrador usam transporte injetável e objetos limitados aos cam
 
 - a rota é técnica, forçada e não é endpoint de produto;
 - nenhuma chamada real foi feita nesta etapa;
-- a seleção automática possui somente a primeira execução real, com seis casos curados e uma repetição por caso, insuficiente para demonstrar estabilidade;
+- a seleção automática possui uma execução inicial com uma repetição e uma execução posterior com três repetições de cada um dos mesmos seis casos curados; a consistência observada ainda é insuficiente para generalização;
 - a interface real do Professor IA, stores e persistência não foram alteradas;
 - o snapshot vindo do navegador continua sem autenticação ou autorização real;
 - não há engine, OCR, visão computacional, backend de produto, retries ou streaming.
@@ -650,16 +650,24 @@ Uma união discriminada validada em runtime garante que `called` corresponda a u
 
 O orquestrador possui fronteiras injetáveis para a primeira interação, a segunda interação e o executor da Tool. Os testes usam variantes reais dos tipos do SDK — `reasoning`, `message` e `function_call` — e confirmam ordem, identidade dos itens e ausência de filtragem. O caminho `called` comprova uma execução determinística, correlação pelo mesmo `call_id` e adição única do output; o caminho `not_called` comprova que a mensagem direta é preservada e que o executor não é usado. Falhas do protocolo, respostas incompletas ou recusadas, output estruturado inválido, erro do provider e precedência das validações HTTP também são cobertos sem rede.
 
-Esses testes comprovam os dois caminhos do código de orquestração. Separadamente, a primeira execução real descrita na seção 21 observou a decisão do `gpt-5-mini` nos seis casos versionados. Uma execução por caso não demonstra estabilidade; serão necessárias repetições controladas. O status `not_executed` permanece somente na definição canônica imutável dos casos, enquanto o relatório e o histórico documental registram a execução efetiva.
+Esses testes comprovam os dois caminhos do código de orquestração. Separadamente, as execuções reais descritas na seção 21 observaram a decisão do `gpt-5-mini` nos seis casos versionados, primeiro com uma repetição e depois com três repetições por caso. O status `not_executed` permanece somente na definição canônica imutável dos casos, enquanto o relatório e o histórico documental registram as execuções efetivas.
 
 ## 20. Runner controlado da Etapa 6D-B-A
 
 O runner versionado de seleção automática fica em `lib/ai/evals/run-position-context-tool-selection-evals.ts`, com entrada executável em `scripts/run-position-context-tool-selection-evals.ts`. Ele reutiliza `runAutoPositionContextToolFlow`, executa `AUTO-SEL-001` a `AUTO-SEL-006` sequencialmente sobre o mesmo snapshot autorizado e produz somente decisões, classificações, latência, evidência e códigos de erro sanitizados. O protocolo, a regra de accuracy e o opt-in obrigatório estão detalhados em `docs/llm-prompting-evals.md`. A definição canônica continua inalterada e o histórico real é registrado separadamente.
 
-## 21. Primeira execução real da seleção automática
+## 21. Execuções reais da seleção automática
+
+### Primeira execução — E-020
 
 O modo automático foi executado contra `gpt-5-mini` com `professor-ia-v2`, `provisional-teacher-response-v1`, `tool_choice: "auto"`, `parallel_tool_calls: false` e uma repetição de cada caso de `position-context-tool-selection-evals-v1`. Os caminhos `called` e `not_called` ocorreram conforme esperado nos seis casos: a Tool foi chamada uma vez em cada um dos três casos dependentes da posição e não foi chamada nos três casos independentes.
 
 O resultado consolidado foi 6/6 decisões corretas, sem falsos positivos, falsos negativos ou erros técnicos. A accuracy observada nesta execução foi `1`, ou 100% na amostra de seis execuções. Como esta foi a primeira execução com uma repetição por caso, o resultado não comprova estabilidade nem desempenho geral.
 
 O baseline forçado permanece preservado e continua cumprindo uma finalidade distinta: validar deterministicamente o encadeamento técnico obrigatório. O modo automático avalia a escolha entre usar ou não a Tool. Não houve integração com a interface pública, avaliação em outros modelos, comparação de prompts, medição de tokens ou custo, nem avaliação humana completa das respostas pedagógicas. Os resultados por caso, as latências isoladas e as limitações metodológicas estão em `docs/llm-experiments.md` e `docs/llm-prompting-evals.md`.
+
+### Execução de consistência — E-021
+
+A seleção automática foi repetida três vezes por caso, com o mesmo `gpt-5-mini`, `professor-ia-v2`, schema, eval set e snapshot autorizado. Em 18/18 execuções, os caminhos `called` e `not_called` permaneceram coerentes com as decisões esperadas: os três casos dependentes da posição chamaram a Tool em 3/3 tentativas cada, e os três casos independentes não a chamaram em 3/3 tentativas cada. Não houve falsos positivos, falsos negativos, erros técnicos ou oscilação observada entre as duas decisões.
+
+O baseline forçado permanece preservado e não se confunde com essa avaliação automática. A accuracy observada foi de 100% na amostra de 18 execuções, limitada aos seis casos curados e ao único snapshot usado; não é garantia estatística nem resultado generalizável. Os resultados completos, inclusive latências, a exceção observada em `evidenceStatus` e a comparação histórica com `E-020`, estão em `docs/llm-experiments.md` e `docs/llm-prompting-evals.md`.

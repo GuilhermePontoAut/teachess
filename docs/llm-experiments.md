@@ -990,3 +990,137 @@ Nesta primeira execução, com uma repetição por caso, o modelo selecionou cor
 - verificar consistência por caso;
 - observar possíveis falsos positivos ou falsos negativos;
 - somente depois considerar conclusões mais amplas.
+
+## E-021 — consistência da seleção automática em três repetições
+
+### Objetivo
+
+Observar a consistência da decisão automática de `get_position_context` ao repetir três vezes cada um dos seis casos canônicos, sem alterar o eval set, o snapshot ou a configuração avaliada em `E-020`.
+
+### Hipótese
+
+Mantidas as variáveis controladas, `gpt-5-mini` deveria produzir `called` nas três repetições de `AUTO-SEL-001` a `AUTO-SEL-003` e `not_called` nas três repetições de `AUTO-SEL-004` a `AUTO-SEL-006`, sem falsos positivos, falsos negativos ou erros técnicos.
+
+### Configuração executada
+
+- **eval set:** `position-context-tool-selection-evals-v1`;
+- **modelo:** `gpt-5-mini`;
+- **prompt:** `professor-ia-v2`;
+- **schema:** `provisional-teacher-response-v1`;
+- **repetições:** 3 por caso;
+- **total de execuções:** 18;
+- **casos:** os seis casos canônicos `AUTO-SEL-001` a `AUTO-SEL-006`;
+- **ordem:** sequencial, incluindo as repetições de cada caso;
+- **seleção:** `tool_choice: "auto"`;
+- **chamadas paralelas:** `parallel_tool_calls: false`;
+- **integração com a interface pública:** nenhuma;
+- **relatório:** JSON sanitizado mantido em `/tmp/teachess-position-context-tool-selection-evals.json`.
+
+O relatório registra exatamente:
+
+- `startedAt: "2026-07-16T05:03:08.336Z"`;
+- `completedAt: "2026-07-16T05:07:50.055Z"`.
+
+O intervalo observado entre esses timestamps foi de aproximadamente 4 minutos e 41,7 segundos. Esse é somente o tempo total desta execução sequencial; não representa SLA.
+
+### Variáveis controladas
+
+Modelo, prompt, schema, versão e conteúdo canônico do eval set, `tool_choice`, configuração de chamadas paralelas, ordem sequencial e snapshot autorizado permaneceram constantes. O mesmo snapshot demonstrativo confirmado foi usado em todas as 18 execuções. Entre os seis casos, somente a mensagem declarada mudou; dentro de cada caso, a mesma mensagem foi repetida três vezes.
+
+A definição canônica em `lib/ai/evals/position-context-tool-selection-cases.ts` não foi alterada. IDs, mensagens, decisões esperadas, justificativas, comportamentos proibidos, status declarativo e versão do eval set continuam imutáveis. O histórico desta execução permanece separado na documentação e no relatório temporário.
+
+### Resultado consolidado
+
+- `totalRuns: 18`;
+- `correct: 18`;
+- `falsePositives: 0`;
+- `falseNegatives: 0`;
+- `technicalErrors: 0`;
+- `accuracy: 1`;
+- 18/18 decisões corretas nesta execução;
+- 100% de accuracy observada na amostra de 18 execuções;
+- três repetições por caso.
+
+Cada caso apresentou decisão consistente nas três repetições, e não houve oscilação observada entre `called` e `not_called`.
+
+### Consistência por caso
+
+| caseId | Esperado | Resultado nas três repetições | toolCallCount | evidenceStatus |
+| --- | --- | --- | --- | --- |
+| `AUTO-SEL-001` | `called` | `called` em 3/3 | 1 em 3/3 | `sufficient` em 3/3 |
+| `AUTO-SEL-002` | `called` | `called` em 3/3 | 1 em 3/3 | `sufficient` em 3/3 |
+| `AUTO-SEL-003` | `called` | `called` em 3/3 | 1 em 3/3 | `sufficient` em 3/3 |
+| `AUTO-SEL-004` | `not_called` | `not_called` em 3/3 | 0 em 3/3 | `insufficient` em 3/3 |
+| `AUTO-SEL-005` | `not_called` | `not_called` em 3/3 | 0 em 3/3 | `insufficient` em 2/3; `sufficient` na execução 3 |
+| `AUTO-SEL-006` | `not_called` | `not_called` em 3/3 | 0 em 3/3 | `insufficient` em 3/3 |
+
+O relatório, fonte de verdade desta documentação, registra `evidenceStatus: "sufficient"` em `AUTO-SEL-005`, execução 3. Essa variação não alterou a decisão avaliada: a Tool permaneceu `not_called`, com `toolCallCount: 0`, como esperado. Nos demais casos `not_called`, `evidenceStatus: "insufficient"` não representa falha: a Tool não foi consultada porque a pergunta não precisava dos fatos da posição ou estava fora do escopo específico. O experimento mede principalmente a decisão `called` versus `not_called`, e o relatório não persiste a resposta completa necessária para uma avaliação pedagógica posterior.
+
+### Matriz de classificação observada
+
+| Esperado | Observado | Classificação | Quantidade |
+| --- | --- | --- | ---: |
+| `called` | `called` | `correct` | 9 |
+| `not_called` | `not_called` | `correct` | 9 |
+| `not_called` | `called` | `false_positive` | 0 |
+| `called` | `not_called` | `false_negative` | 0 |
+| qualquer | sem decisão válida | `technical_error` | 0 |
+
+### Latências observadas
+
+| caseId | Execução 1 | Execução 2 | Execução 3 |
+| --- | ---: | ---: | ---: |
+| `AUTO-SEL-001` | ≈ 18315,24 ms | ≈ 17304,80 ms | ≈ 14003,32 ms |
+| `AUTO-SEL-002` | ≈ 16216,25 ms | ≈ 19331,58 ms | ≈ 20015,85 ms |
+| `AUTO-SEL-003` | ≈ 21627,44 ms | ≈ 16835,40 ms | ≈ 18104,78 ms |
+| `AUTO-SEL-004` | ≈ 12997,42 ms | ≈ 13014,65 ms | ≈ 15916,73 ms |
+| `AUTO-SEL-005` | ≈ 17276,71 ms | ≈ 11477,14 ms | ≈ 8208,57 ms |
+| `AUTO-SEL-006` | ≈ 14002,65 ms | ≈ 13768,90 ms | ≈ 13299,35 ms |
+
+Estatísticas descritivas derivadas das 18 latências do relatório:
+
+- média geral aproximada: 15,65 segundos;
+- mediana aproximada: 16,07 segundos;
+- mínimo aproximado: 8,21 segundos;
+- máximo aproximado: 21,63 segundos;
+- média aproximada dos casos `called`: 17,97 segundos;
+- média aproximada dos casos `not_called`: 13,33 segundos.
+
+Esses números descrevem somente esta execução sequencial. Não constituem SLA ou benchmark definitivo, e a infraestrutura externa do provedor não foi controlada. A diferença observada entre as médias dos grupos `called` e `not_called` não comprova causalidade. Tokens e custos não foram medidos. Não foram calculados percentis, intervalos de confiança ou significância estatística.
+
+### Comparação com E-020
+
+| Experimento | Repetições por caso | Execuções | Acertos | Falsos positivos | Falsos negativos | Erros técnicos | Accuracy observada |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `E-020` | 1 | 6 | 6 | 0 | 0 | 0 | 100% na própria amostra |
+| `E-021` | 3 | 18 | 18 | 0 | 0 | 0 | 100% na própria amostra |
+
+O resultado anterior foi reproduzido em mais duas execuções adicionais por caso dentro de `E-021`. Nesta configuração e neste conjunto curado, a decisão permaneceu consistente e não houve oscilação por caso. `E-020` e `E-021` continuam experimentos históricos distintos; seus totais não foram somados como se formassem uma única amostra.
+
+### Limitações
+
+- apenas seis mensagens curadas;
+- apenas um snapshot demonstrativo;
+- somente um modelo, `gpt-5-mini`;
+- somente `professor-ia-v2`, sem comparação com `professor-ia-v1` nesta etapa;
+- três repetições ainda são uma amostra pequena;
+- nenhuma variação de FEN, origem, confirmação ou natureza dos dados;
+- nenhuma avaliação humana das respostas pedagógicas;
+- o relatório não persiste as respostas completas;
+- tokens e custos não foram medidos;
+- a latência externa pode variar;
+- o experimento mede principalmente a decisão `called` versus `not_called`;
+- não há diversidade suficiente de casos, snapshots, modelos, prompts ou condições para generalizar o resultado.
+
+### Conclusão limitada
+
+Nas três repetições de cada um dos seis casos, o modelo manteve a decisão esperada em todas as 18 execuções. Os três casos dependentes da posição sempre chamaram a Tool e os três independentes nunca a chamaram. Não houve falsos positivos, falsos negativos ou erros técnicos. O resultado amplia a evidência em relação ao `E-020`, mas permanece restrito a um conjunto pequeno, curado e executado sobre um único snapshot.
+
+### Próximos passos possíveis
+
+- ampliar o conjunto com casos mais ambíguos;
+- adicionar paráfrases sem alterar retrospectivamente o eval set v1;
+- variar snapshots e estados de confirmação;
+- medir tokens e custo;
+- avaliar a qualidade pedagógica separadamente;
+- comparar modelos ou prompts somente com controle de variáveis.

@@ -1,6 +1,6 @@
 # Prompting e evals do Professor IA
 
-Este documento registra a hipótese inicial de prompting, os conjuntos versionados de avaliação do Professor IA e os primeiros achados do prompt v2 com a Tool real. `EV-001` a `EV-006` possuem execuções registradas com os prompts v1 e v2; essa amostra pequena não comprova estabilidade. Os experimentos de function calling e seleção automática receberam IDs `E-017` a `E-020` e não alteram os casos declarativos existentes.
+Este documento registra a hipótese inicial de prompting, os conjuntos versionados de avaliação do Professor IA e os primeiros achados do prompt v2 com a Tool real. `EV-001` a `EV-006` possuem execuções registradas com os prompts v1 e v2; essa amostra pequena não comprova estabilidade. Os experimentos de function calling e seleção automática receberam IDs `E-017` a `E-021` e não alteram os casos declarativos existentes.
 
 ## Por que o prompt é versionado
 
@@ -328,7 +328,7 @@ Os testes offline usam respostas simuladas para comprovar que o orquestrador ace
 
 A eval real compara `toolSelection.decision` com `expectedDecision` sem adaptar retrospectivamente os casos. Um falso positivo ocorre quando a Tool é chamada sem necessidade; um falso negativo ocorre quando ela deixa de ser chamada apesar de a resposta depender dos fatos da posição.
 
-Uma única execução por caso não demonstra estabilidade. O runner abaixo permite de uma a cinco repetições para observar a amostra executada, sem afirmar que repetição garante estabilidade estatística. A primeira execução real usou uma repetição por caso e está registrada separadamente abaixo; ela não reescreveu o status nem qualquer outro campo da definição canônica.
+Uma única execução por caso não demonstra estabilidade. O runner abaixo permite de uma a cinco repetições para observar a amostra executada, sem afirmar que repetição garante estabilidade estatística. `E-020` usou uma repetição por caso; `E-021` repetiu cada caso três vezes. Nenhuma dessas execuções reescreveu o status nem qualquer outro campo da definição canônica.
 
 ## Runner de seleção automática
 
@@ -454,13 +454,80 @@ Esta foi a primeira execução com uma repetição por caso e obteve 100% na amo
 - não houve avaliação humana da resposta pedagógica final;
 - o experimento avaliou principalmente `called` versus `not_called`.
 
-O próximo passo futuro é executar repetições controladas, verificar a consistência por caso e observar possíveis falsos positivos ou falsos negativos. Somente depois será adequado considerar conclusões mais amplas.
+Esse próximo passo histórico foi realizado parcialmente em `E-021`, com três repetições controladas por caso. A cobertura ainda precisa de mais diversidade antes de qualquer conclusão ampla.
+
+## Execução com três repetições — E-021
+
+### Histórico e configuração
+
+Depois da execução inicial `E-020`, o mesmo conjunto canônico foi executado com três repetições por caso. `E-021` usou `position-context-tool-selection-evals-v1`, `gpt-5-mini`, `professor-ia-v2`, `provisional-teacher-response-v1`, `tool_choice: "auto"`, `parallel_tool_calls: false` e ordem sequencial. O mesmo snapshot autorizado e confirmado ficou disponível nas 18 execuções; somente a mensagem mudou entre os seis casos. Não houve integração com a interface pública, e o relatório sanitizado permaneceu em `/tmp`.
+
+- **início:** `2026-07-16T05:03:08.336Z`;
+- **conclusão:** `2026-07-16T05:07:50.055Z`;
+- **intervalo observado:** aproximadamente 4 minutos e 41,7 segundos nesta execução sequencial, sem constituir SLA.
+
+### Resultado por caso e ausência de oscilação
+
+| caseId | Esperado | Execução 1 | Execução 2 | Execução 3 | toolCallCount | evidenceStatus |
+| --- | --- | --- | --- | --- | --- | --- |
+| `AUTO-SEL-001` | `called` | `called` | `called` | `called` | 1 em 3/3 | `sufficient` em 3/3 |
+| `AUTO-SEL-002` | `called` | `called` | `called` | `called` | 1 em 3/3 | `sufficient` em 3/3 |
+| `AUTO-SEL-003` | `called` | `called` | `called` | `called` | 1 em 3/3 | `sufficient` em 3/3 |
+| `AUTO-SEL-004` | `not_called` | `not_called` | `not_called` | `not_called` | 0 em 3/3 | `insufficient` em 3/3 |
+| `AUTO-SEL-005` | `not_called` | `not_called` | `not_called` | `not_called` | 0 em 3/3 | `insufficient`, `insufficient`, `sufficient` |
+| `AUTO-SEL-006` | `not_called` | `not_called` | `not_called` | `not_called` | 0 em 3/3 | `insufficient` em 3/3 |
+
+Cada caso repetiu a mesma decisão em 3/3 execuções. Não houve oscilação observada entre `called` e `not_called`. O JSON registra uma variação de `evidenceStatus` em `AUTO-SEL-005`, execução 3, mas a seleção permaneceu correta: `not_called`, zero chamadas e classificação `correct`. Nos demais resultados `not_called`, `insufficient` não representa falha, pois a pergunta não precisava dos fatos da posição ou estava fora do escopo específico.
+
+### Matriz observada e resultado consolidado
+
+| Esperado | Observado | Classificação | Quantidade |
+| --- | --- | --- | ---: |
+| `called` | `called` | `correct` | 9 |
+| `not_called` | `not_called` | `correct` | 9 |
+| `not_called` | `called` | `false_positive` | 0 |
+| `called` | `not_called` | `false_negative` | 0 |
+| qualquer | sem decisão válida | `technical_error` | 0 |
+
+- `totalRuns: 18`;
+- `correct: 18`;
+- `falsePositives: 0`;
+- `falseNegatives: 0`;
+- `technicalErrors: 0`;
+- `accuracy: 1`, ou 100% de accuracy observada na amostra de 18 execuções.
+
+Foram 18/18 decisões corretas nesta execução. Esse resultado descreve a amostra e não constitui precisão garantida ou conclusão estatística geral.
+
+### Latências por repetição
+
+| caseId | Execução 1 | Execução 2 | Execução 3 |
+| --- | ---: | ---: | ---: |
+| `AUTO-SEL-001` | ≈ 18315,24 ms | ≈ 17304,80 ms | ≈ 14003,32 ms |
+| `AUTO-SEL-002` | ≈ 16216,25 ms | ≈ 19331,58 ms | ≈ 20015,85 ms |
+| `AUTO-SEL-003` | ≈ 21627,44 ms | ≈ 16835,40 ms | ≈ 18104,78 ms |
+| `AUTO-SEL-004` | ≈ 12997,42 ms | ≈ 13014,65 ms | ≈ 15916,73 ms |
+| `AUTO-SEL-005` | ≈ 17276,71 ms | ≈ 11477,14 ms | ≈ 8208,57 ms |
+| `AUTO-SEL-006` | ≈ 14002,65 ms | ≈ 13768,90 ms | ≈ 13299,35 ms |
+
+Como estatísticas descritivas desta execução, a média geral foi aproximadamente 15,65 segundos; a mediana, 16,07 segundos; o mínimo, 8,21 segundos; e o máximo, 21,63 segundos. A média aproximada dos casos `called` foi 17,97 segundos, e a dos casos `not_called`, 13,33 segundos. A infraestrutura externa do provedor não foi controlada, tokens e custos não foram medidos, e a diferença entre os grupos não comprova causalidade. Esses valores não são SLA nem benchmark definitivo. Não foram calculados percentis, intervalos de confiança ou significância estatística.
+
+### Relação com o conjunto canônico e com E-020
+
+O eval set v1 continua sendo a definição canônica imutável. IDs, mensagens, decisões esperadas, justificativas, comportamentos proibidos, ordem e status declarativo não mudaram. `E-021` registra histórico de execução, não uma alteração no conjunto. Novos casos ambíguos ou paráfrases devem ampliar a cobertura em artefato futuro apropriado, sem reescrever retrospectivamente `position-context-tool-selection-evals-v1`.
+
+`E-020` teve uma repetição por caso, 6/6 acertos, zero falsos positivos, falsos negativos e erros técnicos e 100% de accuracy observada em sua própria amostra. `E-021` teve três repetições por caso, 18/18 acertos, os mesmos contadores zerados e 100% em sua própria amostra, sem oscilação por caso. O resultado anterior foi reproduzido em mais duas execuções adicionais por caso nesta configuração e neste conjunto curado. Os dois experimentos permanecem separados e não são somados automaticamente como uma única amostra.
+
+### Limitações e próximos passos
+
+A execução cobre somente seis mensagens curadas, um snapshot demonstrativo, um modelo e `professor-ia-v2`. Não houve comparação com v1, variação de FEN, origem, confirmação ou natureza dos dados, avaliação humana das respostas pedagógicas, persistência das respostas completas ou medição de tokens e custo. Três repetições ainda são uma amostra pequena, a latência externa pode variar e o experimento mede principalmente `called` versus `not_called`. Portanto, falta diversidade de casos, snapshots, modelos, prompts e condições para generalizar o resultado.
+
+Próximos passos possíveis, sem alterar o eval set v1, incluem ampliar a cobertura com casos mais ambíguos e paráfrases, variar snapshots e estados de confirmação, medir tokens e custo, avaliar separadamente a qualidade pedagógica e comparar modelos ou prompts somente com controle de variáveis.
 
 ## O que ainda não existe
 
-- ainda não há repetições suficientes para medir estabilidade dos casos;
-- não há notas, pesos ou taxas de aprovação;
+- ainda não há diversidade ou quantidade de repetições suficiente para concluir estabilidade geral;
+- não há notas, pesos ou taxas de aprovação pedagógica;
 - não há comparação entre modelos, prompts ou parâmetros nesta execução;
 - não há avaliação humana das respostas pedagógicas completas desta execução.
 
-O runner controlado continua coberto por testes offline com transportes simulados e agora possui a primeira execução real documentada separadamente. Os seis casos continuam com `status: "not_executed"` apenas na definição canônica imutável; o relatório e o experimento E-020 registram o histórico real. Resultados futuros deverão registrar, no mínimo, modelo, versões do prompt, schema e eval set, repetições e IDs dos casos.
+O runner controlado continua coberto por testes offline com transportes simulados e possui `E-020` e `E-021` documentados separadamente. Os seis casos continuam com `status: "not_executed"` apenas na definição canônica imutável; o relatório temporário e os experimentos registram o histórico real. Resultados futuros deverão registrar, no mínimo, modelo, versões do prompt, schema e eval set, repetições e IDs dos casos.
