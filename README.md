@@ -252,7 +252,7 @@ O system prompt `professor-ia-v1` permanece preservado como baseline, e a compar
 
 #### Fase de Tools
 
-A função interna determinística `get_position_context` agora possui uma definição estrita de Tool para a Responses API e um fluxo técnico controlado de function calling em rota isolada. A aplicação continua executando a função somente no servidor sobre o snapshot autorizado, e os testes do ciclo de duas interações usam transporte simulado, sem rede. A interface real do Professor IA ainda não foi integrada, e nenhuma chamada à OpenAI foi feita nesta etapa. Os detalhes estão em [`docs/llm-tools.md`](docs/llm-tools.md).
+A função interna determinística `get_position_context` possui uma definição estrita de Tool para a Responses API e um fluxo técnico controlado de function calling em rota isolada. O primeiro ciclo real foi validado localmente: a Tool foi executada no servidor sobre um snapshot autorizado, e uma comparação entre o mesmo contexto `confirmed` e `unconfirmed` preservou a diferença de suficiência esperada. A integração pública com a interface do Professor IA ainda não foi implementada. Os detalhes estão em [`docs/llm-tools.md`](docs/llm-tools.md), [`docs/llm-experiments.md`](docs/llm-experiments.md) e [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
 
 #### Segurança e diagnóstico
 
@@ -260,7 +260,7 @@ A chave não é enviada ao frontend, e a rota técnica só pode ser habilitada p
 
 #### Limitações atuais
 
-Ainda não existe Tool registrada no provedor, function calling, RAG, integração real com a interface do Professor IA, autenticação, rate limiting do endpoint final ou validação por engine de xadrez. A função interna determinística não altera esses limites. Também não há garantia de estabilidade nem medição sistemática de custo, tokens e latência.
+Ainda não existe seleção automática de Tool, RAG, integração real com a interface do Professor IA, autenticação, rate limiting do endpoint final ou validação por engine de xadrez. O function calling validado permanece restrito à rota técnica, com chamada forçada e snapshot demonstrativo enviado manualmente. Também não há garantia de estabilidade nem medição sistemática de custo, tokens e latência.
 
 As decisões e evidências detalhadas estão em [`docs/llm-architecture.md`](docs/llm-architecture.md), [`docs/llm-provider-model-selection.md`](docs/llm-provider-model-selection.md), [`docs/llm-experiments.md`](docs/llm-experiments.md) e [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
 

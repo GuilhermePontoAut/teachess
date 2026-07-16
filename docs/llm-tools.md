@@ -1,6 +1,6 @@
 # Tools do Professor IA: contrato inicial de `get_position_context`
 
-Este documento registra a investigação da Etapa 6A, a implementação determinística da Etapa 6B e o fluxo técnico de function calling da Etapa 6C-A. `get_position_context` possui schemas, runtime interno, definição compatível com a Responses API e um orquestrador testado sem rede. A Tool continua sem integração com a interface real do Professor IA, e nenhuma chamada ao provedor foi feita na Etapa 6C-A.
+Este documento registra a investigação da Etapa 6A, a implementação determinística da Etapa 6B, o fluxo técnico de function calling da Etapa 6C-A e as primeiras execuções reais locais da etapa seguinte. `get_position_context` possui schemas, runtime interno, definição compatível com a Responses API, um orquestrador testado sem rede e um primeiro ciclo real validado em rota técnica. A Tool continua sem integração com a interface real do Professor IA.
 
 ## 1. Classificação das definições
 
@@ -37,7 +37,7 @@ Este documento registra a investigação da Etapa 6A, a implementação determin
 
 ### Fora do escopo atual
 
-- executar chamadas reais de function calling contra a OpenAI;
+- integrar as chamadas reais de function calling à interface pública;
 - implementar `get_legal_moves`;
 - usar Stockfish ou qualquer engine;
 - usar RAG;
@@ -576,3 +576,27 @@ Os testes do orquestrador usam transporte injetável e objetos limitados aos cam
 - a interface real do Professor IA, stores e persistência não foram alteradas;
 - o snapshot vindo do navegador continua sem autenticação ou autorização real;
 - não há engine, OCR, visão computacional, backend de produto, retries ou streaming.
+
+## 18. Primeiras execuções reais locais
+
+As primeiras execuções reais de function calling foram realizadas localmente por `POST /api/ai/test/tools/position-context`, sem qualquer integração com a interface pública. A configuração comum usou `gpt-5-mini`, `professor-ia-v2`, `provisional-teacher-response-v1`, a Tool `get_position_context` forçada, `parallel_tool_calls: false`, `store: false`, uma execução da Tool e duas interações lógicas com a Responses API. O snapshot demonstrativo foi enviado manualmente.
+
+O snapshot principal usou `positionContextId: "position-tool-test-01"`, o FEN inicial `rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1`, `imageOrigin: "physical_board_photo"`, `sourceContext: "personal_study"`, `recognitionStatus: "demo_available"`, `dataNature: "simulated_demo"` e `confirmationStatus: "confirmed"`.
+
+Nessa primeira execução, a rota retornou HTTP `200`, `success: true`, `tool.callCount: 1` e `tool.executionStatus: "completed"`. A Tool preservou o FEN presente, a sintaxe válida, a aceitação pelo `chess.js`, `sideToMove: "white"`, `analysisReadiness: "sufficient_for_position_context"` e as limitações do contexto demonstrativo. A resposta final retornou `evidenceStatus: "sufficient"`, sem melhor lance, variante ou avaliação, e manteve `strengths` e `improvements` vazios. A linha do servidor registrou aproximadamente 21,1 segundos para essa execução isolada; esse valor não é média, SLA, benchmark nem evidência de estabilidade.
+
+Um teste negativo separado perguntou pelo melhor lance com `positionContextId: "position-tool-test-02"` e `confirmationStatus: "unconfirmed"`. A rota retornou HTTP `200`, a Tool foi executada uma vez, `analysisReadiness` e `evidenceStatus` ficaram `insufficient`, nenhum melhor lance concreto foi produzido, `strengths` e `improvements` permaneceram vazios e a resposta solicitou confirmação da posição. A linha do servidor registrou aproximadamente 12,6 segundos para essa execução isolada, sem valor de média ou benchmark. Esse teste não constitui comparação controlada com a primeira execução porque tanto a pergunta quanto o ID eram diferentes.
+
+### Comparação controlada de confirmação
+
+A comparação realmente controlada manteve exatamente a mensagem “Analise somente os fatos disponíveis sobre a posição selecionada e explique as limitações.”, o ID `position-tool-test-01`, o mesmo FEN, origem, `sourceContext`, `recognitionStatus`, `dataNature`, modelo, prompt, schema, rota e Tool forçada. A única variável modificada foi `confirmationStatus`: `confirmed` na execução A e `unconfirmed` na execução B.
+
+Com `confirmed`, o runtime retornou `analysisReadiness: "sufficient_for_position_context"`, a resposta final retornou `evidenceStatus: "sufficient"`, os fatos técnicos da posição foram apresentados e o caráter demonstrativo foi preservado. Com `unconfirmed`, ambos os estados ficaram `insufficient`; `strengths` e `improvements` permaneceram vazios; não houve melhor lance, avaliação ou variante; e a resposta recomendou confirmar a posição. Os fatos sintáticos continuaram presentes, mas não foram tratados como representação confiável da posição real.
+
+Nessa comparação, a mudança isolada de `confirmationStatus` alterou coerentemente a suficiência do contexto e o comportamento final. O resultado comprova o funcionamento desse par específico. Uma execução por condição não demonstra estabilidade estatística nem comportamento universal. A latência da execução B não foi registrada por falta de evidência explícita no log, e nenhuma média foi calculada.
+
+### Achado de apresentação
+
+Como achado não bloqueante, a resposta final expôs `positionContextId` e nomes internos como `get_position_context`, `analysisReadiness`, `confirmationStatus` e `chessJsValidationStatus`; `evidenceUsed` também ficou próximo do protocolo técnico. Isso não revelou outro contexto nem quebrou a autorização, mas esses termos não são adequados à experiência final do jogador.
+
+O trabalho futuro deverá impedir identificadores internos no texto pedagógico, decidir entre uma regra adicional em uma futura versão do prompt, sanitização ou pós-processamento server-side e transformação na camada de apresentação, e avaliar se `evidenceUsed` será visível, resumido ou reservado para auditoria. Os dados técnicos devem continuar disponíveis para rastreabilidade sem serem apresentados diretamente ao jogador. Nenhuma `professor-ia-v3` foi criada nesta etapa.

@@ -1,6 +1,6 @@
 # Prompting e evals do Professor IA
 
-Este documento registra a hipótese inicial de prompting e o primeiro conjunto versionado de casos de avaliação do Professor IA. `EV-001` a `EV-006` possuem execuções registradas com os prompts v1 e v2; essa amostra pequena não comprova estabilidade.
+Este documento registra a hipótese inicial de prompting, o primeiro conjunto versionado de casos de avaliação do Professor IA e os primeiros achados do prompt v2 com a Tool real. `EV-001` a `EV-006` possuem execuções registradas com os prompts v1 e v2; essa amostra pequena não comprova estabilidade. Os experimentos de function calling receberam IDs `E-017` a `E-019` e não alteram os casos declarativos existentes.
 
 ## Por que o prompt é versionado
 
@@ -255,6 +255,20 @@ Essa decisão não altera o comportamento padrão de `AI_TEST_PROMPT_VERSION`. A
 
 A comparação conclui apenas que a v2 é a melhor candidata atual diante dos benefícios observados, riscos conhecidos e limitações documentadas. Não conclui que ela seja perfeita, estável ou superior em qualquer entrada futura.
 
+## Primeiros achados do prompt v2 com `get_position_context`
+
+`E-017` validou o primeiro ciclo real local de function calling com a Tool forçada. O servidor executou `get_position_context` uma vez sobre o único snapshot autorizado, e a segunda interação produziu o Structured Output. O contexto confirmado retornou `analysisReadiness: "sufficient_for_position_context"` e `evidenceStatus: "sufficient"`, preservou o caráter demonstrativo e não produziu melhor lance, variante, avaliação, `strengths` ou `improvements` sem evidência apropriada.
+
+`E-018` pediu um melhor lance com posição não confirmada e obteve estados insuficientes, arrays vazios e solicitação de confirmação, sem lance concreto. Esse resultado não deve ser comparado causalmente com `E-017`, pois a pergunta e o ID também mudaram.
+
+`E-019` controlou essas variáveis: manteve mensagem, ID, FEN, metadados, modelo, prompt, schema, rota e Tool forçada, alterando somente `confirmationStatus`. A condição `confirmed` foi suficiente para fatos da posição; a condição `unconfirmed` permaneceu insuficiente, preservou os fatos sintáticos apenas como dados técnicos e recomendou confirmação. Essa execução sustenta a coerência da regra da v2 para esse par específico, não sua estabilidade estatística ou universalidade.
+
+### Segurança de autorização versus apresentação
+
+O fluxo respeitou a fronteira de autorização: nenhuma resposta revelou outra posição ou executou a Tool sobre contexto diferente do snapshot permitido. A apresentação, porém, expôs o ID e vocabulário interno, incluindo `get_position_context`, `analysisReadiness`, `confirmationStatus` e `chessJsValidationStatus`; `evidenceUsed` ficou próximo do protocolo técnico. Segurança de acesso e qualidade de UX são critérios distintos.
+
+Uma etapa futura deverá decidir se a correção ficará em uma nova versão de prompt, sanitização ou pós-processamento server-side, transformação na camada de apresentação ou uma combinação dessas alternativas. Também deverá definir se `evidenceUsed` ficará visível, resumido ou reservado para auditoria. Não foi criada `professor-ia-v3` nesta tarefa.
+
 ## Rubrica inicial
 
 Esta rubrica define critérios conceituais para avaliações futuras. Ainda não há pesos, notas finais ou limite de aprovação.
@@ -298,7 +312,7 @@ Esta rubrica define critérios conceituais para avaliações futuras. Ainda não
 - ainda não há executor automático de evals;
 - ainda não há repetições suficientes para medir estabilidade dos casos;
 - não há notas, pesos ou taxas de aprovação;
-- não há tools implementadas nesta etapa;
+- não há seleção automática de Tool nem repetição suficiente dos casos com function calling;
 - não há comparação de parâmetros nesta tarefa.
 
 Também não foram feitas novas chamadas à OpenAI para criar estes artefatos. Resultados futuros deverão registrar, no mínimo, a versão do prompt e a versão do schema usadas na execução.

@@ -764,3 +764,141 @@ Ambas as versões mantiveram explícita a origem automática. Nenhuma indicou me
 Nesta execução, a v2 corrigiu as duas principais falhas semânticas observadas na v1: a classificação da suficiência para a tarefa solicitada e o uso inadequado de `strengths`. A rubrica da v1 foi parcialmente aprovada; a da v2 foi integralmente aprovada.
 
 As latências observadas foram de aproximadamente 17,3 segundos na v1 e 19,8 segundos na v2. Essas medições isoladas não representam médias nem comprovam diferença estável de desempenho.
+
+## E-017 — primeiro function calling real de `get_position_context`
+
+### Objetivo
+
+Validar localmente o ciclo real de function calling da primeira Tool do TeaChess sobre um único snapshot autorizado e demonstrativo.
+
+### Configuração executada
+
+- **endpoint:** `POST /api/ai/test/tools/position-context`;
+- **modelo:** `gpt-5-mini`;
+- **prompt:** `professor-ia-v2`;
+- **schema:** `provisional-teacher-response-v1`;
+- **Tool:** `get_position_context`;
+- **seleção da Tool:** forçada;
+- **`parallel_tool_calls`:** `false`;
+- **`store`:** `false`;
+- **execuções da Tool:** uma;
+- **interações lógicas com a Responses API:** duas;
+- **mensagem:** “Analise somente os fatos disponíveis sobre a posição selecionada e explique as limitações.”;
+- **integração com a interface pública:** nenhuma.
+
+O snapshot demonstrativo foi enviado manualmente com:
+
+- `positionContextId: "position-tool-test-01"`;
+- FEN inicial `rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1`;
+- `imageOrigin: "physical_board_photo"`;
+- `sourceContext: "personal_study"`;
+- `recognitionStatus: "demo_available"`;
+- `dataNature: "simulated_demo"`;
+- `confirmationStatus: "confirmed"`.
+
+### Resultado técnico observado
+
+- HTTP `200`;
+- `success: true`;
+- `tool.callCount: 1`;
+- `tool.executionStatus: "completed"`;
+- FEN presente e com sintaxe válida;
+- FEN aceito pelo `chess.js`;
+- `sideToMove: "white"`;
+- `analysisReadiness: "sufficient_for_position_context"`;
+- `evidenceStatus: "sufficient"`;
+- nenhuma indicação de melhor lance, variante ou avaliação;
+- `strengths: []`;
+- `improvements: []`;
+- limitações do contexto demonstrativo preservadas.
+
+A linha do servidor registrou aproximadamente 21,1 segundos para essa execução isolada. Esse valor não é média, SLA, benchmark nem evidência de estabilidade.
+
+### Classificação limitada
+
+O experimento validou, neste caso, que o modelo solicitou a Tool forçada, o servidor executou a função determinística uma vez sobre o único snapshot autorizado, devolveu o resultado pelo mesmo `call_id` e obteve a resposta estruturada na segunda interação lógica. A chamada forçada não avalia seleção automática de Tool, e uma execução não demonstra estabilidade geral.
+
+## E-018 — pedido de melhor lance com posição não confirmada
+
+### Objetivo
+
+Verificar se o fluxo preservaria insuficiência semântica diante de um pedido de melhor lance quando a posição estivesse explicitamente não confirmada.
+
+### Configuração executada
+
+- **endpoint:** `POST /api/ai/test/tools/position-context`;
+- **modelo, prompt, schema e Tool:** os mesmos de `E-017`;
+- **pergunta:** solicitava o melhor lance;
+- **`positionContextId`:** `position-tool-test-02`;
+- **`confirmationStatus`:** `unconfirmed`.
+
+### Resultado observado
+
+- HTTP `200`;
+- a Tool foi executada uma vez;
+- `analysisReadiness: "insufficient"`;
+- `evidenceStatus: "insufficient"`;
+- nenhum melhor lance concreto foi produzido;
+- `strengths: []`;
+- `improvements: []`;
+- a resposta solicitou a confirmação da posição.
+
+A linha do servidor registrou aproximadamente 12,6 segundos para essa execução isolada. Esse valor não é média, SLA ou benchmark.
+
+### Classificação metodológica
+
+Este teste não constitui comparação controlada com `E-017`, porque a pergunta e o `positionContextId` eram diferentes. O comportamento negativo foi coerente no caso observado, mas a diferença não pode ser atribuída isoladamente a `confirmationStatus` com base nesse par.
+
+## E-019 — comparação controlada entre posição confirmada e não confirmada
+
+### Objetivo
+
+Isolar o efeito de `confirmationStatus` sobre a suficiência do contexto e sobre a resposta final.
+
+### Variáveis mantidas constantes
+
+- mesma mensagem: “Analise somente os fatos disponíveis sobre a posição selecionada e explique as limitações.”;
+- mesmo `positionContextId: "position-tool-test-01"`;
+- mesmo FEN inicial;
+- mesma origem `physical_board_photo`;
+- mesmo `sourceContext: "personal_study"`;
+- mesmo `recognitionStatus: "demo_available"`;
+- mesma `dataNature: "simulated_demo"`;
+- mesmo modelo `gpt-5-mini`;
+- mesmo prompt `professor-ia-v2`;
+- mesmo schema `provisional-teacher-response-v1`;
+- mesma rota técnica;
+- mesma Tool forçada.
+
+A única variável modificada foi `confirmationStatus`: `confirmed` na execução A e `unconfirmed` na execução B. A condição confirmada corresponde à execução registrada em `E-017`; a condição não confirmada repetiu a mesma entrada com somente esse campo alterado.
+
+### Comparação observada
+
+#### Execução A — `confirmed`
+
+- `analysisReadiness: "sufficient_for_position_context"`;
+- `evidenceStatus: "sufficient"`;
+- fatos técnicos da posição apresentados;
+- caráter demonstrativo preservado.
+
+#### Execução B — `unconfirmed`
+
+- `analysisReadiness: "insufficient"`;
+- `evidenceStatus: "insufficient"`;
+- `strengths: []`;
+- `improvements: []`;
+- nenhum melhor lance, avaliação ou variante;
+- recomendação para confirmar a posição;
+- fatos sintáticos ainda presentes, sem serem tratados como representação confiável da posição real.
+
+### Conclusão limitada
+
+Nesta comparação, a mudança isolada de `confirmationStatus` alterou coerentemente a suficiência do contexto e o comportamento final. O teste comprova o funcionamento desse par específico. Uma única execução de cada condição não demonstra estabilidade estatística nem comportamento universal.
+
+A latência da execução B não foi registrada porque não havia evidência explícita no log. Nenhuma média foi calculada.
+
+## Achado não bloqueante de apresentação
+
+Nas respostas observadas, o texto final expôs `positionContextId` e nomes internos como `get_position_context`, `analysisReadiness`, `confirmationStatus` e `chessJsValidationStatus`. `evidenceUsed` também apresentou conteúdo próximo do protocolo técnico. Isso não revelou outro contexto nem quebrou a autorização, mas esses termos não são apropriados para a experiência final do usuário.
+
+Como trabalho futuro, será necessário impedir identificadores internos no texto pedagógico; decidir entre regra adicional em uma futura versão do prompt, sanitização ou pós-processamento server-side e transformação na camada de apresentação; avaliar se `evidenceUsed` será visível, resumido ou reservado para auditoria; e manter dados técnicos disponíveis para rastreabilidade sem apresentá-los diretamente ao jogador. Nenhuma `professor-ia-v3` foi criada nesta tarefa.
