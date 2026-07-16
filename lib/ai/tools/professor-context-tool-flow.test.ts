@@ -6,6 +6,8 @@ import type {
 } from "openai/resources/responses/responses";
 import {
   PROFESSOR_CONTEXT_TOOL_CALL_ID_MAX_LENGTH,
+  getProfessorContextToolFlowObservedToolName,
+  getProfessorContextToolFlowStructuralDiagnostic,
   ProfessorContextToolFlowError,
   professorContextOpenAITools,
   runProfessorContextToolFlow,
@@ -475,8 +477,143 @@ test("matriz Tool versus contexto rejeita incompatibilidades sem fallback", asyn
       assert.equal(serialized.includes("game-context-01"), false);
       assert.equal(serialized.includes("position-context-01"), false);
       assert.equal(serialized.includes(FEN), false);
+      assert.equal(getProfessorContextToolFlowObservedToolName(error), toolName);
+      assert.equal(serialized.includes(toolName), false);
     });
   }
+});
+
+test("metadados legítimos do ParsedResponse são ignorados e somente output_parsed validado é público", async () => {
+  const rawParsedData = {
+    ...finalData,
+    summary: "Conteúdo interno do item que não deve ser publicado.",
+    sdkOnly: "metadata-only",
+  };
+  const parsedMessage = {
+    ...message,
+    phase: "final_answer",
+    sdk_future_metadata: { opaque: true },
+    content: [
+      {
+        ...message.content[0],
+        parsed: rawParsedData,
+        sdk_content_metadata: "ignored",
+      },
+    ],
+  };
+  const parsedReasoning = {
+    ...reasoning,
+    content: [{ type: "reasoning_text", text: "Conteúdo opaco ignorado." }],
+    sdk_reasoning_metadata: "ignored",
+  };
+  const state = createDependencies(
+    firstResponse([message]),
+    finalResponse({ output: [parsedReasoning, parsedMessage] as never }),
+  );
+
+  const result = await run(state.dependencies, context("none"));
+
+  assert.deepEqual(result.data, finalData);
+  const serialized = JSON.stringify(result);
+  assert.equal(serialized.includes("Conteúdo interno"), false);
+  assert.equal(serialized.includes("metadata-only"), false);
+  assert.equal(serialized.includes("sdk_future_metadata"), false);
+  assert.equal(serialized.includes("parsed"), false);
+});
+
+test("metadados adicionais não tornam conteúdo final malformado aceitável", async () => {
+  const state = createDependencies(
+    firstResponse([message]),
+    finalResponse({
+      output: [
+        {
+          ...message,
+          content: [
+            {
+              type: "output_text",
+              annotations: [],
+              parsed: finalData,
+              sdk_content_metadata: "ignored",
+            },
+          ],
+        },
+      ] as never,
+    }),
+  );
+  await expectFlowError(
+    () => run(state.dependencies, context("none")),
+    "FINAL_RESPONSE_OUTPUT_INVALID",
+  );
+});
+
+test("diagnóstico de output final inválido contém somente forma sanitizada", async () => {
+  const privateValue = `${FEN} ${PGN} call-secret snapshot-secret`;
+  const state = createDependencies(
+    firstResponse([message]),
+    finalResponse({
+      output: [
+        { type: privateValue, id: privateValue },
+        {
+          ...message,
+          content: [{ type: privateValue, text: privateValue }],
+        },
+      ] as never,
+    }),
+  );
+  const error = await expectFlowError(
+    () => run(state.dependencies, context("none")),
+    "FINAL_RESPONSE_OUTPUT_INVALID",
+  );
+
+  assert.deepEqual(getProfessorContextToolFlowStructuralDiagnostic(error), {
+    status: "completed",
+    outputItemTypes: ["unknown", "message"],
+    messageContentTypes: ["unknown"],
+    hasOutputParsed: true,
+    structuredOutputValid: true,
+    code: "FINAL_RESPONSE_OUTPUT_INVALID",
+  });
+  const serializedError = JSON.stringify(error);
+  const serializedDiagnostic = JSON.stringify(
+    getProfessorContextToolFlowStructuralDiagnostic(error),
+  );
+  for (const forbidden of [FEN, PGN, "call-secret", "snapshot-secret"]) {
+    assert.equal(serializedError.includes(forbidden), false);
+    assert.equal(serializedDiagnostic.includes(forbidden), false);
+  }
+  assert.equal(serializedError.includes("outputItemTypes"), false);
+});
+
+test("output não-array é rejeitado nas duas interações", async (t) => {
+  await t.test("primeira", async () => {
+    const state = createDependencies(
+      firstResponse(null as never),
+    );
+    await expectFlowError(
+      () => run(state.dependencies),
+      "FIRST_RESPONSE_OUTPUT_INVALID",
+    );
+    assert.equal(state.providerCalls.length, 1);
+  });
+
+  await t.test("final", async () => {
+    const state = createDependencies(
+      firstResponse([message]),
+      finalResponse({ output: { type: "message" } as never }),
+    );
+    const error = await expectFlowError(
+      () => run(state.dependencies, context("none")),
+      "FINAL_RESPONSE_OUTPUT_INVALID",
+    );
+    assert.deepEqual(getProfessorContextToolFlowStructuralDiagnostic(error), {
+      status: "completed",
+      outputItemTypes: null,
+      messageContentTypes: [],
+      hasOutputParsed: true,
+      structuredOutputValid: true,
+      code: "FINAL_RESPONSE_OUTPUT_INVALID",
+    });
+  });
 });
 
 test("protocolo inválido encerra antes do executor e da segunda interação", async (t) => {
@@ -694,7 +831,14 @@ test("JSON válido mas argumentos rejeitados chegam somente ao executor correto"
 });
 
 test("aceita e preserva reasoning, message e function_call reais antes de output serializado uma vez", async () => {
-  const call = functionCall(GET_GAME_CONTEXT_TOOL_NAME);
+  const call = {
+    ...functionCall(GET_GAME_CONTEXT_TOOL_NAME),
+    id: "function-item-01",
+    status: "completed",
+    namespace: "functions",
+    caller: { type: "direct" },
+    created_by: "sdk-runtime",
+  } as const satisfies ResponseFunctionToolCall & { created_by: string };
   const output = [reasoning, message, call];
   const state = createDependencies(firstResponse(output));
   await run(state.dependencies);
@@ -897,7 +1041,12 @@ test("respostas incompletas, refusal e output final ausente são controlados", a
       name: "segunda output malformado",
       first: firstResponse([message]),
       final: finalResponse({
-        output: [functionCall(GET_GAME_CONTEXT_TOOL_NAME)] as never,
+        output: [
+          {
+            ...functionCall(GET_GAME_CONTEXT_TOOL_NAME),
+            parsed_arguments: { gameContextId: "game-context-01" },
+          },
+        ] as never,
       }),
       code: "FINAL_RESPONSE_OUTPUT_INVALID",
       calls: 2,

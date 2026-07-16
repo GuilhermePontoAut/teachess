@@ -3,6 +3,7 @@ import type { ResponseUsage } from "openai/resources/responses/responses";
 import type { SelectedProfessorIaPrompt } from "../prompts/professor-ia-prompts";
 import { PROVISIONAL_TEACHER_RESPONSE_SCHEMA_VERSION } from "../schemas/provisional-teacher-response";
 import {
+  getProfessorContextToolFlowObservedToolName,
   ProfessorContextToolFlowError,
 } from "../tools/professor-context-tool-flow";
 import {
@@ -178,6 +179,25 @@ export const professorContextToolSelectionEvalRunResultSchema = z
       }
       if (result.errorCode === null) {
         issue(["errorCode"], "Erro técnico exige código sanitizado.");
+      }
+      return;
+    }
+
+    const isBlockedWrongToolObservation =
+      result.classification === "wrong_tool" &&
+      result.actualDecision !== null &&
+      result.actualDecision !== "not_called" &&
+      result.actualDecision !== result.expectedDecision &&
+      result.toolCallCount === 1 &&
+      result.evidenceStatus === null &&
+      result.finalInteractionLatencyMs === null &&
+      result.errorCode === null;
+    if (isBlockedWrongToolObservation) {
+      if (!hasFirstLatency) {
+        issue(
+          ["firstInteractionLatencyMs"],
+          "Uma Tool incompatível observada exige a latência da primeira interação.",
+        );
       }
       return;
     }
@@ -615,6 +635,14 @@ export type ProfessorContextToolSelectionEvalExecutionOutcome =
       telemetry: ProfessorContextToolSelectionTelemetry;
     }
   | {
+      status: "wrong_tool";
+      actualDecision: Exclude<
+        ProfessorContextToolSelectionDecision,
+        "not_called"
+      >;
+      telemetry: ProfessorContextToolSelectionTelemetry;
+    }
+  | {
       status: "technical_error";
       errorCode: string;
       telemetry: ProfessorContextToolSelectionTelemetry;
@@ -661,6 +689,18 @@ export function getProfessorContextToolSelectionSanitizedErrorCode(
   if (error instanceof ProfessorContextToolFlowError) return error.code;
   if (error instanceof z.ZodError) return "FLOW_RESULT_INVALID";
   return "UNEXPECTED_ERROR";
+}
+
+export function getProfessorContextToolSelectionObservedWrongTool(
+  error: unknown,
+): Exclude<ProfessorContextToolSelectionDecision, "not_called"> | null {
+  if (
+    !(error instanceof ProfessorContextToolFlowError) ||
+    error.code !== "TOOL_CONTEXT_MISMATCH"
+  ) {
+    return null;
+  }
+  return getProfessorContextToolFlowObservedToolName(error);
 }
 
 function authorizedContextForCase(
@@ -845,6 +885,24 @@ export async function runProfessorContextToolSelectionEvals({
               toolCallCount: null,
               evidenceStatus: null,
               errorCode: sanitizedErrorCodeSchema.parse(outcome.errorCode),
+            }),
+          );
+          continue;
+        }
+
+        if (outcome.status === "wrong_tool") {
+          results.push(
+            professorContextToolSelectionEvalRunResultSchema.parse({
+              caseId: evalCase.id,
+              runNumber,
+              expectedDecision: evalCase.expectedDecision,
+              actualDecision: outcome.actualDecision,
+              classification: "wrong_tool",
+              totalLatencyMs,
+              ...telemetry,
+              toolCallCount: 1,
+              evidenceStatus: null,
+              errorCode: null,
             }),
           );
           continue;

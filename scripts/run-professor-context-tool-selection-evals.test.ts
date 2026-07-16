@@ -146,6 +146,54 @@ function fakeClient(options: { repetitions?: number } = {}) {
   };
 }
 
+function incompatibleToolClient(mode: "supported" | "unknown") {
+  const state = { createCalls: 0, parseCalls: 0 };
+  return {
+    state,
+    client: {
+      responses: {
+        async create(params: { input: unknown }) {
+          state.createCalls += 1;
+          assert.ok(Array.isArray(params.input));
+          const developerItem = params.input[1] as { content: string };
+          const technicalContext = JSON.parse(developerItem.content) as {
+            type: "game" | "position" | "none";
+          };
+          const name =
+            mode === "unknown"
+              ? "unknown_tool_private"
+              : technicalContext.type === "game"
+                ? "get_position_context"
+                : "get_game_context";
+          return {
+            status: "completed",
+            output: [
+              {
+                type: "function_call",
+                name,
+                call_id: `private-call-${state.createCalls}`,
+                arguments: JSON.stringify({
+                  privateArgument: "private-snapshot-id",
+                }),
+              },
+            ],
+            incomplete_details: null,
+            usage: {
+              input_tokens: 10,
+              output_tokens: 5,
+              total_tokens: 15,
+            },
+          };
+        },
+        async parse() {
+          state.parseCalls += 1;
+          assert.fail("mismatch deve encerrar antes do parse final");
+        },
+      },
+    },
+  };
+}
+
 const readyEnvironment = {
   RUN_REAL_AI_EVALS: "true",
   AI_EVAL_PROMPT_VERSION: "professor-ia-v2",
@@ -390,6 +438,103 @@ test("três repetições continuam estritamente seriais e produzem 36 execuçõe
     (JSON.parse(reportContents) as { totalRuns: number }).totalRuns,
     36,
   );
+});
+
+test("CLI registra Tool suportada incompatível como wrong_tool sem executar ou vazar protocolo", async () => {
+  const fake = incompatibleToolClient("supported");
+  let reportContents = "";
+  const exitCode = await runProfessorContextToolSelectionEvalCli({
+    readEnvironment: environmentReader(readyEnvironment),
+    createClient: () => fake.client as never,
+    writeJsonReport: async (_path, contents) => {
+      reportContents = contents;
+    },
+    writeLine: () => undefined,
+    clock: clock(),
+  });
+
+  assert.equal(exitCode, 0);
+  assert.equal(fake.state.createCalls, 12);
+  assert.equal(fake.state.parseCalls, 0);
+  const report = JSON.parse(reportContents) as {
+    wrongTools: number;
+    technicalErrors: number;
+    results: Array<{
+      caseId: string;
+      actualDecision: string | null;
+      classification: string;
+      toolCallCount: number | null;
+    }>;
+  };
+  assert.equal(report.wrongTools, 12);
+  assert.equal(report.technicalErrors, 0);
+  assert.equal(
+    report.results.find((result) => result.caseId === "GAME-SEL-004")
+      ?.actualDecision,
+    "get_position_context",
+  );
+  assert.equal(
+    report.results.find((result) => result.caseId === "NO-TOOL-SEL-004")
+      ?.actualDecision,
+    "get_game_context",
+  );
+  assert.equal(
+    report.results.every(
+      (result) =>
+        result.classification === "wrong_tool" &&
+        result.toolCallCount === 1,
+    ),
+    true,
+  );
+  for (const forbidden of [
+    "private-call",
+    "privateArgument",
+    "private-snapshot-id",
+    "call_id",
+    "arguments",
+    "snapshot",
+  ]) {
+    assert.equal(reportContents.includes(forbidden), false, forbidden);
+  }
+});
+
+test("CLI mantém Tool desconhecida como erro técnico sanitizado", async () => {
+  const fake = incompatibleToolClient("unknown");
+  let reportContents = "";
+  const exitCode = await runProfessorContextToolSelectionEvalCli({
+    readEnvironment: environmentReader(readyEnvironment),
+    createClient: () => fake.client as never,
+    writeJsonReport: async (_path, contents) => {
+      reportContents = contents;
+    },
+    writeLine: () => undefined,
+    clock: clock(),
+  });
+
+  assert.equal(exitCode, 0);
+  assert.equal(fake.state.createCalls, 12);
+  assert.equal(fake.state.parseCalls, 0);
+  const report = JSON.parse(reportContents) as {
+    wrongTools: number;
+    technicalErrors: number;
+    results: Array<{ errorCode: string | null }>;
+  };
+  assert.equal(report.wrongTools, 0);
+  assert.equal(report.technicalErrors, 12);
+  assert.equal(
+    report.results.every(
+      (result) => result.errorCode === "TOOL_NAME_NOT_SUPPORTED",
+    ),
+    true,
+  );
+  for (const forbidden of [
+    "unknown_tool_private",
+    "private-call",
+    "privateArgument",
+    "private-snapshot-id",
+  ]) {
+    assert.equal(reportContents.includes(forbidden), false, forbidden);
+  }
 });
 
 test("falha de escrita é sanitizada e retorna código 1", async () => {

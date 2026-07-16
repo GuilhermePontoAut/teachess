@@ -367,6 +367,82 @@ test("classifica correct, false_positive, false_negative e wrong_tool", async ()
   );
 });
 
+test("mismatch suportado preserva game, position e none como wrong_tool", async () => {
+  const report = await run(async (input) => {
+    const actualDecision =
+      input.authorizedContext.type === "game"
+        ? "get_position_context"
+        : input.authorizedContext.type === "position"
+          ? "get_game_context"
+          : "get_position_context";
+    return {
+      status: "wrong_tool",
+      actualDecision,
+      telemetry: {
+        firstInteractionLatencyMs: 2,
+        finalInteractionLatencyMs: null,
+        tokens: null,
+      },
+    };
+  });
+
+  assert.equal(report.wrongTools, 12);
+  assert.equal(report.technicalErrors, 0);
+  assert.equal(report.completionRate, 1);
+  assert.equal(report.decisionAccuracy, 0);
+  for (const result of report.results) {
+    assert.equal(result.classification, "wrong_tool");
+    assert.equal(result.toolCallCount, 1);
+    assert.equal(result.evidenceStatus, null);
+    assert.equal(result.finalInteractionLatencyMs, null);
+    assert.equal(result.errorCode, null);
+    assert.notEqual(result.actualDecision, result.expectedDecision);
+  }
+  assert.equal(
+    report.results.find((result) => result.caseId === "GAME-SEL-004")
+      ?.actualDecision,
+    "get_position_context",
+  );
+  assert.equal(
+    report.results.find((result) => result.caseId === "NO-TOOL-SEL-004")
+      ?.actualDecision,
+    "get_game_context",
+  );
+});
+
+test("Tool desconhecida permanece erro técnico sanitizado", async () => {
+  let index = 0;
+  const report = await run(async (input) => {
+    index += 1;
+    if (index === 1) {
+      return {
+        status: "technical_error",
+        errorCode: "TOOL_NAME_NOT_SUPPORTED",
+        telemetry: {
+          firstInteractionLatencyMs: 2,
+          finalInteractionLatencyMs: null,
+          tokens: null,
+        },
+      };
+    }
+    return success(caseForInput(input).expectedDecision);
+  });
+
+  assert.equal(report.results[0].classification, "technical_error");
+  assert.equal(report.results[0].actualDecision, null);
+  assert.equal(report.results[0].toolCallCount, null);
+  assert.equal(report.results[0].errorCode, "TOOL_NAME_NOT_SUPPORTED");
+  const serialized = JSON.stringify(report);
+  for (const forbidden of [
+    "unknown_tool_private",
+    "call_id",
+    "arguments",
+    "snapshot",
+  ]) {
+    assert.equal(serialized.includes(forbidden), false);
+  }
+});
+
 test("technical_error preserva somente código sanitizado e não interrompe", async () => {
   let index = 0;
   const report = await run(async () => {

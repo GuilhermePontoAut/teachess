@@ -10,6 +10,7 @@ import {
 } from "../lib/ai/evals/professor-context-tool-selection-cases";
 import {
   combineProfessorContextToolSelectionUsages,
+  getProfessorContextToolSelectionObservedWrongTool,
   getProfessorContextToolSelectionSanitizedErrorCode,
   InvalidProfessorContextToolSelectionEvalCaseSetError,
   INVALID_PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_CASE_SET,
@@ -318,6 +319,15 @@ export async function runProfessorContextToolSelectionEvalCli(
           telemetry: measured.telemetry(),
         } satisfies ProfessorContextToolSelectionEvalExecutionOutcome;
       } catch (error: unknown) {
+        const observedWrongTool =
+          getProfessorContextToolSelectionObservedWrongTool(error);
+        if (observedWrongTool !== null) {
+          return {
+            status: "wrong_tool",
+            actualDecision: observedWrongTool,
+            telemetry: measured.telemetry(),
+          } satisfies ProfessorContextToolSelectionEvalExecutionOutcome;
+        }
         return {
           status: "technical_error",
           errorCode: getProfessorContextToolSelectionSanitizedErrorCode(error),

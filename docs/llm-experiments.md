@@ -1127,28 +1127,37 @@ Nas três repetições de cada um dos seis casos, o modelo manteve a decisão es
 
 ## E-022 — seleção conjunta entre contexto de partida, posição ou nenhuma Tool
 
-**Status:** `not_executed`
+**Status:** `failed_integration` — inconclusivo
 
-### Plano
+### Configuração executada
 
-O experimento medirá exclusivamente a decisão pública `toolDecision` do fluxo real `runProfessorContextToolFlow`: `get_game_context`, `get_position_context` ou `not_called`. A configuração preparada usa `gpt-5-mini`, prompt `professor-ia-v2`, schema `provisional-teacher-response-v1` e eval set `professor-context-tool-selection-evals-v1`.
+O experimento buscou medir exclusivamente a decisão do fluxo real `runProfessorContextToolFlow`: `get_game_context`, `get_position_context` ou `not_called`. A execução usou `gpt-5-mini`, prompt `professor-ia-v2`, schema `provisional-teacher-response-v1`, eval set `professor-context-tool-selection-evals-v1` e uma repetição por caso.
 
-O conjunto possui 12 casos sintéticos e congelados, igualmente distribuídos entre as três decisões. O plano inicial é uma repetição por caso, com possibilidade posterior de três repetições para observar variabilidade. A execução será estritamente sequencial.
+O conjunto possui 12 casos sintéticos e congelados, igualmente distribuídos entre as três decisões. A execução foi estritamente sequencial. A definição canônica e seus status declarativos não foram alterados pelo histórico real.
 
-Serão registrados `correct`, `false_positive`, `false_negative`, `wrong_tool` e `technical_error`; `decisionAccuracy`, `endToEndSuccessRate` e `completionRate`; matriz de confusão 3 × 3; accuracy e quantidade por classe; latências; e tokens quando o SDK fornecer `usage`. Não haverá cálculo de custo.
+### Resultado observado
 
-`wrong_tool` faz parte da taxonomia e pode ser produzido em testes offline por executores injetados. No fluxo real, uma solicitação da Tool oposta ao contexto autorizado é bloqueada pela matriz server-side antes da execução e emerge como `TOOL_CONTEXT_MISMATCH`/`technical_error`, sem decisão pública `wrong_tool`. Isso preserva a autorização, mas impede observar diretamente algumas células da matriz de confusão nesse caminho. Esta limitação não altera o estado do experimento: `E-022` continua `not_executed`.
+- 12 execuções;
+- `correct: 0` como contador bruto de classificações, sem representar accuracy de 0%;
+- `technicalErrors: 12`;
+- `decisionAccuracy: null`;
+- `completionRate: 0`;
+- dez casos com `FINAL_RESPONSE_OUTPUT_INVALID`;
+- `GAME-SEL-004` e `NO-TOOL-SEL-004` com `TOOL_CONTEXT_MISMATCH`;
+- dez casos com latências das duas interações e `usage`;
+- nenhuma decisão válida registrada;
+- relatório sanitizado.
 
-O relatório será sanitizado e gravado somente em `/tmp/teachess-professor-context-tool-selection-evals.json`. Ele não conterá mensagens, justificativas, snapshots, PGN, FEN, identificadores internos, argumentos, respostas textuais nem objetos do provider.
+Não se registra accuracy de 0%, porque o denominador de decisões válidas foi zero e o contrato retornou corretamente `decisionAccuracy: null`. O experimento não avaliou validamente a qualidade do modelo e não sustenta conclusão positiva ou negativa sobre sua capacidade de seleção.
 
-### Critério inicial de aprovação
+### Diagnóstico de integração
 
-Para a verificação inicial com uma repetição, o critério planejado é:
+Os dez `FINAL_RESPONSE_OUTPUT_INVALID` revelaram que o pipeline validava `response.output` de `responses.parse` com uma allowlist exata de propriedades. Os tipos locais do SDK 6.47.0 permitem metadados adicionais legítimos, em especial `parsed` em `ParsedResponseOutputText<ParsedT>`. Assim, uma forma válida do output bruto podia ser rejeitada antes que `output_parsed` fosse submetido ao `provisionalTeacherResponseSchema`. Essa é uma incompatibilidade de integração no tratamento do envelope do SDK, distinta de uma falha do Structured Output público.
 
-- zero `technical_error`;
-- zero `wrong_tool`;
-- zero `false_positive`;
-- zero `false_negative`;
-- 12/12 classificações `correct`.
+Os dois `TOOL_CONTEXT_MISMATCH` mostraram outro problema de observabilidade: a barreira de autorização funcionou e bloqueou a Tool incompatível antes do executor, mas o runner descartou qual Tool suportada havia sido observada e converteu a escolha em erro técnico sem decisão. O pipeline corrigido mantém internamente somente o nome validado da Tool suportada e registra esse caso como `wrong_tool`, com `actualDecision` e uma chamada observada, sem executar a Tool. Nome desconhecido continua erro técnico sanitizado.
 
-O runner não foi executado nesta etapa. Portanto, não há resultado real, accuracy observada nem conclusão sobre a capacidade do modelo. Mesmo uma futura execução perfeita com uma repetição será apenas uma verificação inicial, não prova de estabilidade.
+O relatório observado permaneceu sanitizado e não registrou mensagens, justificativas, snapshots, PGN, FEN, identificadores internos, argumentos, respostas textuais nem objetos do provider. Nenhum desses dados foi copiado para esta documentação.
+
+### Classificação metodológica
+
+`E-022` permanece inconclusivo e não foi concluído com sucesso. O status documental `failed_integration` descreve o histórico da execução sem inventar um novo status nos schemas dos casos canônicos, que continuam congelados. Uma nova execução futura, explicitamente autorizada, será necessária para avaliar o modelo depois da correção; mesmo um resultado perfeito com uma repetição continuará sendo apenas uma verificação inicial, não prova de estabilidade.

@@ -117,6 +117,31 @@ export type ProfessorContextToolFlowErrorCode =
   | "PROVIDER_ERROR"
   | "INTERNAL_ERROR";
 
+type SupportedToolName =
+  | typeof GET_GAME_CONTEXT_TOOL_NAME
+  | typeof GET_POSITION_CONTEXT_TOOL_NAME;
+
+export type ProfessorContextToolFlowStructuralDiagnostic = {
+  status: string;
+  outputItemTypes: string[] | null;
+  messageContentTypes: string[];
+  hasOutputParsed: boolean;
+  structuredOutputValid: boolean;
+  code: "FINAL_RESPONSE_OUTPUT_INVALID";
+};
+
+type ProfessorContextToolFlowErrorMetadata = {
+  observedToolName?: SupportedToolName;
+  structuralDiagnostic?: ProfessorContextToolFlowStructuralDiagnostic;
+};
+
+const professorContextToolFlowErrorMetadata = Symbol(
+  "professorContextToolFlowErrorMetadata",
+);
+
+type ProfessorContextToolFlowErrorOptions = ErrorOptions &
+  ProfessorContextToolFlowErrorMetadata;
+
 const flowErrorMessages: Record<ProfessorContextToolFlowErrorCode, string> = {
   FIRST_RESPONSE_OUTPUT_INVALID:
     "O provedor retornou uma primeira resposta em formato inválido.",
@@ -152,11 +177,32 @@ const flowErrorMessages: Record<ProfessorContextToolFlowErrorCode, string> = {
 
 export class ProfessorContextToolFlowError extends Error {
   readonly code: ProfessorContextToolFlowErrorCode;
+  readonly [professorContextToolFlowErrorMetadata]!:
+    ProfessorContextToolFlowErrorMetadata;
 
-  constructor(code: ProfessorContextToolFlowErrorCode, options?: ErrorOptions) {
-    super(flowErrorMessages[code], options);
+  constructor(
+    code: ProfessorContextToolFlowErrorCode,
+    options?: ProfessorContextToolFlowErrorOptions,
+  ) {
+    super(
+      flowErrorMessages[code],
+      options?.cause === undefined ? undefined : { cause: options.cause },
+    );
     this.name = "ProfessorContextToolFlowError";
     this.code = code;
+    Object.defineProperty(this, professorContextToolFlowErrorMetadata, {
+      value: {
+        ...(options?.observedToolName === undefined
+          ? {}
+          : { observedToolName: options.observedToolName }),
+        ...(options?.structuralDiagnostic === undefined
+          ? {}
+          : { structuralDiagnostic: options.structuralDiagnostic }),
+      },
+      enumerable: false,
+      writable: false,
+      configurable: false,
+    });
   }
 
   toJSON() {
@@ -164,9 +210,32 @@ export class ProfessorContextToolFlowError extends Error {
   }
 }
 
-type SupportedToolName =
-  | typeof GET_GAME_CONTEXT_TOOL_NAME
-  | typeof GET_POSITION_CONTEXT_TOOL_NAME;
+export function getProfessorContextToolFlowObservedToolName(
+  error: unknown,
+): SupportedToolName | null {
+  if (!(error instanceof ProfessorContextToolFlowError)) return null;
+  return (
+    error[professorContextToolFlowErrorMetadata].observedToolName ?? null
+  );
+}
+
+export function getProfessorContextToolFlowStructuralDiagnostic(
+  error: unknown,
+): ProfessorContextToolFlowStructuralDiagnostic | null {
+  if (!(error instanceof ProfessorContextToolFlowError)) return null;
+  const diagnostic =
+    error[professorContextToolFlowErrorMetadata].structuralDiagnostic;
+  return diagnostic === undefined
+    ? null
+    : {
+        ...diagnostic,
+        outputItemTypes:
+          diagnostic.outputItemTypes === null
+            ? null
+            : [...diagnostic.outputItemTypes],
+        messageContentTypes: [...diagnostic.messageContentTypes],
+      };
+}
 
 type ParsedFunctionCall = {
   name: SupportedToolName;
@@ -207,14 +276,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function hasOnlyKeys(
-  value: Record<string, unknown>,
-  allowedKeys: readonly string[],
-): boolean {
-  const allowed = new Set(allowedKeys);
-  return Object.keys(value).every((key) => allowed.has(key));
-}
-
 function hasValidOptionalStatus(value: Record<string, unknown>): boolean {
   return value.status === undefined || isResponseItemStatus(value.status);
 }
@@ -222,7 +283,6 @@ function hasValidOptionalStatus(value: Record<string, unknown>): boolean {
 function isLogprobCandidate(value: unknown): boolean {
   return (
     isRecord(value) &&
-    hasOnlyKeys(value, ["token", "bytes", "logprob"]) &&
     typeof value.token === "string" &&
     Array.isArray(value.bytes) &&
     value.bytes.every((byte) => typeof byte === "number") &&
@@ -233,7 +293,6 @@ function isLogprobCandidate(value: unknown): boolean {
 function isLogprob(value: unknown): boolean {
   return (
     isRecord(value) &&
-    hasOnlyKeys(value, ["token", "bytes", "logprob", "top_logprobs"]) &&
     typeof value.token === "string" &&
     Array.isArray(value.bytes) &&
     value.bytes.every((byte) => typeof byte === "number") &&
@@ -248,20 +307,12 @@ function isOutputTextAnnotation(value: unknown): boolean {
   switch (value.type) {
     case "file_citation":
       return (
-        hasOnlyKeys(value, ["file_id", "filename", "index", "type"]) &&
         typeof value.file_id === "string" &&
         typeof value.filename === "string" &&
         typeof value.index === "number"
       );
     case "url_citation":
       return (
-        hasOnlyKeys(value, [
-          "end_index",
-          "start_index",
-          "title",
-          "type",
-          "url",
-        ]) &&
         typeof value.end_index === "number" &&
         typeof value.start_index === "number" &&
         typeof value.title === "string" &&
@@ -269,14 +320,6 @@ function isOutputTextAnnotation(value: unknown): boolean {
       );
     case "container_file_citation":
       return (
-        hasOnlyKeys(value, [
-          "container_id",
-          "end_index",
-          "file_id",
-          "filename",
-          "start_index",
-          "type",
-        ]) &&
         typeof value.container_id === "string" &&
         typeof value.end_index === "number" &&
         typeof value.file_id === "string" &&
@@ -285,7 +328,6 @@ function isOutputTextAnnotation(value: unknown): boolean {
       );
     case "file_path":
       return (
-        hasOnlyKeys(value, ["file_id", "index", "type"]) &&
         typeof value.file_id === "string" &&
         typeof value.index === "number"
       );
@@ -298,15 +340,11 @@ function isResponseMessageContent(value: unknown): boolean {
   if (!isRecord(value)) return false;
 
   if (value.type === "refusal") {
-    return (
-      hasOnlyKeys(value, ["type", "refusal"]) &&
-      typeof value.refusal === "string"
-    );
+    return typeof value.refusal === "string";
   }
 
   if (value.type === "output_text") {
     return (
-      hasOnlyKeys(value, ["type", "text", "annotations", "logprobs"]) &&
       typeof value.text === "string" &&
       Array.isArray(value.annotations) &&
       value.annotations.every(isOutputTextAnnotation) &&
@@ -322,7 +360,6 @@ function isResponseOutputMessage(value: unknown): value is ResponseOutputMessage
   if (!isRecord(value)) return false;
 
   return (
-    hasOnlyKeys(value, ["type", "id", "role", "status", "content", "phase"]) &&
     value.type === "message" &&
     typeof value.id === "string" &&
     value.role === "assistant" &&
@@ -339,7 +376,6 @@ function isResponseOutputMessage(value: unknown): value is ResponseOutputMessage
 function isReasoningPart(value: unknown, type: "summary_text" | "reasoning_text") {
   return (
     isRecord(value) &&
-    hasOnlyKeys(value, ["type", "text"]) &&
     value.type === type &&
     typeof value.text === "string"
   );
@@ -349,14 +385,6 @@ function isResponseReasoningItem(value: unknown): value is ResponseReasoningItem
   if (!isRecord(value)) return false;
 
   return (
-    hasOnlyKeys(value, [
-      "type",
-      "id",
-      "summary",
-      "content",
-      "encrypted_content",
-      "status",
-    ]) &&
     value.type === "reasoning" &&
     typeof value.id === "string" &&
     Array.isArray(value.summary) &&
@@ -377,11 +405,10 @@ function hasValidFunctionCaller(value: unknown): boolean {
   if (value === undefined || value === null) return true;
   if (!isRecord(value)) return false;
   if (value.type === "direct") {
-    return hasOnlyKeys(value, ["type"]);
+    return true;
   }
   return (
     value.type === "program" &&
-    hasOnlyKeys(value, ["type", "caller_id"]) &&
     typeof value.caller_id === "string"
   );
 }
@@ -392,16 +419,6 @@ function isResponseFunctionToolCall(
   if (!isRecord(value)) return false;
 
   return (
-    hasOnlyKeys(value, [
-      "type",
-      "name",
-      "call_id",
-      "arguments",
-      "id",
-      "caller",
-      "namespace",
-      "status",
-    ]) &&
     value.type === "function_call" &&
     typeof value.name === "string" &&
     typeof value.call_id === "string" &&
@@ -411,6 +428,66 @@ function isResponseFunctionToolCall(
     hasValidFunctionCaller(value.caller) &&
     hasValidOptionalStatus(value)
   );
+}
+
+const knownOutputItemTypes = new Set([
+  "message",
+  "reasoning",
+  "function_call",
+]);
+
+const knownMessageContentTypes = new Set(["output_text", "refusal"]);
+
+const knownResponseStatuses = new Set([
+  "completed",
+  "failed",
+  "in_progress",
+  "cancelled",
+  "queued",
+  "incomplete",
+]);
+
+function sanitizedDiscriminator(
+  value: unknown,
+  knownValues: ReadonlySet<string>,
+): string {
+  if (!isRecord(value)) return "non_object";
+  if (typeof value.type !== "string") return "missing";
+  return knownValues.has(value.type) ? value.type : "unknown";
+}
+
+function buildFinalResponseStructuralDiagnostic(
+  response: FinalProviderResponse,
+  structuredOutputValid: boolean,
+): ProfessorContextToolFlowStructuralDiagnostic {
+  const outputItemTypes = Array.isArray(response.output)
+    ? response.output.map((item) =>
+        sanitizedDiscriminator(item, knownOutputItemTypes),
+      )
+    : null;
+  const messageContentTypes = Array.isArray(response.output)
+    ? response.output.flatMap((item) => {
+        if (!isRecord(item) || item.type !== "message") return [];
+        if (!Array.isArray(item.content)) return ["non_array"];
+        return item.content.map((content) =>
+          sanitizedDiscriminator(content, knownMessageContentTypes),
+        );
+      })
+    : [];
+
+  return {
+    status:
+      typeof response.status === "string" &&
+      knownResponseStatuses.has(response.status)
+        ? response.status
+        : "unknown",
+    outputItemTypes,
+    messageContentTypes,
+    hasOutputParsed: response.output_parsed !== null &&
+      response.output_parsed !== undefined,
+    structuredOutputValid,
+    code: "FINAL_RESPONSE_OUTPUT_INVALID",
+  };
 }
 
 function validateOutput(
@@ -507,7 +584,9 @@ function assertCompatibleContext(
       call.name === GET_POSITION_CONTEXT_TOOL_NAME);
 
   if (!compatible) {
-    throw new ProfessorContextToolFlowError("TOOL_CONTEXT_MISMATCH");
+    throw new ProfessorContextToolFlowError("TOOL_CONTEXT_MISMATCH", {
+      observedToolName: call.name,
+    });
   }
 }
 
@@ -698,7 +777,29 @@ async function runValidatedProfessorContextToolFlow(
     throw new ProfessorContextToolFlowError("PROVIDER_ERROR", { cause: error });
   }
 
-  const finalOutput = validateOutput(finalResponse.output, "final");
+  const parsedOutput = provisionalTeacherResponseSchema.safeParse(
+    finalResponse.output_parsed,
+  );
+  let finalOutput: ResponseOutputItem[];
+  try {
+    finalOutput = validateOutput(finalResponse.output, "final");
+  } catch (error: unknown) {
+    if (
+      error instanceof ProfessorContextToolFlowError &&
+      error.code === "FINAL_RESPONSE_OUTPUT_INVALID"
+    ) {
+      throw new ProfessorContextToolFlowError(
+        "FINAL_RESPONSE_OUTPUT_INVALID",
+        {
+          structuralDiagnostic: buildFinalResponseStructuralDiagnostic(
+            finalResponse,
+            parsedOutput.success,
+          ),
+        },
+      );
+    }
+    throw error;
+  }
   if (hasRefusal(finalOutput)) {
     throw new ProfessorContextToolFlowError("FINAL_RESPONSE_REFUSED");
   }
@@ -706,9 +807,6 @@ async function runValidatedProfessorContextToolFlow(
     throw new ProfessorContextToolFlowError("FINAL_RESPONSE_INCOMPLETE");
   }
 
-  const parsedOutput = provisionalTeacherResponseSchema.safeParse(
-    finalResponse.output_parsed,
-  );
   if (!parsedOutput.success) {
     throw new ProfessorContextToolFlowError(
       "FINAL_STRUCTURED_OUTPUT_UNAVAILABLE",
