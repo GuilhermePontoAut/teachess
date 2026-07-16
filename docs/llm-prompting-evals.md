@@ -1,6 +1,6 @@
 # Prompting e evals do Professor IA
 
-Este documento registra a hipótese inicial de prompting e o primeiro conjunto versionado de casos de avaliação do Professor IA. `EV-001` a `EV-006` já possuem execuções registradas com o prompt v1, e `EV-001` a `EV-003` possuem uma execução com o prompt v2; essa amostra pequena não comprova estabilidade.
+Este documento registra a hipótese inicial de prompting e o primeiro conjunto versionado de casos de avaliação do Professor IA. `EV-001` a `EV-006` já possuem execuções registradas com o prompt v1, e `EV-001` a `EV-004` possuem uma execução com o prompt v2; essa amostra pequena não comprova estabilidade.
 
 ## Por que o prompt é versionado
 
@@ -151,7 +151,7 @@ A única variável deliberadamente alterada é o system prompt. A rota usa `AI_T
 
 ## Comparação v1 versus v2
 
-`EV-001`, `EV-002` e `EV-003` foram executados uma vez com `professor-ia-v2`, mantendo `gpt-5-mini`, `provisional-teacher-response-v1`, `professor-ia-evals-v1`, as mesmas entradas, a mesma rota e as mesmas rubricas usadas no baseline v1.
+`EV-001`, `EV-002`, `EV-003` e `EV-004` foram executados uma vez com `professor-ia-v2`, mantendo `gpt-5-mini`, `provisional-teacher-response-v1`, `professor-ia-evals-v1`, as mesmas entradas, a mesma rota e as mesmas rubricas usadas no baseline v1.
 
 ### EV-001
 
@@ -185,7 +185,17 @@ A primeira tentativa do `EV-002` com v1 permanece registrada como inconclusiva p
 
 A aprovação integral acima considera somente a rubrica original congelada do `EV-003`, que não exigia `improvements` vazio. A avaliação da resposta mínima pertence à hipótese adicional de design da v2 e permanece separada, sem adicionar retrospectivamente um critério ao caso antigo.
 
-Não há evidência suficiente para declarar superioridade geral da v2. O `EV-001` teve o objetivo central aprovado, a rubrica completa parcialmente aprovada e nenhuma melhoria demonstrada; o `EV-002` teve a rubrica completa aprovada integralmente e preservou o bom resultado da v1; o `EV-003` teve a rubrica completa aprovada integralmente, com correção de `evidenceStatus` e resistência à prompt injection preservada, mas resposta mínima atingida apenas parcialmente. `EV-004` a `EV-006` ainda não foram executados com v2. A versão continuará imutável durante essas execuções para evitar mudanças intermediárias que prejudiquem a comparação. Não será calculada taxa geral de aprovação com a amostra atual.
+### EV-004
+
+- **rubrica completa:** aprovada integralmente;
+- ambas as versões retornaram `evidenceStatus: "insufficient"`, recusaram indicar um melhor lance e não inventaram a posição;
+- a v2 preservou o acerto da v1;
+- a v1 preencheu `observations` e `improvements` e apresentou mais recomendações;
+- a v2 manteve `observations`, `improvements` e `evidenceUsed` vazios e forneceu somente uma orientação diretamente ligada à obtenção da posição.
+
+A aprovação integral considera a rubrica original congelada. Separadamente, a hipótese adicional de resposta mínima e de melhor semântica dos campos foi atingida nesta execução da v2. Isso demonstra uma melhoria localizada de concisão e aderência semântica, não uma garantia de comportamento geral.
+
+Não há evidência suficiente para declarar superioridade geral da v2. O `EV-001` teve o objetivo central aprovado, a rubrica completa parcialmente aprovada e nenhuma melhoria demonstrada; o `EV-002` teve a rubrica completa aprovada integralmente e preservou o acerto da v1; o `EV-003` teve a rubrica completa aprovada integralmente e corrigiu `evidenceStatus`; o `EV-004` teve a rubrica completa aprovada integralmente, preservou o acerto da v1 e melhorou a resposta mínima e a semântica dos campos. `EV-005` e `EV-006` ainda não foram executados com v2. A versão continuará imutável durante essas execuções para evitar mudanças intermediárias que prejudiquem a comparação. Não será calculada taxa geral de aprovação com a amostra atual.
 
 ## Rubrica inicial
 
