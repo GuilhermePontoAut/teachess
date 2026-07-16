@@ -328,14 +328,77 @@ Os testes offline usam respostas simuladas para comprovar que o orquestrador ace
 
 A eval real deverá executar os seis casos contra a rota automática, comparar `toolSelection.decision` com `expectedDecision` e registrar as observações sem adaptar retrospectivamente os casos. Um falso positivo ocorre quando a Tool é chamada sem necessidade; um falso negativo ocorre quando ela deixa de ser chamada apesar de a resposta depender dos fatos da posição.
 
-Uma única execução por caso não demonstrará estabilidade. Uma etapa posterior deverá definir quantidade de repetições, tratamento de falhas inconclusivas e uma métrica de acerto antes de calcular qualquer taxa. Nesta etapa não há chamada real, repetição nem taxa de seleção.
+Uma única execução por caso não demonstrará estabilidade. O runner abaixo permite de uma a cinco repetições para observar a amostra executada, sem afirmar que repetição garante estabilidade estatística. Nesta etapa não houve chamada real, repetição contra o modelo nem taxa de seleção observada.
+
+## Runner de seleção automática
+
+### Objetivo e controle de variáveis
+
+O runner da Etapa 6D-B-A prepara a execução futura do conjunto `position-context-tool-selection-evals-v1` sem modificar os seis casos declarativos. A biblioteca recebe casos, configuração, prompt, snapshot e executor injetado; ela não lê `process.env`, não cria cliente e não depende diretamente da OpenAI. Os testes usam somente executores e transportes simulados.
+
+A versão do eval set identifica o conteúdo integral e imutável dos seis casos, não apenas sua quantidade ou o formato dos IDs. Antes de qualquer execução ou consumo da API, o runner compara o conjunto recebido com `positionContextToolSelectionCases`: exige exatamente seis IDs únicos na ordem canônica e igualdade de `id`, `message`, `expectedDecision`, `rationale`, `status` e `prohibitedBehaviors`, inclusive sua ordem. Omissão, duplicação, reordenação ou modificação produz um erro global e sanitizado de configuração, sem relatório parcial nem conversão em `technical_error` individual. Somente um conjunto integralmente correspondente pode produzir um relatório identificado por `position-context-tool-selection-evals-v1`.
+
+Todas as execuções usam exatamente o mesmo snapshot validado por `authorizedPositionSnapshotSchema`:
+
+- `positionContextId: "auto-selection-eval-position-01"`;
+- FEN da posição inicial;
+- origem `physical_board_photo`;
+- contexto `personal_study`;
+- reconhecimento `demo_available`;
+- natureza `simulated_demo`;
+- confirmação `confirmed`.
+
+O objeto é congelado antes de chegar ao executor. Cada caso fornece somente sua mensagem e sua decisão esperada; ele não pode substituir o snapshot. A presença do snapshot nos casos `not_called` é deliberada: permite observar se a Tool é chamada apenas porque está disponível, caracterizando falso positivo. O FEN e o snapshot integral nunca aparecem no relatório.
+
+### Execução e classificação
+
+Os casos são executados sequencialmente na ordem `AUTO-SEL-001` a `AUTO-SEL-006`; as repetições de cada caso também seguem ordem crescente. Não há `Promise.all`, paralelismo, retry, backoff ou loop aberto. Essa ordem reduz interferência, deixa custo e logs futuros previsíveis e facilita rastreabilidade. Um erro técnico de uma execução é registrado, e o runner continua com as seguintes.
+
+A matriz é:
+
+| Esperado | Observado | Classificação |
+| --- | --- | --- |
+| `called` | `called` | `correct` |
+| `not_called` | `not_called` | `correct` |
+| `not_called` | `called` | `false_positive` |
+| `called` | `not_called` | `false_negative` |
+| qualquer | sem decisão válida por falha | `technical_error` |
+
+Em erro técnico, `actualDecision`, `toolCallCount` e `evidenceStatus` ficam nulos, e somente um `errorCode` sanitizado é registrado. Sem erro, `called` exige call count 1, `not_called` exige 0 e `errorCode` fica nulo. Schemas Zod estritos validam essas relações e também os contadores consolidados.
+
+### Accuracy observada e relatório
+
+A accuracy é calculada por:
+
+```text
+correct / (totalRuns - technicalErrors)
+```
+
+Erros técnicos ficam fora do denominador porque não produziram uma decisão válida a comparar. Se todas as execuções terminarem em erro técnico, `accuracy` será `null`. A métrica descreve a amostra realmente executada; ela não é estimativa universal, prova de estabilidade nem garantia. O relatório inclui versões, timestamps ISO 8601, repetições, contadores e resultados individuais. A latência mede o fluxo automático completo com relógio monotônico; relógios de parede e monotônicos são injetáveis nos testes.
+
+O JSON público não contém mensagem do usuário, FEN, snapshot, ID de posição, `call_id`, argumentos, `response.output`, raciocínio, resposta pedagógica completa, chave, objetos do SDK, stack, `cause` ou request body bruto. O `caseId` referencia a mensagem no conjunto versionado.
+
+### Opt-in e saída temporária
+
+O comando futuro é:
+
+```bash
+RUN_REAL_AI_EVALS=true \
+AI_EVAL_PROMPT_VERSION=professor-ia-v2 \
+AI_EVAL_REPETITIONS=1 \
+npm run eval:position-context-tool-selection
+```
+
+O script exige o valor exato `RUN_REAL_AI_EVALS=true`. Sem ele, encerra com código 2 e mensagem segura, sem consultar `AI_EVAL_PROMPT_VERSION`, `AI_EVAL_REPETITIONS` ou `OPENAI_API_KEY`, sem criar cliente e sem executar casos. Depois do opt-in, exige uma versão registrada de prompt, valida repetições entre 1 e 5 — usando 1 quando a variável está ausente — e só então consulta a chave. Erro de configuração encerra com código 1; sucesso futuro usa código 0.
+
+O resumo legível e o JSON sanitizado serão impressos no terminal. O JSON também será gravado em `/tmp/teachess-position-context-tool-selection-evals.json`, nunca automaticamente dentro do repositório. O script não altera README ou documentação com resultados.
 
 ## O que ainda não existe
 
-- ainda não há executor automático de evals;
+- ainda não houve execução real do runner de evals;
 - ainda não há repetições suficientes para medir estabilidade dos casos;
 - não há notas, pesos ou taxas de aprovação;
 - não há execução real dos casos de seleção automática nem repetição suficiente para medir estabilidade;
 - não há comparação de parâmetros nesta tarefa.
 
-Também não foram feitas novas chamadas à OpenAI para criar estes artefatos. Resultados futuros deverão registrar, no mínimo, a versão do prompt e a versão do schema usadas na execução.
+O runner controlado existe e foi testado somente offline com transportes simulados. Não foram feitas novas chamadas à OpenAI para criar estes artefatos, e os seis casos continuam `not_executed`. Resultados futuros deverão registrar, no mínimo, modelo, versões do prompt, schema e eval set, repetições e IDs dos casos.

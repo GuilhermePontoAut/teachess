@@ -17,7 +17,11 @@
     "app/api/ai/test/tools/position-context/auto/route.test.ts",
     "lib/ai/evals/position-context-tool-selection-cases.ts",
     "lib/ai/evals/position-context-tool-selection-cases.test.ts",
+    "lib/ai/evals/run-position-context-tool-selection-evals.ts",
+    "lib/ai/evals/run-position-context-tool-selection-evals.test.ts",
     "lib/ai/tools/**/*.ts",
-    "lib/types/chess.ts"
+    "lib/types/chess.ts",
+    "scripts/run-position-context-tool-selection-evals.ts",
+    "scripts/run-position-context-tool-selection-evals.test.ts"
   ]
 }

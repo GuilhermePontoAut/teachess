@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "isolatedModules": false,
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "noEmit": false,
+    "outDir": "/tmp/teachess-ai-evals",
+    "rootDir": ".",
+    "target": "ES2022"
+  },
+  "include": [
+    "lib/ai/evals/position-context-tool-selection-cases.ts",
+    "lib/ai/evals/run-position-context-tool-selection-evals.ts",
+    "lib/ai/openai-client.ts",
+    "lib/ai/prompts/**/*.ts",
+    "lib/ai/schemas/provisional-teacher-response.ts",
+    "lib/ai/tools/**/*.ts",
+    "lib/types/chess.ts",
+    "scripts/run-position-context-tool-selection-evals.ts"
+  ],
+  "exclude": ["**/*.test.ts"]
+}

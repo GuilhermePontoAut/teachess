@@ -256,6 +256,8 @@ A função interna determinística `get_position_context` possui uma definição
 
 A seleção automática também foi preparada em uma rota técnica separada. O baseline forçado permanece preservado, enquanto o novo fluxo aceita zero ou uma chamada de `get_position_context` e sempre realiza uma segunda interação estruturada. Os dois caminhos possuem testes exclusivamente offline; os casos declarativos de seleção ainda não foram executados contra o modelo real, e nenhuma integração foi conectada à interface pública.
 
+Um runner controlado e reutilizável também está preparado para executar futuramente os seis casos `AUTO-SEL` com snapshot fixo, ordem sequencial e relatório sanitizado. O comando `npm run eval:position-context-tool-selection` exige o opt-in exato `RUN_REAL_AI_EVALS=true`, além da configuração de prompt e da chave; sem o opt-in, encerra antes de consultar a chave ou criar o cliente. Nenhum eval real foi executado nesta etapa. O protocolo completo está em [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
+
 #### Segurança e diagnóstico
 
 A chave não é enviada ao frontend, e a rota técnica só pode ser habilitada por flag server-side. A resposta pública de erro permanece genérica. O diagnóstico no servidor registra apenas campos seguros para distinguir erros HTTP, conexão, timeout e falhas inesperadas. Prompts, entrada do usuário, headers completos, chave e objeto bruto do erro não devem ser registrados.
@@ -470,6 +472,8 @@ npm run start   # execução do build de produção
 npm run test:get-position-context # testes determinísticos da função interna
 npm run test:position-context-tool-flow # testes offline de function calling
 npm run test:auto-position-context-tool-selection # testes offline da seleção automática
+npm run test:position-context-tool-selection-runner # testes offline do runner de evals
+npm run eval:position-context-tool-selection # runner real; exige opt-in explícito
 npm run test:ai-tools # executa todas as suítes relacionadas à Tool
 ```
 

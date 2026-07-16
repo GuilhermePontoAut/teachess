@@ -902,3 +902,13 @@ A latência da execução B não foi registrada porque não havia evidência exp
 Nas respostas observadas, o texto final expôs `positionContextId` e nomes internos como `get_position_context`, `analysisReadiness`, `confirmationStatus` e `chessJsValidationStatus`. `evidenceUsed` também apresentou conteúdo próximo do protocolo técnico. Isso não revelou outro contexto nem quebrou a autorização, mas esses termos não são apropriados para a experiência final do usuário.
 
 Como trabalho futuro, será necessário impedir identificadores internos no texto pedagógico; decidir entre regra adicional em uma futura versão do prompt, sanitização ou pós-processamento server-side e transformação na camada de apresentação; avaliar se `evidenceUsed` será visível, resumido ou reservado para auditoria; e manter dados técnicos disponíveis para rastreabilidade sem apresentá-los diretamente ao jogador. Nenhuma `professor-ia-v3` foi criada nesta tarefa.
+
+## Protocolo futuro — runner de seleção automática
+
+Foi preparado um runner controlado para uma futura execução real de `AUTO-SEL-001` a `AUTO-SEL-006`. Isso é protocolo, não resultado: nenhum caso de seleção automática foi chamado contra o modelo nesta etapa, e todos continuam com status `not_executed`.
+
+O protocolo manterá constantes `gpt-5-mini`, o schema versionado, a versão escolhida do prompt e um único snapshot confirmado. Somente a mensagem declarada de cada caso variará. Os casos serão executados na ordem versionada, com repetições inteiras entre 1 e 5, sem paralelismo, retry ou backoff. Cada execução comparará a decisão esperada com a observada e será classificada como acerto, falso positivo, falso negativo ou erro técnico. Um erro técnico será registrado com código sanitizado e não impedirá necessariamente os casos seguintes.
+
+O relatório não conterá FEN, snapshot, ID de posição, `call_id`, argumentos, resposta pedagógica completa, raciocínio, objetos do SDK, stack ou `cause`. A accuracy observada será `acertos / execuções com decisão válida`; erros técnicos ficarão fora do denominador. Essa razão descreve somente a amostra executada e não é garantia geral nem prova de estabilidade.
+
+A execução real somente poderá começar com `RUN_REAL_AI_EVALS=true`, uma versão válida em `AI_EVAL_PROMPT_VERSION`, repetições válidas em `AI_EVAL_REPETITIONS` — padrão 1 — e `OPENAI_API_KEY`. Sem o opt-in exato, o script encerra com código 2 antes de consultar a chave, criar o cliente ou executar casos. Em sucesso futuro, o JSON sanitizado será gravado em `/tmp/teachess-position-context-tool-selection-evals.json`; a documentação pública não será atualizada automaticamente.
