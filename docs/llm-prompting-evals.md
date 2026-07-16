@@ -307,12 +307,35 @@ Esta rubrica define critérios conceituais para avaliações futuras. Ainda não
 - a resposta é objetiva;
 - as recomendações são proporcionais às evidências disponíveis.
 
+## Casos declarativos de seleção automática
+
+O conjunto `position-context-tool-selection-evals-v1`, definido em `lib/ai/evals/position-context-tool-selection-cases.ts`, prepara a futura avaliação da decisão automática entre chamar `get_position_context` e seguir sem Tool. Todos os casos possuem status inicial `not_executed`; nenhuma resposta, decisão ou taxa foi registrada como se viesse do modelo.
+
+| ID | Mensagem | Decisão esperada | Justificativa resumida | Status |
+| --- | --- | --- | --- | --- |
+| `AUTO-SEL-001` | “Qual é o lado a mover na posição selecionada?” | `called` | O lado depende do FEN do snapshot autorizado. | `not_executed` |
+| `AUTO-SEL-002` | “A posição selecionada está confirmada e possui dados suficientes para análise?” | `called` | Confirmação e suficiência vêm do runtime sobre o snapshot. | `not_executed` |
+| `AUTO-SEL-003` | “Analise somente os fatos disponíveis sobre a posição selecionada e explique as limitações.” | `called` | Fatos e limitações dependem do contexto autorizado. | `not_executed` |
+| `AUTO-SEL-004` | “Qual é a melhor abertura de xadrez para todos os jogadores?” | `not_called` | A pergunta é geral e fora do escopo da posição. | `not_executed` |
+| `AUTO-SEL-005` | “Olá, tudo bem?” | `not_called` | Uma saudação não depende da posição. | `not_executed` |
+| `AUTO-SEL-006` | “Explique de forma geral o que é o roque.” | `not_called` | A explicação conceitual não depende da posição selecionada. | `not_executed` |
+
+Cada caso também registra uma justificativa completa e comportamentos proibidos, como responder fatos da posição sem consultar a Tool, inferir autorização da mensagem, inventar outro ID, fazer uma chamada desnecessária ou expor dados da posição em perguntas gerais.
+
+### Teste do código e avaliação do modelo
+
+Os testes offline usam respostas simuladas para comprovar que o orquestrador aceita zero ou uma `function_call`, preserva integralmente o protocolo, executa a Tool apenas quando solicitada e sempre produz a segunda resposta estruturada. Eles testam o código do TeaChess, não a capacidade de decisão do modelo.
+
+A eval real deverá executar os seis casos contra a rota automática, comparar `toolSelection.decision` com `expectedDecision` e registrar as observações sem adaptar retrospectivamente os casos. Um falso positivo ocorre quando a Tool é chamada sem necessidade; um falso negativo ocorre quando ela deixa de ser chamada apesar de a resposta depender dos fatos da posição.
+
+Uma única execução por caso não demonstrará estabilidade. Uma etapa posterior deverá definir quantidade de repetições, tratamento de falhas inconclusivas e uma métrica de acerto antes de calcular qualquer taxa. Nesta etapa não há chamada real, repetição nem taxa de seleção.
+
 ## O que ainda não existe
 
 - ainda não há executor automático de evals;
 - ainda não há repetições suficientes para medir estabilidade dos casos;
 - não há notas, pesos ou taxas de aprovação;
-- não há seleção automática de Tool nem repetição suficiente dos casos com function calling;
+- não há execução real dos casos de seleção automática nem repetição suficiente para medir estabilidade;
 - não há comparação de parâmetros nesta tarefa.
 
 Também não foram feitas novas chamadas à OpenAI para criar estes artefatos. Resultados futuros deverão registrar, no mínimo, a versão do prompt e a versão do schema usadas na execução.

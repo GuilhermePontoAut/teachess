@@ -1,6 +1,6 @@
 # Tools do Professor IA: contrato inicial de `get_position_context`
 
-Este documento registra a investigação da Etapa 6A, a implementação determinística da Etapa 6B, o fluxo técnico de function calling da Etapa 6C-A e as primeiras execuções reais locais da etapa seguinte. `get_position_context` possui schemas, runtime interno, definição compatível com a Responses API, um orquestrador testado sem rede e um primeiro ciclo real validado em rota técnica. A Tool continua sem integração com a interface real do Professor IA.
+Este documento registra a investigação da Etapa 6A, a implementação determinística da Etapa 6B, o fluxo técnico forçado da Etapa 6C-A, suas primeiras execuções reais locais e o fluxo separado de seleção automática da Etapa 6D-A. `get_position_context` possui schemas, runtime interno, definição compatível com a Responses API, um baseline forçado e um orquestrador automático testado sem rede. A Tool continua sem integração com a interface real do Professor IA.
 
 ## 1. Classificação das definições
 
@@ -456,7 +456,7 @@ flowchart LR
     class C1,FC,C2,SO model;
 ```
 
-O modelo solicita a função, mas a aplicação valida e executa o código. O modelo nunca acessa diretamente o snapshot: ele recebe somente o identificador de correlação e, depois, os fatos produzidos pelo runtime. Nesta rota técnica, a Tool é forçada para validar a infraestrutura; a seleção automática será avaliada posteriormente.
+O modelo solicita a função, mas a aplicação valida e executa o código. O modelo nunca acessa diretamente o snapshot: ele recebe somente o identificador de correlação e, depois, os fatos produzidos pelo runtime. Nesta rota técnica, a Tool é forçada para validar a infraestrutura. A Etapa 6D-A acrescenta uma rota separada para preparar a avaliação automática sem alterar este baseline.
 
 ## 16. Implementação determinística da Etapa 6B
 
@@ -572,7 +572,7 @@ Os testes do orquestrador usam transporte injetável e objetos limitados aos cam
 
 - a rota é técnica, forçada e não é endpoint de produto;
 - nenhuma chamada real foi feita nesta etapa;
-- seleção automática de Tool ainda não foi avaliada;
+- a qualidade da seleção automática pelo modelo real ainda não foi avaliada;
 - a interface real do Professor IA, stores e persistência não foram alteradas;
 - o snapshot vindo do navegador continua sem autenticação ou autorização real;
 - não há engine, OCR, visão computacional, backend de produto, retries ou streaming.
@@ -600,3 +600,54 @@ Nessa comparação, a mudança isolada de `confirmationStatus` alterou coerentem
 Como achado não bloqueante, a resposta final expôs `positionContextId` e nomes internos como `get_position_context`, `analysisReadiness`, `confirmationStatus` e `chessJsValidationStatus`; `evidenceUsed` também ficou próximo do protocolo técnico. Isso não revelou outro contexto nem quebrou a autorização, mas esses termos não são adequados à experiência final do jogador.
 
 O trabalho futuro deverá impedir identificadores internos no texto pedagógico, decidir entre uma regra adicional em uma futura versão do prompt, sanitização ou pós-processamento server-side e transformação na camada de apresentação, e avaliar se `evidenceUsed` será visível, resumido ou reservado para auditoria. Os dados técnicos devem continuar disponíveis para rastreabilidade sem serem apresentados diretamente ao jogador. Nenhuma `professor-ia-v3` foi criada nesta etapa.
+
+## 19. Seleção automática da Etapa 6D-A
+
+### Baseline forçado e fluxo automático
+
+`POST /api/ai/test/tools/position-context` continua sendo o baseline técnico forçado. Seu contrato público não mudou: a primeira interação exige exatamente uma chamada de `get_position_context`, o runtime executa a Tool uma vez e o sucesso retorna `tool.callCount: 1`. Esse caminho valida definição, argumentos, autorização, execução e correlação do protocolo; ele não mede se o modelo escolheria usar a Tool sozinho.
+
+`POST /api/ai/test/tools/position-context/auto` é uma rota técnica separada, também em runtime Node.js, protegida por `ENABLE_AI_TEST_ROUTE === "true"` e desconectada da interface. Ela reutiliza o registro de prompts e o mesmo schema estrito de `message` e `authorizedSnapshot`. Prompt, JSON e snapshot são validados antes da criação do cliente. Nenhum prompt v1/v2, schema da Tool, runtime determinístico, store ou persistência foi alterado.
+
+Na primeira interação, somente `get_position_context` fica disponível, com `tool_choice: "auto"`, `parallel_tool_calls: false` e `store: false`. O contexto técnico confiável informa que existe uma posição autorizada, fornece somente o ID de correlação derivado do snapshot e explica que a Tool só deve ser usada quando a pergunta depender dos fatos da posição. Saudações, perguntas gerais e pedidos fora do escopo não exigem a Tool. A mensagem do usuário permanece separada e não concede autorização.
+
+### Decisão `called`
+
+Quando há uma `function_call`, a aplicação exige exatamente uma chamada, confere o nome, valida `call_id`, interpreta `arguments` como JSON e entrega o valor exclusivamente a `executeGetPositionContext`. O ID precisa corresponder ao snapshot autorizado. Nome inesperado, múltiplas chamadas, JSON inválido, argumentos inválidos, divergência de autorização ou falha de execução encerram o fluxo antes da segunda interação.
+
+Em sucesso, a entrada da segunda interação contém, nesta ordem:
+
+1. entrada original, formada pela mensagem e pelo contexto técnico;
+2. todos os itens de `response.output`, sem filtragem, reordenação ou alteração;
+3. um `function_call_output` associado ao mesmo `call_id`.
+
+### Decisão `not_called`
+
+Zero `function_call` é um resultado normal. O executor determinístico não é chamado e nenhum `function_call_output` é criado. A entrada da segunda interação contém a entrada original seguida de todos os itens da primeira `response.output`. Isso inclui a mensagem direta eventualmente produzida pelo modelo na primeira fase.
+
+### Segunda interação e resultado público
+
+Os dois caminhos realizam exatamente duas interações lógicas. A segunda usa `responses.parse`, `zodTextFormat`, `provisionalTeacherResponseSchema` e `store: false`; não recebe `tools`, `tool_choice` nem `parallel_tool_calls`. O fluxo exige `status: "completed"` e valida novamente `output_parsed`. Não existe terceira rodada, retry, loop ou streaming.
+
+O sucesso expõe apenas modelo, versões, `data` e os metadados semânticos:
+
+```json
+{
+  "toolSelection": {
+    "mode": "auto",
+    "decision": "called | not_called",
+    "availableToolCount": 1,
+    "callCount": "0 | 1",
+    "toolName": "get_position_context | null",
+    "executionStatus": "completed | not_requested"
+  }
+}
+```
+
+Uma união discriminada validada em runtime garante que `called` corresponda a uma chamada concluída e que `not_called` corresponda a zero chamadas, nome nulo e execução não solicitada. A resposta pública não contém `call_id`, argumentos, `response.output`, snapshot, FEN separado, raciocínio ou objetos do SDK.
+
+### Testes offline e limites
+
+O orquestrador possui fronteiras injetáveis para a primeira interação, a segunda interação e o executor da Tool. Os testes usam variantes reais dos tipos do SDK — `reasoning`, `message` e `function_call` — e confirmam ordem, identidade dos itens e ausência de filtragem. O caminho `called` comprova uma execução determinística, correlação pelo mesmo `call_id` e adição única do output; o caminho `not_called` comprova que a mensagem direta é preservada e que o executor não é usado. Falhas do protocolo, respostas incompletas ou recusadas, output estruturado inválido, erro do provider e precedência das validações HTTP também são cobertos sem rede.
+
+Esses testes comprovam os dois caminhos do código de orquestração, mas não comprovam que o `gpt-5-mini` real escolherá corretamente. A qualidade da seleção só poderá ser medida com execuções reais dos casos versionados. Uma execução por caso não demonstrará estabilidade; serão necessárias repetições e uma futura métrica de acerto. Nenhuma taxa de seleção foi calculada nesta etapa, e todos os casos `AUTO-SEL` permanecem `not_executed`.

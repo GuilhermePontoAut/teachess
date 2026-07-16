@@ -254,13 +254,15 @@ O system prompt `professor-ia-v1` permanece preservado como baseline, e a compar
 
 A função interna determinística `get_position_context` possui uma definição estrita de Tool para a Responses API e um fluxo técnico controlado de function calling em rota isolada. O primeiro ciclo real foi validado localmente: a Tool foi executada no servidor sobre um snapshot autorizado, e uma comparação entre o mesmo contexto `confirmed` e `unconfirmed` preservou a diferença de suficiência esperada. A integração pública com a interface do Professor IA ainda não foi implementada. Os detalhes estão em [`docs/llm-tools.md`](docs/llm-tools.md), [`docs/llm-experiments.md`](docs/llm-experiments.md) e [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
 
+A seleção automática também foi preparada em uma rota técnica separada. O baseline forçado permanece preservado, enquanto o novo fluxo aceita zero ou uma chamada de `get_position_context` e sempre realiza uma segunda interação estruturada. Os dois caminhos possuem testes exclusivamente offline; os casos declarativos de seleção ainda não foram executados contra o modelo real, e nenhuma integração foi conectada à interface pública.
+
 #### Segurança e diagnóstico
 
 A chave não é enviada ao frontend, e a rota técnica só pode ser habilitada por flag server-side. A resposta pública de erro permanece genérica. O diagnóstico no servidor registra apenas campos seguros para distinguir erros HTTP, conexão, timeout e falhas inesperadas. Prompts, entrada do usuário, headers completos, chave e objeto bruto do erro não devem ser registrados.
 
 #### Limitações atuais
 
-Ainda não existe seleção automática de Tool, RAG, integração real com a interface do Professor IA, autenticação, rate limiting do endpoint final ou validação por engine de xadrez. O function calling validado permanece restrito à rota técnica, com chamada forçada e snapshot demonstrativo enviado manualmente. Também não há garantia de estabilidade nem medição sistemática de custo, tokens e latência.
+Ainda não existe avaliação real da qualidade da seleção automática, RAG, integração real com a interface do Professor IA, autenticação, rate limiting do endpoint final ou validação por engine de xadrez. Os fluxos de function calling permanecem restritos a rotas técnicas: o baseline forçado já teve execuções manuais documentadas, enquanto o modo automático foi validado somente com transporte simulado e sem rede. Também não há garantia de estabilidade nem medição sistemática de custo, tokens e latência.
 
 As decisões e evidências detalhadas estão em [`docs/llm-architecture.md`](docs/llm-architecture.md), [`docs/llm-provider-model-selection.md`](docs/llm-provider-model-selection.md), [`docs/llm-experiments.md`](docs/llm-experiments.md) e [`docs/llm-prompting-evals.md`](docs/llm-prompting-evals.md).
 
@@ -467,7 +469,8 @@ npm run build   # build de produção, TypeScript e geração de páginas
 npm run start   # execução do build de produção
 npm run test:get-position-context # testes determinísticos da função interna
 npm run test:position-context-tool-flow # testes offline de function calling
-npm run test:ai-tools # executa as duas suítes relacionadas à Tool
+npm run test:auto-position-context-tool-selection # testes offline da seleção automática
+npm run test:ai-tools # executa todas as suítes relacionadas à Tool
 ```
 
 A revisão integrada documentada em [`docs/qa-checklist.md`](docs/qa-checklist.md) verificou as rotas pelo código e obteve sucesso em lint, build e `git diff --check`. Existe uma suíte unitária direcionada ao runtime de `get_position_context`, executada com o test runner nativo do Node.js e sem rede. Ainda não há uma suíte automatizada ampla para os demais módulos, nem testes de integração ou end-to-end; portanto, não se deve interpretar o build ou a suíte específica como cobertura funcional completa.
