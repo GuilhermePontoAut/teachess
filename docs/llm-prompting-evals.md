@@ -137,7 +137,7 @@ A comparação controlada da v2 está registrada abaixo. Uma execução por caso
 
 ## professor-ia-v3 como hipótese de seleção semântica
 
-O `professor-ia-v3` preserva integralmente as regras pedagógicas e de grounding da v2 e acrescenta instruções voltadas especificamente à primeira decisão do fluxo conjunto. A v2 continua disponível e inalterada como baseline histórico; a v3 não a substitui e ainda não possui resultado real registrado.
+O `professor-ia-v3` preserva integralmente as regras pedagógicas e de grounding da v2 e acrescenta instruções voltadas especificamente à primeira decisão do fluxo conjunto. A v2 continua disponível e inalterada como baseline histórico; a v3 não a substitui. O resultado real inicial da hipótese foi registrado posteriormente em `E-024`.
 
 A distinção central é:
 
@@ -150,9 +150,9 @@ Na fase de seleção, o prompt solicita somente a decisão operacional necessár
 
 ### Comparação controlada v2 versus v3
 
-`E-023`, executado com `professor-ia-v2`, permanece o baseline. A futura avaliação com v3 manterá `gpt-5-mini`, os 12 casos e suas decisões esperadas, definições e schemas das Tools, runtimes, orquestração, Structured Output, métricas, classificações e formato do relatório. A única variável experimental será o system prompt.
+`E-023`, executado com `professor-ia-v2`, permanece o baseline. O plano da avaliação com v3 determinou manter `gpt-5-mini`, os 12 casos e suas decisões esperadas, definições e schemas das Tools, runtimes, orquestração, Structured Output, métricas, classificações e formato do relatório. A única variável experimental seria o system prompt; a execução correspondente está registrada em `E-024`.
 
-O runner conjunto aceita explicitamente `AI_EVAL_PROMPT_VERSION=professor-ia-v2` e `AI_EVAL_PROMPT_VERSION=professor-ia-v3`, rejeita ausência e versões desconhecidas e registra no relatório exatamente a versão selecionada. Essa capacidade prepara a comparação; não constitui execução nem evidência de melhoria.
+O runner conjunto aceita explicitamente `AI_EVAL_PROMPT_VERSION=professor-ia-v2` e `AI_EVAL_PROMPT_VERSION=professor-ia-v3`, rejeita ausência e versões desconhecidas e registra no relatório exatamente a versão selecionada. Essa capacidade, isoladamente, apenas preparou a comparação; a evidência observada pertence ao experimento `E-024`.
 
 ## Protocolo de comparação v1 versus v2
 
@@ -586,3 +586,17 @@ Não houve erro técnico, de protocolo, de Structured Output ou de integração.
 A telemetria exata do relatório contém latência com `sampleCount: 9`, `minimumMs: 13061.335269000017`, `maximumMs: 27425.816783000002`, `averageMs: 19136.374574` e `medianMs: 17521.139098`; e tokens com `sampleCount: 9`, `inputTokens: 44761`, `outputTokens: 15187` e `totalTokens: 59948`. Os três casos classificados como `wrong_tool` foram bloqueados antes da segunda interação. Por isso, o relatório possui 12 execuções totais, mas somente nove amostras com telemetria completa agregável de latência e tokens.
 
 `E-022` permanece `failed_integration` e inconclusivo; `E-023` não o reclassifica nem combina seus números com ele ou com experimentos anteriores. O novo resultado é o primeiro baseline real tecnicamente válido do fluxo conjunto, mas sua qualidade ainda é limitada por uma amostra pequena. A principal hipótese para investigação é uma fronteira semântica ainda insuficientemente clara entre contexto de partida, contexto de posição e ausência de necessidade de Tool. Mudanças futuras no prompt ou nas descrições das Tools deverão ser comparadas com este baseline.
+
+## E-024 — comparação real de professor-ia-v3 com E-023
+
+`E-024` executou `professor-ia-v3` com `professor-context-tool-selection-runner-v1`, `gpt-5-mini`, uma repetição e 12 casos. O experimento permanece separado de `E-023/professor-ia-v2`; seus resultados não substituem, reclassificam nem são combinados com o baseline.
+
+O consolidado registrou `correct: 11`, `falsePositives: 0`, `falseNegatives: 0`, `wrongTools: 1`, `technicalErrors: 0`, `decisionAccuracy: 0.9166666666666666`, `endToEndSuccessRate: 0.9166666666666666` e `completionRate: 1`. Todos os casos foram `correct`, exceto `POSITION-SEL-004`, classificado como `wrong_tool` após observar `get_game_context`.
+
+A telemetria exata de latência foi `sampleCount: 11`, `minimumMs: 10917.200578000018`, `maximumMs: 43823.181874`, `averageMs: 24695.392492272727` e `medianMs: 22461.411223000003`. Em tokens, o relatório registrou `sampleCount: 11`, `inputTokens: 68652`, `outputTokens: 20311` e `totalTokens: 88963`.
+
+Na comparação controlada, os acertos passaram de 8 para 11, a `decisionAccuracy` de 66,67% para 91,67%, `wrongTools` de 3 para 1 e `falsePositives` de 1 para 0. `falseNegatives` e `technicalErrors` permaneceram em 0, e `completionRate` permaneceu em 100%.
+
+Em contrapartida, os tokens por amostra completa aumentaram de aproximadamente 6.661 para 8.088, e a latência média aumentou de aproximadamente 19,1 s para 24,7 s. Os denominadores são diferentes porque `wrong_tool` encerra antes da segunda interação: `E-023` teve nove amostras completas, enquanto `E-024` teve 11. Assim, a v3 melhorou a qualidade nesta amostra, mas aumentou custo e latência.
+
+Esta é uma melhoria inicial sobre o baseline na amostra curada, não uma medida da precisão geral do modelo. Uma repetição de 12 casos não comprova estabilidade, generalização ou qualidade pedagógica. `professor-ia-v2` continua preservado como baseline, e `professor-ia-v3` permanece uma hipótese candidata, ainda não promovida automaticamente para produção.

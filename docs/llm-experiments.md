@@ -1240,19 +1240,19 @@ O experimento foi executado, concluído e tecnicamente válido, mas seu resultad
 
 A amostra contém apenas 12 casos curados e uma repetição por caso. Ela não comprova estabilidade estatística, generalização para outras mensagens ou qualidade pedagógica ampla. Futuras alterações de prompt ou das descrições das Tools deverão ser avaliadas contra este baseline, sem modificar retrospectivamente seus casos ou resultados. Nenhuma alteração funcional é proposta nesta etapa.
 
-## Etapa 7F-A — plano do experimento controlado de prompting
+## Etapa 7F-A — plano registrado antes do experimento controlado de prompting
 
-**Status:** planejado e preparado; avaliação real ainda não executada.
+**Status histórico da etapa:** planejado e preparado; naquele momento, a avaliação real ainda não havia sido executada. O resultado posterior está registrado separadamente em `E-024`.
 
 ### Objetivo e hipótese
 
-A Etapa 7F-A comparará `professor-ia-v3` com o baseline `professor-ia-v2` registrado em `E-023`. A hipótese é que instruções semânticas mais explícitas sobre quando fatos da partida completa, fatos da posição específica ou nenhum dado privado são realmente necessários podem melhorar a seleção entre `get_game_context`, `get_position_context` e nenhuma Tool.
+A Etapa 7F-A planejou comparar `professor-ia-v3` com o baseline `professor-ia-v2` registrado em `E-023`. A hipótese era que instruções semânticas mais explícitas sobre quando fatos da partida completa, fatos da posição específica ou nenhum dado privado são realmente necessários poderiam melhorar a seleção entre `get_game_context`, `get_position_context` e nenhuma Tool.
 
 A v3 explicita que a disponibilidade de contexto e palavras isoladas não determinam uma chamada, limita a decisão a no máximo uma Tool, proíbe contexto inventado e Tool incompatível e inclui poucos exemplos novos das três decisões. O conteúdo não confiável continua sendo tratado como dado, e o prompt solicita somente a decisão operacional, sem cadeia de pensamento.
 
 ### Controle experimental
 
-A única variável deliberadamente alterada será o system prompt, de `professor-ia-v2` para `professor-ia-v3`. Permanecerão congelados:
+A única variável deliberadamente planejada para alteração era o system prompt, de `professor-ia-v2` para `professor-ia-v3`. Permaneceriam congelados:
 
 - modelo `gpt-5-mini`;
 - os 12 casos de `professor-context-tool-selection-evals-v1`, inclusive mensagens e `expectedDecision`;
@@ -1262,4 +1262,90 @@ A única variável deliberadamente alterada será o system prompt, de `professor
 - runner, formato do relatório, métricas e classificações;
 - interface pública, stores e persistência.
 
-O runner continuará registrando a versão efetivamente escolhida. `E-023` permanece o baseline de comparação e seus resultados não serão reescritos ou combinados antecipadamente com a futura execução. Esta seção não registra accuracy, resultado ou conclusão da v3, pois nenhuma avaliação real da Etapa 7F foi executada.
+O runner registraria a versão efetivamente escolhida. `E-023` permaneceria o baseline de comparação e seus resultados não seriam reescritos ou combinados com a nova execução. Esta seção preserva o plano anterior; a accuracy, o resultado e a conclusão cautelosa da v3 estão no registro independente de `E-024` abaixo.
+
+## E-024 — avaliação real de professor-ia-v3 contra o baseline E-023
+
+**Status:** `executed`; `completed`; `technically valid`; melhoria inicial na amostra curada, sem promoção automática.
+
+### Objetivo e controle experimental
+
+`E-024` registrou uma nova execução real da seleção entre `get_game_context`, `get_position_context` e nenhuma Tool, agora com `professor-ia-v3`. O experimento é separado de `E-023/professor-ia-v2`: não substitui, reclassifica, combina nem soma seus números aos do baseline, que continua preservado.
+
+A configuração executada foi:
+
+- **runner:** `professor-context-tool-selection-runner-v1`;
+- **modelo:** `gpt-5-mini`;
+- **prompt:** `professor-ia-v3`;
+- **repetições:** 1 por caso;
+- **execuções:** 12.
+
+Modelo, runner, casos canônicos, Tools, schemas, fluxo e métricas permaneceram congelados em relação à comparação planejada. A variável deliberada foi a versão do prompt.
+
+### Resultado consolidado
+
+- `totalRuns: 12`;
+- `correct: 11`;
+- `falsePositives: 0`;
+- `falseNegatives: 0`;
+- `wrongTools: 1`;
+- `technicalErrors: 0`;
+- `decisionAccuracy: 0.9166666666666666`;
+- `endToEndSuccessRate: 0.9166666666666666`;
+- `completionRate: 1`.
+
+Isso corresponde a **91,67% de decision accuracy nesta amostra curada de 12 casos, com uma repetição por caso**. Todas as execuções chegaram a uma decisão válida, e o único erro foi uma escolha da Tool incompatível com a expectativa.
+
+### Resultado por caso
+
+| Caso | Classificação | Decisão observada quando divergente |
+| --- | --- | --- |
+| `GAME-SEL-001` | `correct` | — |
+| `GAME-SEL-002` | `correct` | — |
+| `GAME-SEL-003` | `correct` | — |
+| `GAME-SEL-004` | `correct` | — |
+| `POSITION-SEL-001` | `correct` | — |
+| `POSITION-SEL-002` | `correct` | — |
+| `POSITION-SEL-003` | `correct` | — |
+| `POSITION-SEL-004` | `wrong_tool` | `get_game_context` |
+| `NO-TOOL-SEL-001` | `correct` | — |
+| `NO-TOOL-SEL-002` | `correct` | — |
+| `NO-TOOL-SEL-003` | `correct` | — |
+| `NO-TOOL-SEL-004` | `correct` | — |
+
+### Telemetria agregada
+
+Latência, em milissegundos:
+
+- `sampleCount: 11`;
+- `minimumMs: 10917.200578000018`;
+- `maximumMs: 43823.181874`;
+- `averageMs: 24695.392492272727`;
+- `medianMs: 22461.411223000003`.
+
+Tokens:
+
+- `sampleCount: 11`;
+- `inputTokens: 68652`;
+- `outputTokens: 20311`;
+- `totalTokens: 88963`.
+
+O caso `POSITION-SEL-004`, classificado como `wrong_tool`, foi encerrado antes da segunda interação. Por isso, as 12 execuções produziram 11 amostras completas agregáveis de latência e tokens.
+
+### Comparação explícita com E-023
+
+| Métrica | `E-023` / `professor-ia-v2` | `E-024` / `professor-ia-v3` |
+| --- | ---: | ---: |
+| Acertos | 8 | 11 |
+| `decisionAccuracy` | 66,67% | 91,67% |
+| `wrongTools` | 3 | 1 |
+| `falsePositives` | 1 | 0 |
+| `falseNegatives` | 0 | 0 |
+| `technicalErrors` | 0 | 0 |
+| `completionRate` | 100% | 100% |
+
+A comparação também registra uma contrapartida operacional. Os tokens por amostra completa aumentaram de aproximadamente 6.661 (`59948 / 9`) para 8.088 (`88963 / 11`), e a latência média aumentou de aproximadamente 19,1 s para 24,7 s. Os denominadores de telemetria são diferentes porque cada `wrong_tool` encerra antes da segunda interação: `E-023` teve três desses casos e nove amostras completas; `E-024` teve um e 11 amostras completas. Portanto, a v3 melhorou a qualidade nesta amostra, mas aumentou custo e latência.
+
+### Conclusão cautelosa
+
+`E-024` é uma melhoria inicial sobre o baseline na amostra curada. Não representa precisão geral do modelo. Uma repetição de 12 casos não comprova estabilidade, generalização ou qualidade pedagógica. `professor-ia-v2` continua preservado como baseline, e `professor-ia-v3` permanece uma hipótese candidata, ainda não promovida automaticamente para produção.
