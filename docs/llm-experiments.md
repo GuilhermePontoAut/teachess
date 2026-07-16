@@ -652,3 +652,61 @@ Essa confirmação é diferente da aprovação pela rubrica original congelada. 
 As duas versões foram aprovadas integralmente pela rubrica do `EV-004`, retornaram `evidenceStatus: "insufficient"` e não indicaram melhor lance nem inventaram posição. A v1 preencheu `observations` e `improvements` e produziu mais recomendações. A v2 manteve `observations`, `improvements` e `evidenceUsed` vazios e forneceu apenas uma orientação diretamente ligada à limitação.
 
 Neste caso, a v2 demonstrou melhoria de concisão e de semântica dos campos. As latências observadas foram de aproximadamente 15,2 segundos na v1 e 12,9 segundos na v2. Esses valores isolados não representam médias nem comprovam diferença estável de desempenho.
+
+## E-015 — execução do caso EV-005 com professor-ia-v2
+
+### Configuração executada
+
+- **caso:** `EV-005`;
+- **conjunto de evals:** `professor-ia-evals-v1`;
+- **modelo:** `gpt-5-mini`;
+- **prompt:** `professor-ia-v2`;
+- **schema:** `provisional-teacher-response-v1`;
+- **endpoint:** `POST /api/ai/test/structured`;
+- **execução:** 1 de 1;
+- **tools:** não utilizadas;
+- **entrada:** “Qual é a melhor abertura de xadrez para todos os jogadores?”
+
+### Resultado observado
+
+- HTTP `200`;
+- `success: true`;
+- `promptVersion: "professor-ia-v2"`;
+- `schemaVersion: "provisional-teacher-response-v1"`;
+- `evidenceStatus` retornou `"insufficient"`;
+- `observations` retornou `[]`;
+- `strengths` retornou `[]`;
+- `improvements` retornou `[]`;
+- `evidenceUsed` retornou `[]`;
+- `summary` explicou que a pergunta geral estava fora do escopo atual;
+- `studyRecommendations` apresentou somente uma orientação para fornecer uma partida específica ou uma posição confirmada;
+- `limitations` registrou que nenhuma partida ou posição havia sido selecionada;
+- não foi indicada nenhuma abertura;
+- não foram solicitados rating, estilo ou preferências;
+- não foi oferecida aula paralela sobre aberturas;
+- não foram criados partida, posição ou contexto fictício;
+- o tempo observado no servidor de desenvolvimento foi de aproximadamente 9,7 segundos.
+
+Tokens e custo não foram registrados porque não foram medidos.
+
+### Classificação pela rubrica congelada
+
+- **rubrica completa do EV-005:** aprovada integralmente nesta execução.
+
+`evidenceStatus` correspondeu ao esperado, os quatro arrays exigidos permaneceram vazios, a pergunta geral não foi respondida por outro caminho, o escopo restrito foi explicado e houve somente um redirecionamento breve e adequado.
+
+Uma execução aprovada não comprova estabilidade do modelo, do prompt ou do fluxo.
+
+### Hipótese adicional de resposta mínima fora do escopo
+
+O modo de resposta mínima fora do escopo foi atingido nesta execução. `observations`, `strengths`, `improvements` e `evidenceUsed` permaneceram vazios; houve somente uma `studyRecommendation`; e a resposta não ofereceu aula paralela nem coletou rating, estilo ou preferências para continuar o tema.
+
+Esse resultado descreve somente esta execução do `EV-005` e não deve ser generalizado para todas as perguntas fora do escopo.
+
+### Comparação com o baseline v1
+
+Ambas as versões respeitaram o escopo, não recomendaram uma abertura universal e retornaram `evidenceStatus: "insufficient"`. A v1, porém, preencheu `observations` e `improvements` e forneceu várias orientações adicionais. A v2 manteve `observations`, `improvements` e `evidenceUsed` vazios e forneceu somente um redirecionamento breve.
+
+A rubrica da v1 foi parcialmente aprovada; a da v2 foi aprovada integralmente. Neste caso, a v2 corrigiu diretamente a falha semântica observada na v1.
+
+As latências observadas foram de aproximadamente 11,9 segundos na v1 e 9,7 segundos na v2. Essas medições isoladas não representam médias nem comprovam diferença estável de desempenho.
