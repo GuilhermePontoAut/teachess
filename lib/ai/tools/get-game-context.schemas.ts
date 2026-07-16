@@ -8,6 +8,7 @@ import type {
 } from "../../types/chess";
 
 export const GAME_CONTEXT_ID_MAX_LENGTH = 128;
+export const GAME_CONTEXT_ID_PATTERN = /^[A-Za-z0-9._:-]+$/;
 export const GAME_CONTEXT_PGN_MAX_LENGTH = 20_000;
 export const GAME_CONTEXT_NOTES_MAX_LENGTH = 4_000;
 export const GAME_CONTEXT_TAG_MAX_LENGTH = 64;
@@ -23,6 +24,7 @@ const analysisStatuses = [
   "not_analyzed",
 ] as const satisfies readonly AnalysisStatus[];
 const boundedIdSchema = z.string().trim().min(1).max(GAME_CONTEXT_ID_MAX_LENGTH);
+const gameContextIdSchema = boundedIdSchema.regex(GAME_CONTEXT_ID_PATTERN);
 const nullableTrimmedString = (maximum: number) =>
   z.string().trim().min(1).max(maximum).nullable();
 const nullableRatingSchema = z.number().int().min(100).max(3500).nullable();
@@ -43,7 +45,7 @@ const dateSchema = z
 
 export const getGameContextArgumentsSchema = z
   .object({
-    gameContextId: boundedIdSchema,
+    gameContextId: gameContextIdSchema,
   })
   .strict();
 
@@ -53,7 +55,7 @@ export type GetGameContextArguments = z.infer<
 
 export const authorizedGameSnapshotSchema = z
   .object({
-    gameContextId: boundedIdSchema,
+    gameContextId: gameContextIdSchema,
     origin: z.enum(gameOrigins),
     visibility: z.enum(gameVisibilities),
     ownerUserId: boundedIdSchema,
@@ -140,7 +142,7 @@ const limitationSchema = z.string().min(1).max(180);
 
 export const getGameContextResultSchema = z
   .object({
-    gameContextId: boundedIdSchema,
+    gameContextId: gameContextIdSchema,
     origin: z.enum(gameOrigins),
     visibility: z.enum(gameVisibilities),
     access: z

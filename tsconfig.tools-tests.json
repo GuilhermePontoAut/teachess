@@ -15,6 +15,8 @@
     "app/api/ai/test/tools/position-context/route.test.ts",
     "app/api/ai/test/tools/position-context/auto/route.ts",
     "app/api/ai/test/tools/position-context/auto/route.test.ts",
+    "app/api/ai/test/tools/game-context/route.ts",
+    "app/api/ai/test/tools/game-context/route.test.ts",
     "lib/ai/evals/position-context-tool-selection-cases.ts",
     "lib/ai/evals/position-context-tool-selection-cases.test.ts",
     "lib/ai/evals/run-position-context-tool-selection-evals.ts",

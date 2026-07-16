@@ -1,6 +1,6 @@
 # Tools do Professor IA: runtimes determinísticos de contexto
 
-Este documento registra a investigação da Etapa 6A, a implementação determinística da Etapa 6B, o fluxo técnico forçado da Etapa 6C-A, suas primeiras execuções reais locais, o fluxo separado de seleção automática da Etapa 6D-A e o runtime determinístico de `get_game_context` da Etapa 7A. `get_position_context` possui definição compatível com a Responses API e fluxos técnicos isolados. `get_game_context` possui apenas schemas, runtime e testes offline: ainda não foi registrada na Responses API, não chama a OpenAI e não está integrada à interface real do Professor IA.
+Este documento registra a investigação da Etapa 6A, os fluxos de `get_position_context`, o runtime determinístico de `get_game_context` da Etapa 7A e seu fluxo técnico forçado da Etapa 7B. As duas funções possuem definições compatíveis com a Responses API e infraestrutura técnica isolada. `get_game_context` continua sem integração com a interface pública, sem seleção automática e foi validada nesta etapa somente com transportes simulados, sem chamada real à OpenAI.
 
 ## 1. Classificação das definições
 
@@ -678,7 +678,7 @@ O baseline forçado permanece preservado e não se confunde com essa avaliação
 
 `get_game_context` organiza somente fatos da única partida que a aplicação já selecionou e disponibilizou para a requisição. O runtime não pesquisa partidas, não lê stores ou `localStorage`, não recebe o histórico do jogador, não calcula estatísticas globais, não altera dados e não acessa rede. Também não usa LLM ou engine, não avalia a partida e não indica melhor lance.
 
-Nesta etapa existem apenas os schemas, o runtime e a suíte offline nos arquivos `get-game-context.*`, além de erros públicos próprios e scripts locais. Não existe definição OpenAI de `get_game_context`, rota de function calling, fluxo automático com duas Tools nem integração com o Professor IA. Nenhuma chamada à OpenAI foi executada.
+O runtime determinístico permanece separado da definição registrada e da orquestração. A Etapa 7B acrescenta a definição OpenAI, um fluxo forçado de duas chamadas e uma rota técnica isolada. Ainda não existem fluxo automático com duas Tools nem integração com o Professor IA público. Nenhuma chamada à OpenAI foi executada nesta etapa.
 
 ### Tipos reais e campos escolhidos
 
@@ -690,7 +690,7 @@ Controle de tempo não integra o contrato porque não existe em `ChessGame`. Rat
 
 ### Argumentos da futura Tool
 
-O schema estrito aceita somente `{ gameContextId: string }`. O ID recebe `trim`, exige de 1 a 128 caracteres e é apenas uma correlação opaca. PGN, FEN, rating, usuário, adversário e propriedades adicionais são rejeitados. O argumento nunca concede autorização e um ID divergente não provoca busca alternativa.
+O schema estrito aceita somente `{ gameContextId: string }`. O ID recebe `trim`, exige de 1 a 128 caracteres e segue a allowlist única `^[A-Za-z0-9._:-]+$`; continua sendo apenas uma correlação opaca. PGN, FEN, rating, usuário, adversário e propriedades adicionais são rejeitados. O argumento nunca concede autorização e um ID divergente não provoca busca alternativa.
 
 ### Snapshot autorizado
 
@@ -751,6 +751,70 @@ O executor segue a ordem: presença do snapshot, schema do snapshot, schema dos 
 
 ### Testes offline
 
-`npm run test:get-game-context` executa 73 testes determinísticos com `node:test`, sem rede. A suíte substituiu os casos que autorizavam público e administrador por rejeições owner-only e cobre proprietário de partida platform e external, minimização do solicitante para somente o ID, argumentos, limites, allowlist do snapshot, rejeição de FEN, campos obrigatórios por origem, datas reais, ordem das validações, quatro casos positivos e nove rejeições independentes da matriz de PGN, ausência de chamadas desnecessárias ao `chess.js`, diferença permitida entre as duas contagens, texto malicioso tratado como dado, readiness, invariantes do resultado, sanitização, determinismo e imutabilidade.
+`npm run test:get-game-context` executa 75 testes determinísticos com `node:test`, sem rede. A suíte substituiu os casos que autorizavam público e administrador por rejeições owner-only e cobre proprietário de partida platform e external, minimização do solicitante para somente o ID, argumentos, limites, formato restrito do identificador, allowlist do snapshot, rejeição de FEN, campos obrigatórios por origem, datas reais, ordem das validações, quatro casos positivos e nove rejeições independentes da matriz de PGN, ausência de chamadas desnecessárias ao `chess.js`, diferença permitida entre as duas contagens, texto malicioso tratado como dado, readiness, invariantes do resultado, sanitização, determinismo e imutabilidade.
 
-`npm run test:ai-tools` inclui a nova suíte sem remover as anteriores. O total agregado passou dos 121 testes históricos para 194 testes únicos: os 73 casos novos não aparecem em outra suíte. Os comandos específicos continuam sobrepostos ao agregado e não devem ser somados novamente. `get_game_context` permanece offline, não foi registrada na Responses API e não está conectada à interface do Professor IA.
+`npm run test:ai-tools` inclui a suíte determinística sem remover as anteriores. Após a revisão final da Etapa 7B, o agregado passa a 292 testes únicos: 75 do runtime de partida e 96 da definição, fluxo e rota; cada teste aparece uma única vez no agregado. Os comandos específicos continuam sobrepostos ao agregado e não devem ser somados novamente. `get_game_context` permanece desconectada da interface do Professor IA.
+
+## 23. Definição OpenAI e fluxo forçado de `get_game_context` — Etapa 7B
+
+### Runtime determinístico versus Tool registrada
+
+`executeGetGameContext` é a fronteira determinística que valida argumentos, snapshot, autorização owner-only e resultado. A definição em `get-game-context.openai.ts` é apenas o contrato apresentado ao modelo; ela não executa código nem concede acesso. O orquestrador aceita uma solicitação do modelo somente depois de validar o protocolo e chama exclusivamente o executor determinístico, nunca `getGameContext` diretamente.
+
+### Definição e argumentos
+
+A Tool usa o nome exato `get_game_context`, `type: "function"`, `strict: true` e `additionalProperties: false`. Seu único argumento obrigatório é `gameContextId`, string de 1 a 128 caracteres com o mesmo `pattern` `^[A-Za-z0-9._:-]+$` do schema Zod do runtime. A definição não aceita PGN, FEN, usuário, adversário, rating, notas ou tags.
+
+O formato restrito importa porque opacidade não significa texto livre. `JSON.stringify` escapa uma string para que ela seja JSON válido, mas não torna seu conteúdo semanticamente neutro: espaços, quebras de linha ou uma instrução continuam chegando ao modelo como texto. A allowlist reduz o identificador ao alfabeto necessário aos IDs reais do projeto e rejeita conteúdo instrucional ou caracteres de controle, sem tentar “consertar” o valor removendo caracteres. A autorização e a igualdade com o snapshot continuam sendo verificações separadas; sintaxe segura não concede acesso.
+
+A descrição explicita que a função retorna somente fatos da única partida já selecionada e autorizada; não pesquisa nem enumera histórico; não acessa store ou `localStorage`; não calcula estatísticas; não usa engine; não indica melhor lance; não analisa autonomamente a partida; e não recebe PGN como argumento. O ID correlaciona a solicitação ao snapshot server-side e nunca concede autorização.
+
+### Primeira chamada lógica
+
+`runGameContextToolFlow` recebe transportes e executor injetáveis, mensagem, snapshot, modelo e prompt selecionado. Antes do provider, valida presença e schema do snapshot. A entrada mantém a mensagem original em um item `user` e cria um item técnico `developer` contendo somente o `gameContextId` derivado do snapshot. PGN, notas, tags, adversário, ratings, data e IDs de usuário não entram nesse contexto técnico.
+
+A chamada usa `gpt-5-mini`, o prompt versionado existente, somente a definição `get_game_context`, `tool_choice: { type: "function", name: "get_game_context" }`, `parallel_tool_calls: false` e `store: false`. Um ID escrito pelo usuário não substitui o ID do snapshot.
+
+### `response.output` não confiável e execução
+
+O fluxo procura itens por tipo, sem confiar na ordem, e exige exatamente uma `function_call`. Rejeita ausência ou multiplicidade, nome diferente, `call_id` ausente, vazio ou acima de 256 caracteres, `arguments` ausente ou não string, JSON inválido, valores primitivos ou arrays, propriedades extras, PGN/FEN injetados e ID divergente. Nenhum valor é corrigido ou inventado.
+
+Itens legítimos como `reasoning` e `message` são preservados integralmente. Depois da validação, somente `executeGetGameContext({ rawArguments, authorizedSnapshot })` é executado. Snapshot ausente ou inválido, não proprietário e falha interna encerram o ciclo antes da segunda chamada; não há fallback, lookup, store, banco ou outra partida.
+
+Os testes distinguem precisamente as fronteiras. Erros de protocolo — output sem chamada válida, multiplicidade, nome ou `call_id` incorreto, `arguments` ausente/não string e JSON sintaticamente inválido — executam a Tool zero vezes. Quando `arguments` já foi interpretado como JSON, mas a rejeição depende do schema determinístico, de propriedades proibidas, do formato do ID ou da autorização, o executor é chamado exatamente uma vez. Em todos os erros, somente `createResponse` ocorreu; `parseResponse` e qualquer terceira chamada permanecem ausentes.
+
+O resultado bem-sucedido vira um único item:
+
+```json
+{
+  "type": "function_call_output",
+  "call_id": "o mesmo call_id",
+  "output": "{\"success\":true,\"data\":{...}}"
+}
+```
+
+`output` recebe uma única serialização JSON. O envelope não contém snapshot, IDs de usuário, argumentos separados, stack, `cause` ou objetos do SDK.
+
+### Segunda chamada lógica
+
+A entrada final concatena, nesta ordem, a entrada original, todos os itens da primeira `response.output` sem filtragem ou reordenação e o `function_call_output`. Como no fluxo de posição, o SDK 6.47.0 possui uma divergência entre as unions de output e input para algumas Tools embutidas. Uma conversão de tipo localizada é aplicada somente depois da concatenação integral; nenhum item é descartado.
+
+A segunda chamada usa o mesmo modelo e prompt, `store: false`, não disponibiliza Tools, não usa `tool_choice` e não permite outro ciclo. Ela usa `responses.parse`, `zodTextFormat`, o schema `provisional-teacher-response-v1` e valida novamente `output_parsed`. O fluxo termina após exatamente duas chamadas lógicas: não há terceira chamada, loop, retry, streaming ou paralelismo.
+
+O resultado público contém somente o modelo e versões, `data` validado e `{ name: "get_game_context", callCount: 1, executionStatus: "completed" }`. Não contém `call_id`, argumentos, snapshot, PGN intermediário, resposta bruta ou diagnóstico interno.
+
+### Rota técnica, erros e HTTP
+
+`POST /api/ai/test/tools/game-context` usa runtime Node.js e responde `404` sem `ENABLE_AI_TEST_ROUTE === "true"`. Além dos limites por campo, a rota impõe um limite total de 262.144 bytes. O valor cobre os máximos atuais de mensagem, PGN, notas, tags e metadados mesmo considerando UTF-8 e escapes JSON; limites de campo controlam cada dado, enquanto o limite total impede que a leitura do envelope completo cresça sem controle.
+
+A ordem é: flag exata, seleção do prompt, sinal antecipado de `Content-Length`, leitura por `request.text()`, medição dos bytes reais com `TextEncoder`, `JSON.parse`, schema estrito, owner-only, criação do cliente e fluxo. `Content-Length` é útil para rejeitar cedo, mas pode estar ausente ou mentir; por isso nunca substitui a medição real. A rota não usa `request.json()`. Corpo acima do teto retorna `413 request_body_too_large`, com mensagem genérica e sem logar conteúdo; JSON malformado ou schema inválido abaixo ou exatamente no teto permanece `400`. `AI_TEST_PROMPT_VERSION` reutiliza o registro existente; versão desconhecida e chave ausente produzem `503`; não proprietário produz `403`.
+
+Refusals produzem `422`. Resposta incompleta, Structured Output indisponível, falha de protocolo, falha da Tool no ciclo e erro do provider produzem `502`. Falhas internas locais e invariantes inesperadas produzem `500`. O `switch` do mapeamento é exaustivo. Somente `PROVIDER_ERROR` recebe o diagnóstico sanitizado do SDK; erros locais nunca são atribuídos automaticamente ao provider. As mensagens públicas não incluem dados da partida, API key, stack, `cause` ou mensagem bruta do provider.
+
+O teste de sucesso da rota verifica o wiring completo: mensagem validada, snapshot integral, modelo, versão e texto do prompt selecionado chegam ao orquestrador, junto de um transporte com `createResponse` e `parseResponse`. As funções do transporte não são invocadas nesse teste de rota. Para `PROVIDER_ERROR`, o log contém somente o marcador e o objeto sanitizado devolvido pelo diagnóstico; a `cause` bruta e os dados da partida não aparecem. Erros locais inesperados não executam o diagnóstico e registram somente o marcador genérico `internal_error`.
+
+### Testes e limitações
+
+`npm run test:game-context-tool-flow` executa 96 testes offline da definição, schemas compartilhados, fluxo e rota. Eles cobrem configuração das duas chamadas, preservação de `reasoning`, `message` e `function_call`, output malformado, envelope e correlação por `call_id`, formato compartilhado do ID, fronteira exata entre protocolo e executor determinístico, argumentos maliciosos, snapshots, owner-only, execução única, ausência de terceira chamada, wiring completo da rota, conteúdo exato dos logs, erros do provider e Structured Output, sanitização, precedência das validações HTTP, `Content-Length` excessivo, ausente ou menor que o corpo real, fronteira exata em bytes, ausência de vazamento e de criação do cliente nas rejeições, restauração normal e excepcional de `process.env` e cliente injetado. Nenhum teste monkey patcha o SDK global ou acessa rede.
+
+O estado atual é estritamente técnico: a Tool está disponível apenas na rota isolada, forçada para validar infraestrutura. Ela não está na interface pública, não escolhe automaticamente entre partida e posição, não compara Tools e não implementa engine, autenticação real, backend, RAG, streaming ou retries.
