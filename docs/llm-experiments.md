@@ -1349,3 +1349,29 @@ A comparação também registra uma contrapartida operacional. Os tokens por amo
 ### Conclusão cautelosa
 
 `E-024` é uma melhoria inicial sobre o baseline na amostra curada. Não representa precisão geral do modelo. Uma repetição de 12 casos não comprova estabilidade, generalização ou qualidade pedagógica. `professor-ia-v2` continua preservado como baseline, e `professor-ia-v3` permanece uma hipótese candidata, ainda não promovida automaticamente para produção.
+
+## Etapa 7F-B1 — diagnóstico controlado do PROVIDER_ERROR
+
+### Objetivo e limite experimental
+
+Esta etapa isolou a infraestrutura básica do provedor e, depois, a combinação histórica de `responses.parse` com Structured Outputs que havia terminado em `provider_error` na primeira tentativa do `EV-002`, registrada em `E-004`. O diagnóstico foi limitado antecipadamente a no máximo duas chamadas externas, sem retry, Tool, runner completo, repetições ou alteração de arquivos.
+
+### Chamada mínima
+
+A primeira chamada usou `responses.create`, `gpt-5-mini`, uma instrução e uma entrada curtas, sem Structured Outputs, Tool ou segunda interação. O SDK foi configurado com `maxRetries: 0`. A execução retornou HTTP `200`, status `completed` e modelo efetivo `gpt-5-mini-2025-08-07`.
+
+Esse resultado observou, nessa condição e nesse momento, o funcionamento conjunto de credencial, permissão básica, quota disponível, rede, SDK, Responses API e acesso ao modelo. Ele não avaliou schema, parsing estruturado, Tools ou o fluxo completo.
+
+### Chamada representativa
+
+A segunda chamada reproduziu uma única interação representativa da configuração de `E-004`: modelo solicitado `gpt-5-mini`, prompt `professor-ia-v1`, entrada histórica do `EV-002`, schema `provisional-teacher-response-v1`, `responses.parse` e `maxRetries: 0`. Não houve Tool nem segunda interação.
+
+A execução retornou HTTP `200`, status `completed` e modelo efetivo `gpt-5-mini-2025-08-07`. `output_parsed` estava presente e foi aprovado novamente pelo schema Zod local. Assim, as duas chamadas externas autorizadas foram realizadas e ambas foram bem-sucedidas.
+
+Antes da segunda chamada, um comando temporário de preparação não reconheceu o terminador `.trim()` do arquivo do prompt. O processo terminou antes de invocar o SDK e realizou zero chamadas externas. A extração foi corrigida apenas no comando temporário. Esse evento foi um erro local anterior à rede: não é erro de transporte, resposta HTTP do provedor, falha de Structured Output nem defeito confirmado do repositório.
+
+### Conclusão e limites
+
+O PROVIDER_ERROR histórico não foi reproduzido nas condições atuais. As duas chamadas diagnósticas foram bem-sucedidas. A hipótese principal passa a ser uma falha externa transitória ou uma condição histórica que não está mais presente, mas os dados antigos são insuficientes para determinar a causa raiz exata.
+
+Duas observações pontuais não demonstram estabilidade futura, eliminam a possibilidade de novos erros do provedor ou permitem atribuir retrospectivamente `E-004` a rede, quota, disponibilidade, SDK ou processamento. O diagnóstico apenas reduz o espaço de hipóteses nas condições atuais. Os identificadores individuais das requisições não são registrados neste documento.

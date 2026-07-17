@@ -600,3 +600,11 @@ Na comparação controlada, os acertos passaram de 8 para 11, a `decisionAccurac
 Em contrapartida, os tokens por amostra completa aumentaram de aproximadamente 6.661 para 8.088, e a latência média aumentou de aproximadamente 19,1 s para 24,7 s. Os denominadores são diferentes porque `wrong_tool` encerra antes da segunda interação: `E-023` teve nove amostras completas, enquanto `E-024` teve 11. Assim, a v3 melhorou a qualidade nesta amostra, mas aumentou custo e latência.
 
 Esta é uma melhoria inicial sobre o baseline na amostra curada, não uma medida da precisão geral do modelo. Uma repetição de 12 casos não comprova estabilidade, generalização ou qualidade pedagógica. `professor-ia-v2` continua preservado como baseline, e `professor-ia-v3` permanece uma hipótese candidata, ainda não promovida automaticamente para produção.
+
+## Etapa 7F-B1 — controle do erro de provedor antes de novas repetições
+
+Antes de qualquer nova execução com três repetições, o `provider_error` histórico de `E-004` foi investigado com um orçamento fechado de duas chamadas externas e sem executar o runner. Uma chamada textual mínima com `responses.create` e uma chamada representativa com `responses.parse`, `professor-ia-v1`, `EV-002` e `provisional-teacher-response-v1` retornaram HTTP `200` e status `completed`; na segunda, `output_parsed` também passou pela validação Zod local. Ambas usaram `gpt-5-mini`, resolveram para `gpt-5-mini-2025-08-07`, não disponibilizaram Tools e foram executadas sem retry.
+
+O resultado não reclassifica `E-004` nem comprova sua causa. O erro histórico não foi reproduzido nas condições atuais, o que torna uma falha externa transitória ou uma condição antiga ausente hoje a hipótese principal, ainda sem evidência suficiente para determinar a causa raiz. Um erro no extrator usado para preparar a segunda chamada terminou localmente antes da rede, fez zero chamadas externas e deve ser separado de erros de transporte, respostas HTTP do provedor e falhas de parsing.
+
+Não há, na documentação atual, uma etapa numerada posterior à 7F-B1. Uma futura repetição do runner conjunto continua condicionada a autorização explícita e deve preservar modelo, prompts, 12 casos canônicos, schemas, Tools, métricas e ordem sequencial.
