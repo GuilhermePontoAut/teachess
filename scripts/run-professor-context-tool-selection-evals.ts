@@ -1,4 +1,4 @@
-import { writeFile } from "node:fs/promises";
+import { access, writeFile } from "node:fs/promises";
 import type {
   Response,
   ResponseCreateParamsNonStreaming,
@@ -10,6 +10,7 @@ import {
 } from "../lib/ai/evals/professor-context-tool-selection-cases";
 import {
   combineProfessorContextToolSelectionUsages,
+  createProfessorContextToolSelectionTechnicalErrorSignature,
   getProfessorContextToolSelectionObservedWrongTool,
   getProfessorContextToolSelectionSanitizedErrorCode,
   InvalidProfessorContextToolSelectionEvalCaseSetError,
@@ -60,6 +61,7 @@ export type ResolvedProfessorContextToolSelectionEvalEnvironment =
         | "PROMPT_VERSION_INVALID"
         | "REPETITIONS_REQUIRED"
         | "REPETITIONS_INVALID"
+        | "OUTPUT_PATH_INVALID"
         | "OPENAI_API_KEY_REQUIRED";
     }
   | {
@@ -67,6 +69,9 @@ export type ResolvedProfessorContextToolSelectionEvalEnvironment =
       exitCode: 0;
       config: ProfessorContextToolSelectionEvalRunConfig;
       prompt: SelectedProfessorIaPrompt;
+      outputPath: string;
+      allowOverwrite: boolean;
+      consecutiveTechnicalErrorThreshold: number | null;
     };
 
 export function resolveProfessorContextToolSelectionEvalEnvironment(
@@ -121,6 +126,26 @@ export function resolveProfessorContextToolSelectionEvalEnvironment(
     };
   }
 
+  const configuredOutputPath = readEnvironment("AI_EVAL_OUTPUT_PATH");
+  if (configuredOutputPath !== undefined && configuredOutputPath.length === 0) {
+    return {
+      status: "invalid",
+      exitCode: PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_ERROR_EXIT_CODE,
+      errorCode: "OUTPUT_PATH_INVALID",
+    };
+  }
+  const outputPath =
+    configuredOutputPath ?? PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_REPORT_PATH;
+  const allowOverwrite = readEnvironment("AI_EVAL_ALLOW_OVERWRITE") === "true";
+  const rawThreshold = readEnvironment(
+    "AI_EVAL_ABORT_AFTER_CONSECUTIVE_TECHNICAL_ERRORS",
+  );
+  const parsedThreshold = Number(rawThreshold);
+  const consecutiveTechnicalErrorThreshold =
+    rawThreshold?.trim() && Number.isInteger(parsedThreshold) && parsedThreshold > 0
+      ? parsedThreshold
+      : null;
+
   if (!readEnvironment("OPENAI_API_KEY")?.trim()) {
     return {
       status: "invalid",
@@ -141,6 +166,9 @@ export function resolveProfessorContextToolSelectionEvalEnvironment(
       repetitions,
     },
     prompt,
+    outputPath,
+    allowOverwrite,
+    consecutiveTechnicalErrorThreshold,
   };
 }
 
@@ -151,6 +179,7 @@ export type ProfessorContextToolSelectionEvalCliDependencies = {
   readEnvironment: ProfessorContextEvalEnvironmentReader;
   createClient: () => EvalOpenAIClient;
   writeJsonReport: (path: string, contents: string) => Promise<void>;
+  reportExists?: (path: string) => Promise<boolean>;
   writeLine: (line: string) => void;
   clock?: ProfessorContextToolSelectionEvalRunnerClock;
 };
@@ -248,6 +277,13 @@ function formatPercent(value: number | null): string {
 export function formatProfessorContextToolSelectionEvalSummary(
   report: ProfessorContextToolSelectionEvalReport,
 ): string[] {
+  if (report.reportCompleteness === "partial") {
+    return [
+      `Experimento incompleto: ${report.completedCaseRuns}/${report.plannedCaseRuns} execuções concluídas.`,
+      `Execução abortada: ${report.abortReason}.`,
+      "Resultados parciais são inconclusivos e não constituem comparação válida de estabilidade.",
+    ];
+  }
   return [
     `Eval set: ${report.evalSetVersion}`,
     `Modelo: ${report.model}`,
@@ -293,6 +329,12 @@ export async function runProfessorContextToolSelectionEvalCli(
     return environment.exitCode;
   }
 
+  const reportExists = dependencies.reportExists ?? (async () => false);
+  if (!environment.allowOverwrite && await reportExists(environment.outputPath)) {
+    dependencies.writeLine("Falha técnica sanitizada: REPORT_ALREADY_EXISTS.");
+    return PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_ERROR_EXIT_CODE;
+  }
+
   const clock = dependencies.clock ?? defaultClock;
   const client = dependencies.createClient();
   const report = await runProfessorContextToolSelectionEvals({
@@ -300,6 +342,9 @@ export async function runProfessorContextToolSelectionEvalCli(
     config: environment.config,
     prompt: environment.prompt,
     clock,
+    consecutiveTechnicalErrorThreshold:
+      environment.consecutiveTechnicalErrorThreshold,
+    outputPath: environment.outputPath,
     executeCase: async ({ message, authorizedContext, prompt }) => {
       const measured = createMeasuredTransport(client, clock);
       try {
@@ -334,6 +379,26 @@ export async function runProfessorContextToolSelectionEvalCli(
         return {
           status: "technical_error",
           errorCode: getProfessorContextToolSelectionSanitizedErrorCode(error),
+          technicalErrorSignature:
+            createProfessorContextToolSelectionTechnicalErrorSignature({
+              category: "provider_or_flow_error",
+              status:
+                typeof error === "object" && error !== null &&
+                "status" in error && typeof error.status === "number"
+                  ? error.status
+                  : undefined,
+              type:
+                typeof error === "object" && error !== null &&
+                "type" in error && typeof error.type === "string"
+                  ? error.type
+                  : undefined,
+              code:
+                typeof error === "object" && error !== null &&
+                "code" in error && typeof error.code === "string"
+                  ? error.code
+                  : getProfessorContextToolSelectionSanitizedErrorCode(error),
+              message: error instanceof Error ? error.message : undefined,
+            }),
           telemetry: measured.telemetry(),
         } satisfies ProfessorContextToolSelectionEvalExecutionOutcome;
       }
@@ -343,7 +408,7 @@ export async function runProfessorContextToolSelectionEvalCli(
 
   try {
     await dependencies.writeJsonReport(
-      PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_REPORT_PATH,
+      environment.outputPath,
       json,
     );
   } catch {
@@ -356,9 +421,11 @@ export async function runProfessorContextToolSelectionEvalCli(
   }
   dependencies.writeLine(json.trimEnd());
   dependencies.writeLine(
-    `Relatório JSON sanitizado gravado em ${PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_REPORT_PATH}.`,
+    `Relatório JSON sanitizado gravado em ${environment.outputPath}.`,
   );
-  return 0;
+  return report.aborted
+    ? PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_ERROR_EXIT_CODE
+    : 0;
 }
 
 if (require.main === module) {
@@ -366,6 +433,14 @@ if (require.main === module) {
     readEnvironment: (name) => process.env[name],
     createClient: getOpenAIClient,
     writeJsonReport: (path, contents) => writeFile(path, contents, "utf8"),
+    reportExists: async (path) => {
+      try {
+        await access(path);
+        return true;
+      } catch {
+        return false;
+      }
+    },
     writeLine: (line) => console.log(line),
   })
     .then((exitCode) => {

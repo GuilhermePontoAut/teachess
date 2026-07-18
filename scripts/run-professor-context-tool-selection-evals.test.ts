@@ -4,6 +4,7 @@ import {
   professorContextToolSelectionCases,
 } from "../lib/ai/evals/professor-context-tool-selection-cases";
 import type { ProfessorContextToolSelectionEvalRunnerClock } from "../lib/ai/evals/run-professor-context-tool-selection-evals";
+import { createProfessorContextToolSelectionTechnicalErrorSignature } from "../lib/ai/evals/run-professor-context-tool-selection-evals";
 import {
   PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_DISABLED_EXIT_CODE,
   PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_ERROR_EXIT_CODE,
@@ -297,6 +298,9 @@ test("chave só é consultada depois das configurações e nunca entra no result
     "RUN_REAL_AI_EVALS",
     "AI_EVAL_PROMPT_VERSION",
     "AI_EVAL_REPETITIONS",
+    "AI_EVAL_OUTPUT_PATH",
+    "AI_EVAL_ALLOW_OVERWRITE",
+    "AI_EVAL_ABORT_AFTER_CONSECUTIVE_TECHNICAL_ERRORS",
     "OPENAI_API_KEY",
   ]);
   assert.equal(JSON.stringify(missing).includes("sk-"), false);
@@ -622,4 +626,128 @@ test("a CLI não modifica o ambiente e o harness restaura os valores temporário
     }
   }
   for (const key of keys) assert.equal(process.env[key], original[key]);
+});
+
+test("caminho padrão é retrocompatível e AI_EVAL_OUTPUT_PATH é respeitado", async () => {
+  for (const outputPath of [
+    undefined,
+    "/tmp/teachess-professor-context-tool-selection-v2-r3.json",
+  ]) {
+    const fake = fakeClient();
+    let writtenPath = "";
+    const exitCode = await runProfessorContextToolSelectionEvalCli({
+      readEnvironment: environmentReader({
+        ...readyEnvironment,
+        AI_EVAL_OUTPUT_PATH: outputPath,
+      }),
+      createClient: () => fake.client as never,
+      writeJsonReport: async (path) => { writtenPath = path; },
+      writeLine: () => undefined,
+      clock: clock(),
+    });
+    assert.equal(exitCode, 0);
+    assert.equal(
+      writtenPath,
+      outputPath ?? PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_REPORT_PATH,
+    );
+  }
+});
+
+test("relatório existente é recusado antes do cliente e overwrite explícito permite execução", async () => {
+  let clients = 0;
+  let writes = 0;
+  const lines: string[] = [];
+  const baseDependencies = {
+    reportExists: async () => true,
+    writeJsonReport: async () => { writes += 1; },
+    writeLine: (line: string) => lines.push(line),
+    clock: clock(),
+  };
+  const refused = await runProfessorContextToolSelectionEvalCli({
+    ...baseDependencies,
+    readEnvironment: environmentReader(readyEnvironment),
+    createClient: () => {
+      clients += 1;
+      assert.fail("cliente não deveria ser criado");
+    },
+  });
+  assert.equal(refused, 1);
+  assert.equal(clients, 0);
+  assert.equal(writes, 0);
+  assert.deepEqual(lines, ["Falha técnica sanitizada: REPORT_ALREADY_EXISTS."]);
+
+  const fake = fakeClient();
+  const allowed = await runProfessorContextToolSelectionEvalCli({
+    ...baseDependencies,
+    readEnvironment: environmentReader({
+      ...readyEnvironment,
+      AI_EVAL_ALLOW_OVERWRITE: "true",
+    }),
+    createClient: () => {
+      clients += 1;
+      return fake.client as never;
+    },
+  });
+  assert.equal(allowed, 0);
+  assert.equal(clients, 1);
+  assert.equal(writes, 1);
+});
+
+test("CLI aborta após três erros iguais, grava parcial e retorna código não zero", async () => {
+  const fake = incompatibleToolClient("unknown");
+  let reportContents = "";
+  const lines: string[] = [];
+  const exitCode = await runProfessorContextToolSelectionEvalCli({
+    readEnvironment: environmentReader({
+      ...readyEnvironment,
+      AI_EVAL_REPETITIONS: "3",
+      AI_EVAL_ABORT_AFTER_CONSECUTIVE_TECHNICAL_ERRORS: "3",
+      AI_EVAL_OUTPUT_PATH: "/tmp/partial.json",
+    }),
+    createClient: () => fake.client as never,
+    writeJsonReport: async (_path, contents) => { reportContents = contents; },
+    writeLine: (line) => lines.push(line),
+    clock: clock(),
+  });
+  const report = JSON.parse(reportContents) as {
+    plannedCaseRuns: number;
+    completedCaseRuns: number;
+    aborted: boolean;
+    reportCompleteness: string;
+    outputPath: string;
+  };
+  assert.equal(exitCode, 1);
+  assert.equal(fake.state.createCalls, 3);
+  assert.deepEqual(report, {
+    ...report,
+    plannedCaseRuns: 36,
+    completedCaseRuns: 3,
+    aborted: true,
+    reportCompleteness: "partial",
+    outputPath: "/tmp/partial.json",
+  });
+  assert.match(lines.join("\n"), /inconclusivos/i);
+  assert.equal(lines.some((line) => line.includes("Decision accuracy")), false);
+});
+
+test("assinatura técnica ignora request_id e segredos e preserva campos estáveis", () => {
+  const first = createProfessorContextToolSelectionTechnicalErrorSignature({
+    category: "provider_error",
+    status: 429,
+    type: "rate_limit_error",
+    code: "rate_limit_exceeded",
+    message: "Rate limit reached; request_id=req-a; key=sk-secret-a",
+  });
+  const second = createProfessorContextToolSelectionTechnicalErrorSignature({
+    category: "provider_error",
+    status: 429,
+    type: "rate_limit_error",
+    code: "rate_limit_exceeded",
+    message: "Rate limit reached; request_id=req-b; key=sk-secret-b",
+  });
+  assert.equal(first, second);
+  assert.match(first, /RATE_LIMIT_ERROR/);
+  for (const forbidden of ["request_id", "req-a", "req-b", "sk-secret"]) {
+    assert.equal(first.includes(forbidden), false);
+  }
 });

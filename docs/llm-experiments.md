@@ -1375,3 +1375,22 @@ Antes da segunda chamada, um comando temporário de preparação não reconheceu
 O PROVIDER_ERROR histórico não foi reproduzido nas condições atuais. As duas chamadas diagnósticas foram bem-sucedidas. A hipótese principal passa a ser uma falha externa transitória ou uma condição histórica que não está mais presente, mas os dados antigos são insuficientes para determinar a causa raiz exata.
 
 Duas observações pontuais não demonstram estabilidade futura, eliminam a possibilidade de novos erros do provedor ou permitem atribuir retrospectivamente `E-004` a rede, quota, disponibilidade, SDK ou processamento. O diagnóstico apenas reduz o espaço de hipóteses nas condições atuais. Os identificadores individuais das requisições não são registrados neste documento.
+
+## Etapa 7F-B2 — preparação segura da reexecução de estabilidade V2 × V3
+
+Esta etapa prepara, mas não executa, a comparação com três repetições dos 12 casos. Modelo, conteúdo de `professor-ia-v2` e `professor-ia-v3`, casos, expectativas, ordem, Tools, schemas, fluxo de duas interações, parâmetros, classificações e métricas permanecem congelados. As mudanças são exclusivamente operacionais: caminhos separados de artefato, proteção contra sobrescrita e interrupção após falha técnica repetitiva.
+
+`AI_EVAL_OUTPUT_PATH` seleciona o arquivo do relatório; sem a variável, o caminho histórico `/tmp/teachess-professor-context-tool-selection-evals.json` permanece. Um arquivo existente é recusado antes da criação do cliente, salvo quando `AI_EVAL_ALLOW_OVERWRITE=true` autoriza explicitamente a substituição. `AI_EVAL_ABORT_AFTER_CONSECUTIVE_TECHNICAL_ERRORS=N` habilita o circuit breaker somente para um inteiro positivo. Ausente, vazia, zero ou inválida, a proteção fica desabilitada e o comportamento anterior é preservado.
+
+O contador considera erros `technical_error` consecutivos com a mesma assinatura sanitizada e é reiniciado por uma execução não técnica ou por outra assinatura. A assinatura utiliza somente categoria interna e, quando disponíveis, status HTTP, `error.type`, `error.code` e uma classe fechada da mensagem. Ela exclui `request_id`, timestamp, duração, stack trace, texto bruto e conteúdo sensível. A proteção não interrompe resultados semanticamente incorretos (`wrong_tool`, `false_positive` ou `false_negative`).
+
+Ao atingir o limite, o próximo caso não é iniciado. O relatório parcial preserva os resultados concluídos, registra `aborted: true`, `reportCompleteness: "partial"` e motivo sanitizado, e o processo termina com código diferente de zero. Essa execução é inconclusiva: métricas parciais não podem ser apresentadas como comparação válida de estabilidade nem usadas para promover um prompt. Em conclusão normal, `aborted: false` e `reportCompleteness: "complete"`.
+
+Comandos preparados para uma execução real futura, sujeitos a autorização explícita e deliberadamente não executados nesta etapa:
+
+```bash
+RUN_REAL_AI_EVALS=true AI_EVAL_REPETITIONS=3 AI_EVAL_ABORT_AFTER_CONSECUTIVE_TECHNICAL_ERRORS=3 AI_EVAL_PROMPT_VERSION=professor-ia-v2 AI_EVAL_OUTPUT_PATH=/tmp/teachess-professor-context-tool-selection-v2-r3.json npm run eval:professor-context-tool-selection
+RUN_REAL_AI_EVALS=true AI_EVAL_REPETITIONS=3 AI_EVAL_ABORT_AFTER_CONSECUTIVE_TECHNICAL_ERRORS=3 AI_EVAL_PROMPT_VERSION=professor-ia-v3 AI_EVAL_OUTPUT_PATH=/tmp/teachess-professor-context-tool-selection-v3-r3.json npm run eval:professor-context-tool-selection
+```
+
+Nenhuma chave deve ser incluída nesses comandos. O limite de três erros será ativado explicitamente apenas na execução real autorizada.

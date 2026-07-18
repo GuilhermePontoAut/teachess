@@ -34,6 +34,8 @@ export const PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_MAX_REPETITIONS = 5;
 export const INVALID_PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_CASE_SET =
   "INVALID_EVAL_CASE_SET" as const;
 export const PROFESSOR_CONTEXT_TOOL_SELECTION_LATENCY_TOLERANCE_MS = 1;
+export const PROFESSOR_CONTEXT_TOOL_SELECTION_ABORT_REASON =
+  "CONSECUTIVE_TECHNICAL_ERRORS" as const;
 
 export class InvalidProfessorContextToolSelectionEvalCaseSetError extends Error {
   readonly code = INVALID_PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_CASE_SET;
@@ -365,6 +367,16 @@ export const professorContextToolSelectionEvalReportSchema = z
       .int()
       .min(1)
       .max(PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_MAX_REPETITIONS),
+    caseCount: z.literal(12),
+    plannedCaseRuns: nonnegativeIntegerSchema,
+    completedCaseRuns: nonnegativeIntegerSchema,
+    aborted: z.boolean(),
+    abortReason: z
+      .literal(PROFESSOR_CONTEXT_TOOL_SELECTION_ABORT_REASON)
+      .nullable(),
+    consecutiveTechnicalErrorThreshold: z.number().int().positive().nullable(),
+    outputPath: z.string().min(1),
+    reportCompleteness: z.enum(["complete", "partial"]),
     startedAt: z.iso.datetime(),
     completedAt: z.iso.datetime(),
     totalRuns: nonnegativeIntegerSchema,
@@ -403,15 +415,28 @@ export const professorContextToolSelectionEvalReportSchema = z
       technicalErrors: count("technical_error"),
     };
 
+    if (report.plannedCaseRuns !== 12 * report.repetitions) {
+      issue(["plannedCaseRuns"], "O total planejado está inconsistente.");
+    }
     if (
       report.totalRuns !== report.results.length ||
-      report.totalRuns !== 12 * report.repetitions
+      report.completedCaseRuns !== report.results.length
     ) {
       context.addIssue({
         code: "custom",
         path: ["totalRuns"],
-        message: "totalRuns deve ser doze casos vezes repetitions.",
+        message: "Os totais concluídos devem corresponder aos resultados.",
       });
+    }
+    const isComplete = report.completedCaseRuns === report.plannedCaseRuns;
+    if (
+      report.caseCount !== 12 ||
+      report.aborted === isComplete ||
+      report.reportCompleteness !== (isComplete ? "complete" : "partial") ||
+      report.abortReason !==
+        (isComplete ? null : PROFESSOR_CONTEXT_TOOL_SELECTION_ABORT_REASON)
+    ) {
+      issue(["reportCompleteness"], "A completude do relatório está inconsistente.");
     }
     for (const [field, expected] of Object.entries(expectedCounts)) {
       if (report[field as keyof typeof expectedCounts] !== expected) {
@@ -466,9 +491,7 @@ export const professorContextToolSelectionEvalReportSchema = z
     if (uniqueRuns.size !== report.results.length) {
       issue(["results"], "A identidade das execuções é inválida.");
     }
-    const hasCanonicalResults =
-      report.results.length === expectedResultOrder.length &&
-      report.results.every((result, index) => {
+    const hasCanonicalResults = report.results.every((result, index) => {
         const expected = expectedResultOrder[index];
         return (
           expected !== undefined &&
@@ -655,6 +678,7 @@ export type ProfessorContextToolSelectionEvalExecutionOutcome =
   | {
       status: "technical_error";
       errorCode: string;
+      technicalErrorSignature?: string;
       telemetry: ProfessorContextToolSelectionTelemetry;
     };
 
@@ -679,6 +703,8 @@ export type RunProfessorContextToolSelectionEvalsInput = {
   prompt: SelectedProfessorIaPrompt;
   executeCase: ProfessorContextToolSelectionEvalExecutor;
   clock?: ProfessorContextToolSelectionEvalRunnerClock;
+  consecutiveTechnicalErrorThreshold?: number | null;
+  outputPath?: string;
 };
 
 const defaultClock: ProfessorContextToolSelectionEvalRunnerClock = {
@@ -699,6 +725,43 @@ export function getProfessorContextToolSelectionSanitizedErrorCode(
   if (error instanceof ProfessorContextToolFlowError) return error.code;
   if (error instanceof z.ZodError) return "FLOW_RESULT_INVALID";
   return "UNEXPECTED_ERROR";
+}
+
+type TechnicalErrorSignatureInput = {
+  category: string;
+  status?: number;
+  type?: string;
+  code?: string;
+  message?: string;
+};
+
+function sanitizeSignatureToken(value: string | undefined): string | null {
+  if (value === undefined) return null;
+  const normalized = value.toUpperCase().replace(/[^A-Z0-9_]/g, "_");
+  return /^[A-Z][A-Z0-9_]{0,63}$/.test(normalized) ? normalized : null;
+}
+
+function classifyTechnicalErrorMessage(message: string | undefined): string | null {
+  if (!message) return null;
+  const normalized = message.toLowerCase();
+  if (normalized.includes("rate limit")) return "RATE_LIMIT";
+  if (normalized.includes("timeout") || normalized.includes("timed out")) return "TIMEOUT";
+  if (normalized.includes("auth") || normalized.includes("api key")) return "AUTHENTICATION";
+  if (normalized.includes("connect") || normalized.includes("network")) return "CONNECTION";
+  if (normalized.includes("invalid request")) return "INVALID_REQUEST";
+  return "OTHER";
+}
+
+export function createProfessorContextToolSelectionTechnicalErrorSignature(
+  input: TechnicalErrorSignatureInput,
+): string {
+  return JSON.stringify({
+    category: sanitizeSignatureToken(input.category) ?? "TECHNICAL_ERROR",
+    status: Number.isInteger(input.status) ? input.status : null,
+    type: sanitizeSignatureToken(input.type),
+    code: sanitizeSignatureToken(input.code),
+    messageClass: classifyTechnicalErrorMessage(input.message),
+  });
 }
 
 export function getProfessorContextToolSelectionObservedWrongTool(
@@ -849,6 +912,8 @@ export async function runProfessorContextToolSelectionEvals({
   prompt,
   executeCase,
   clock = defaultClock,
+  consecutiveTechnicalErrorThreshold = null,
+  outputPath = "/tmp/teachess-professor-context-tool-selection-evals.json",
 }: RunProfessorContextToolSelectionEvalsInput): Promise<ProfessorContextToolSelectionEvalReport> {
   const canonicalCases = validateProfessorContextToolSelectionEvalCaseSet(cases);
   const parsedConfig = professorContextToolSelectionEvalRunConfigSchema.parse(config);
@@ -858,6 +923,9 @@ export async function runProfessorContextToolSelectionEvals({
   const fixtures = createProfessorContextToolSelectionEvalFixtures();
   const startedAt = clock.now().toISOString();
   const results: ProfessorContextToolSelectionEvalRunResult[] = [];
+  let previousTechnicalErrorSignature: string | null = null;
+  let consecutiveTechnicalErrors = 0;
+  let aborted = false;
 
   for (const evalCase of canonicalCases) {
     for (
@@ -897,8 +965,28 @@ export async function runProfessorContextToolSelectionEvals({
               errorCode: sanitizedErrorCodeSchema.parse(outcome.errorCode),
             }),
           );
+          const signature = outcome.technicalErrorSignature ??
+            createProfessorContextToolSelectionTechnicalErrorSignature({
+              category: "technical_error",
+              code: outcome.errorCode,
+            });
+          consecutiveTechnicalErrors =
+            signature === previousTechnicalErrorSignature
+              ? consecutiveTechnicalErrors + 1
+              : 1;
+          previousTechnicalErrorSignature = signature;
+          if (
+            consecutiveTechnicalErrorThreshold !== null &&
+            consecutiveTechnicalErrors >= consecutiveTechnicalErrorThreshold
+          ) {
+            aborted = true;
+            break;
+          }
           continue;
         }
+
+        previousTechnicalErrorSignature = null;
+        consecutiveTechnicalErrors = 0;
 
         if (outcome.status === "wrong_tool") {
           results.push(
@@ -968,8 +1056,25 @@ export async function runProfessorContextToolSelectionEvals({
             errorCode: getProfessorContextToolSelectionSanitizedErrorCode(error),
           }),
         );
+        const signature = createProfessorContextToolSelectionTechnicalErrorSignature({
+          category: "runner_error",
+          code: getProfessorContextToolSelectionSanitizedErrorCode(error),
+        });
+        consecutiveTechnicalErrors =
+          signature === previousTechnicalErrorSignature
+            ? consecutiveTechnicalErrors + 1
+            : 1;
+        previousTechnicalErrorSignature = signature;
+        if (
+          consecutiveTechnicalErrorThreshold !== null &&
+          consecutiveTechnicalErrors >= consecutiveTechnicalErrorThreshold
+        ) {
+          aborted = true;
+          break;
+        }
       }
     }
+    if (aborted) break;
   }
 
   const count = (classification: ProfessorContextToolSelectionClassification) =>
@@ -991,6 +1096,16 @@ export async function runProfessorContextToolSelectionEvals({
     schemaVersion: parsedConfig.schemaVersion,
     evalSetVersion: parsedConfig.evalSetVersion,
     repetitions: parsedConfig.repetitions,
+    caseCount: canonicalCases.length,
+    plannedCaseRuns: canonicalCases.length * parsedConfig.repetitions,
+    completedCaseRuns: results.length,
+    aborted,
+    abortReason: aborted
+      ? PROFESSOR_CONTEXT_TOOL_SELECTION_ABORT_REASON
+      : null,
+    consecutiveTechnicalErrorThreshold,
+    outputPath,
+    reportCompleteness: aborted ? "partial" : "complete",
     startedAt,
     completedAt: clock.now().toISOString(),
     totalRuns: results.length,

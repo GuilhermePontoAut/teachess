@@ -99,6 +99,8 @@ function run(
     repetitions?: number;
     cases?: readonly unknown[];
     clock?: ProfessorContextToolSelectionEvalRunnerClock;
+    consecutiveTechnicalErrorThreshold?: number | null;
+    outputPath?: string;
   } = {},
 ) {
   return runProfessorContextToolSelectionEvals({
@@ -107,6 +109,9 @@ function run(
     prompt,
     executeCase,
     clock: changes.clock ?? deterministicClock(),
+    consecutiveTechnicalErrorThreshold:
+      changes.consecutiveTechnicalErrorThreshold,
+    outputPath: changes.outputPath,
   });
 }
 
@@ -820,4 +825,68 @@ test("uma repetição produz 12 runs e três repetições produzem 36", async ()
     ).totalRuns,
     36,
   );
+});
+
+test("circuit breaker interrompe três erros técnicos iguais e cria relatório parcial", async () => {
+  let calls = 0;
+  const report = await run(
+    async () => {
+      calls += 1;
+      return {
+        status: "technical_error",
+        errorCode: "PROVIDER_ERROR",
+        technicalErrorSignature: "stable-provider-error",
+        telemetry: {
+          firstInteractionLatencyMs: null,
+          finalInteractionLatencyMs: null,
+          tokens: null,
+        },
+      };
+    },
+    { repetitions: 3, consecutiveTechnicalErrorThreshold: 3 },
+  );
+  assert.equal(calls, 3);
+  assert.equal(report.plannedCaseRuns, 36);
+  assert.equal(report.completedCaseRuns, 3);
+  assert.equal(report.aborted, true);
+  assert.equal(report.abortReason, "CONSECUTIVE_TECHNICAL_ERRORS");
+  assert.equal(report.reportCompleteness, "partial");
+});
+
+test("circuit breaker desabilitado não interrompe erros técnicos", async () => {
+  const report = await run(async () => ({
+    status: "technical_error",
+    errorCode: "PROVIDER_ERROR",
+    telemetry: {
+      firstInteractionLatencyMs: null,
+      finalInteractionLatencyMs: null,
+      tokens: null,
+    },
+  }));
+  assert.equal(report.completedCaseRuns, 12);
+  assert.equal(report.aborted, false);
+  assert.equal(report.reportCompleteness, "complete");
+});
+
+test("contador técnico reinicia após acerto ou mudança de assinatura", async () => {
+  const outcomes = [
+    "A", "A", "correct", "A", "A", "B", "A", "A", "correct", "correct", "correct", "correct",
+  ];
+  let index = 0;
+  const report = await run(async (input) => {
+    const marker = outcomes[index++];
+    if (marker === "correct") return success(caseForInput(input).expectedDecision);
+    return {
+      status: "technical_error" as const,
+      errorCode: "PROVIDER_ERROR",
+      technicalErrorSignature: marker,
+      telemetry: {
+        firstInteractionLatencyMs: null,
+        finalInteractionLatencyMs: null,
+        tokens: null,
+      },
+    };
+  }, { consecutiveTechnicalErrorThreshold: 3 });
+  assert.equal(report.completedCaseRuns, 12);
+  assert.equal(report.aborted, false);
 });

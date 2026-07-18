@@ -608,3 +608,18 @@ Antes de qualquer nova execução com três repetições, o `provider_error` his
 O resultado não reclassifica `E-004` nem comprova sua causa. O erro histórico não foi reproduzido nas condições atuais, o que torna uma falha externa transitória ou uma condição antiga ausente hoje a hipótese principal, ainda sem evidência suficiente para determinar a causa raiz. Um erro no extrator usado para preparar a segunda chamada terminou localmente antes da rede, fez zero chamadas externas e deve ser separado de erros de transporte, respostas HTTP do provedor e falhas de parsing.
 
 Não há, na documentação atual, uma etapa numerada posterior à 7F-B1. Uma futura repetição do runner conjunto continua condicionada a autorização explícita e deve preservar modelo, prompts, 12 casos canônicos, schemas, Tools, métricas e ordem sequencial.
+
+## Etapa 7F-B2 — preparação segura da reexecução de estabilidade V2 × V3
+
+A etapa 7F-B2 não executa o experimento e não muda sua metodologia. Ela preserva separadamente os artefatos de V2 e V3 por `AI_EVAL_OUTPUT_PATH`, mantém o caminho legado quando a variável não existe e recusa sobrescrita antes de qualquer chamada externa, exceto com `AI_EVAL_ALLOW_OVERWRITE=true`.
+
+O circuit breaker opcional `AI_EVAL_ABORT_AFTER_CONSECUTIVE_TECHNICAL_ERRORS` reage apenas a uma sequência de falhas `technical_error` com assinatura sanitizada igual. Acertos e demais classificações reiniciam o contador, assim como uma assinatura técnica diferente. Casos semanticamente incorretos nunca acionam essa proteção. O limite fica desligado para valor ausente, vazio, zero ou inválido e será definido explicitamente como `3` apenas na futura execução real autorizada.
+
+Relatórios agora distinguem o plano do que foi concluído por `plannedCaseRuns`, `completedCaseRuns`, `caseCount`, `repetitions`, `promptVersion`, `consecutiveTechnicalErrorThreshold`, `outputPath`, `aborted`, `abortReason` e `reportCompleteness`. Um relatório `partial` é inconclusivo e não pode fundamentar comparação de estabilidade ou promoção de prompt. Um relatório `complete` registra a conclusão normal sem mudar as métricas existentes.
+
+Comandos apenas preparados, não executados:
+
+```bash
+RUN_REAL_AI_EVALS=true AI_EVAL_REPETITIONS=3 AI_EVAL_ABORT_AFTER_CONSECUTIVE_TECHNICAL_ERRORS=3 AI_EVAL_PROMPT_VERSION=professor-ia-v2 AI_EVAL_OUTPUT_PATH=/tmp/teachess-professor-context-tool-selection-v2-r3.json npm run eval:professor-context-tool-selection
+RUN_REAL_AI_EVALS=true AI_EVAL_REPETITIONS=3 AI_EVAL_ABORT_AFTER_CONSECUTIVE_TECHNICAL_ERRORS=3 AI_EVAL_PROMPT_VERSION=professor-ia-v3 AI_EVAL_OUTPUT_PATH=/tmp/teachess-professor-context-tool-selection-v3-r3.json npm run eval:professor-context-tool-selection
+```
