@@ -8,6 +8,8 @@ import {
   InvalidProfessorContextToolSelectionEvalCaseSetError,
   combineProfessorContextToolSelectionUsages,
   createProfessorContextToolSelectionEvalFixtures,
+  createProfessorContextToolSelectionTechnicalErrorDetails,
+  createProfessorContextToolSelectionTechnicalErrorSignature,
   professorContextToolSelectionEvalReportSchema,
   professorContextToolSelectionEvalRunConfigSchema,
   professorContextToolSelectionEvalRunResultSchema,
@@ -777,6 +779,42 @@ test("schema do relatório rejeita adulterações semânticas isoladas", async (
   }
 });
 
+test("schema lê relatório histórico sem campos diagnósticos da 7F-B3", async () => {
+  let index = 0;
+  const currentReport = await run(async (input) => {
+    index += 1;
+    if (index === 1) {
+      return {
+        status: "technical_error",
+        errorCode: "PROVIDER_ERROR",
+        telemetry: {
+          firstInteractionLatencyMs: null,
+          finalInteractionLatencyMs: null,
+          tokens: null,
+        },
+      };
+    }
+    return success(caseForInput(input).expectedDecision);
+  });
+  const historical = JSON.parse(JSON.stringify(currentReport)) as Record<
+    string,
+    unknown
+  >;
+  delete historical.technicalErrorsByCategory;
+  delete historical.technicalErrorsByStage;
+  delete historical.technicalErrorSignatures;
+  for (const result of historical.results as Array<Record<string, unknown>>) {
+    delete result.technicalErrorDetails;
+  }
+
+  const parsed = professorContextToolSelectionEvalReportSchema.parse(historical);
+  assert.equal(parsed.technicalErrors, 1);
+  assert.equal(parsed.technicalErrorsByCategory, undefined);
+  assert.equal(parsed.technicalErrorsByStage, undefined);
+  assert.equal(parsed.technicalErrorSignatures, undefined);
+  assert.equal(parsed.results[0].technicalErrorDetails, undefined);
+});
+
 test("relatório sanitizado exclui mensagens, snapshots, IDs internos e output textual", async () => {
   const report = await run(async (input) => {
     const evalCase = caseForInput(input);
@@ -851,6 +889,108 @@ test("circuit breaker interrompe três erros técnicos iguais e cria relatório 
   assert.equal(report.aborted, true);
   assert.equal(report.abortReason, "CONSECUTIVE_TECHNICAL_ERRORS");
   assert.equal(report.reportCompleteness, "partial");
+});
+
+test("diagnóstico técnico classifica provider, timeout, transporte e erro local sem dados brutos", () => {
+  const cases = [
+    [{ status: 401, type: "invalid_request_error", code: "invalid_api_key" }, "authentication_error"],
+    [{ status: 403, type: "permission_error" }, "permission_error"],
+    [{ status: 429, type: "rate_limit_error" }, "rate_limit_or_quota_error"],
+    [{ status: 500, type: "server_error" }, "provider_server_error"],
+    [{ name: "APIConnectionTimeoutError", code: "ETIMEDOUT" }, "timeout_error"],
+    [{ name: "APIConnectionError", code: "ECONNRESET" }, "transport_error"],
+  ] as const;
+  for (const [error, expected] of cases) {
+    const details = createProfessorContextToolSelectionTechnicalErrorDetails(
+      error,
+      "PROVIDER_ERROR",
+    );
+    assert.equal(details.category, expected);
+  }
+
+  const local = createProfessorContextToolSelectionTechnicalErrorDetails(
+    new Error("sk-private Authorization: Bearer private stack trace"),
+    "UNEXPECTED_ERROR",
+  );
+  assert.equal(local.category, "local_preparation_error");
+  assert.equal(local.stage, "preparation");
+  const serialized = JSON.stringify(local);
+  for (const forbidden of ["sk-private", "Authorization", "Bearer", "stack trace"]) {
+    assert.equal(serialized.includes(forbidden), false);
+  }
+});
+
+test("status HTTP utilizável prevalece sobre indícios de timeout e transporte", () => {
+  const cases = [
+    [{ status: 500, message: "provider timeout" }, "provider_server_error"],
+    [{ status: 503, message: "connection reset" }, "provider_server_error"],
+    [{ message: "request timeout" }, "timeout_error"],
+    [{ code: "ECONNRESET", message: "socket closed" }, "transport_error"],
+    [{ status: 429, message: "connection unavailable" }, "rate_limit_or_quota_error"],
+  ] as const;
+  for (const [error, expectedCategory] of cases) {
+    const details = createProfessorContextToolSelectionTechnicalErrorDetails(
+      error,
+      "PROVIDER_ERROR",
+    );
+    assert.equal(details.category, expectedCategory);
+  }
+});
+
+test("diagnóstico preserva estágio, validação e somente presença do request_id", () => {
+  const details = createProfessorContextToolSelectionTechnicalErrorDetails(
+    {
+      name: "StagedProviderError",
+      technicalErrorStage: "first_response_create",
+      cause: {
+        status: 401,
+        type: "invalid_request_error",
+        code: "invalid_api_key",
+        request_id: "req-private-value",
+        message: "Incorrect API key sk-private",
+        stack: "private stack trace",
+      },
+    },
+    "PROVIDER_ERROR",
+  );
+  assert.equal(details.stage, "first_response_create");
+  assert.equal(details.requestIdPresent, true);
+  assert.equal(details.localValidationCode, null);
+  const serialized = JSON.stringify(details);
+  for (const forbidden of ["req-private-value", "sk-private", "private stack trace"]) {
+    assert.equal(serialized.includes(forbidden), false);
+  }
+
+  const protocol = createProfessorContextToolSelectionTechnicalErrorDetails(
+    { code: "TOOL_ARGUMENTS_JSON_INVALID" },
+    "TOOL_ARGUMENTS_JSON_INVALID",
+  );
+  assert.equal(protocol.category, "validation_error");
+  assert.equal(protocol.stage, "tool_call_validation");
+  assert.equal(protocol.localValidationCode, "TOOL_ARGUMENTS_JSON_INVALID");
+});
+
+test("assinaturas distinguem categorias estáveis e ignoram request_id", () => {
+  const authenticationA = createProfessorContextToolSelectionTechnicalErrorDetails(
+    { status: 401, code: "invalid_api_key", request_id: "req-a" },
+    "PROVIDER_ERROR",
+  );
+  const authenticationB = createProfessorContextToolSelectionTechnicalErrorDetails(
+    { status: 401, code: "invalid_api_key", request_id: "req-b" },
+    "PROVIDER_ERROR",
+  );
+  const rateLimit = createProfessorContextToolSelectionTechnicalErrorDetails(
+    { status: 429, code: "rate_limit_exceeded", request_id: "req-c" },
+    "PROVIDER_ERROR",
+  );
+  assert.equal(
+    createProfessorContextToolSelectionTechnicalErrorSignature(authenticationA),
+    createProfessorContextToolSelectionTechnicalErrorSignature(authenticationB),
+  );
+  assert.notEqual(
+    createProfessorContextToolSelectionTechnicalErrorSignature(authenticationA),
+    createProfessorContextToolSelectionTechnicalErrorSignature(rateLimit),
+  );
 });
 
 test("circuit breaker desabilitado não interrompe erros técnicos", async () => {

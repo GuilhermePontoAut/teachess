@@ -67,6 +67,64 @@ const comparablePromptVersionSchema = z.enum([
   PROFESSOR_IA_PROMPT_VERSION_V2,
   PROFESSOR_IA_PROMPT_VERSION_V3,
 ]);
+const technicalErrorCategorySchema = z.enum([
+  "authentication_error",
+  "permission_error",
+  "rate_limit_or_quota_error",
+  "timeout_error",
+  "transport_error",
+  "provider_server_error",
+  "protocol_error",
+  "validation_error",
+  "local_preparation_error",
+  "provider_error_unknown",
+]);
+const technicalErrorStageSchema = z.enum([
+  "preparation",
+  "first_response_create",
+  "initial_response_validation",
+  "tool_call_validation",
+  "tool_execution",
+  "second_response_parse",
+  "final_output_validation",
+  "report_generation",
+]);
+const sanitizedDiagnosticTokenSchema = z
+  .string()
+  .regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/);
+const sanitizedMessageClassSchema = z.enum([
+  "AUTHENTICATION",
+  "PERMISSION",
+  "RATE_LIMIT_OR_QUOTA",
+  "TIMEOUT",
+  "TRANSPORT",
+  "PROVIDER_SERVER",
+  "PROTOCOL",
+  "VALIDATION",
+  "LOCAL_PREPARATION",
+  "UNKNOWN",
+]);
+
+export const professorContextToolSelectionTechnicalErrorDetailsSchema = z
+  .object({
+    category: technicalErrorCategorySchema,
+    stage: technicalErrorStageSchema.nullable(),
+    httpStatus: z.number().int().min(100).max(599).nullable(),
+    providerErrorType: sanitizedDiagnosticTokenSchema.nullable(),
+    providerErrorCode: sanitizedDiagnosticTokenSchema.nullable(),
+    sanitizedMessageClass: sanitizedMessageClassSchema,
+    requestIdPresent: z.boolean(),
+    retryable: z.boolean().nullable(),
+    timeout: z.boolean(),
+    transportError: z.boolean(),
+    sdkErrorName: sanitizedDiagnosticTokenSchema.nullable(),
+    localValidationCode: sanitizedErrorCodeSchema.nullable(),
+  })
+  .strict();
+
+export type ProfessorContextToolSelectionTechnicalErrorDetails = z.infer<
+  typeof professorContextToolSelectionTechnicalErrorDetailsSchema
+>;
 
 export type ProfessorContextToolSelectionDecision = z.infer<
   typeof decisionSchema
@@ -158,6 +216,8 @@ export const professorContextToolSelectionEvalRunResultSchema = z
       .nullable(),
     tokens: professorContextToolSelectionTokensSchema.nullable(),
     errorCode: sanitizedErrorCodeSchema.nullable(),
+    technicalErrorDetails:
+      professorContextToolSelectionTechnicalErrorDetailsSchema.nullable().optional(),
   })
   .strict()
   .superRefine((result, context) => {
@@ -192,7 +252,23 @@ export const professorContextToolSelectionEvalRunResultSchema = z
       if (result.errorCode === null) {
         issue(["errorCode"], "Erro técnico exige código sanitizado.");
       }
+      if (result.technicalErrorDetails === null) {
+        issue(
+          ["technicalErrorDetails"],
+          "Erro técnico exige diagnóstico sanitizado.",
+        );
+      }
       return;
+    }
+
+    if (
+      result.technicalErrorDetails !== null &&
+      result.technicalErrorDetails !== undefined
+    ) {
+      issue(
+        ["technicalErrorDetails"],
+        "Execução não técnica não pode conter diagnóstico técnico.",
+      );
     }
 
     const isBlockedWrongToolObservation =
@@ -385,6 +461,20 @@ export const professorContextToolSelectionEvalReportSchema = z
     falseNegatives: nonnegativeIntegerSchema,
     wrongTools: nonnegativeIntegerSchema,
     technicalErrors: nonnegativeIntegerSchema,
+    technicalErrorsByCategory: z.partialRecord(
+      technicalErrorCategorySchema,
+      nonnegativeIntegerSchema,
+    ).optional(),
+    technicalErrorsByStage: z.partialRecord(
+      technicalErrorStageSchema,
+      nonnegativeIntegerSchema,
+    ).optional(),
+    technicalErrorSignatures: z.array(
+      z.object({
+        signature: z.string().min(1).max(1_000),
+        count: nonnegativeIntegerSchema,
+      }).strict(),
+    ).optional(),
     decisionAccuracy: z.number().min(0).max(1).nullable(),
     endToEndSuccessRate: z.number().min(0).max(1),
     completionRate: z.number().min(0).max(1),
@@ -446,6 +536,33 @@ export const professorContextToolSelectionEvalReportSchema = z
           message: "Contador consolidado está inconsistente.",
         });
       }
+    }
+    const technicalResults = report.results.filter(
+      (result) => result.classification === "technical_error",
+    );
+    const expectedByCategory = countTechnicalErrorsBy(
+      technicalResults,
+      "category",
+    );
+    const expectedByStage = countTechnicalErrorsBy(technicalResults, "stage");
+    if (
+      report.technicalErrorsByCategory !== undefined &&
+      JSON.stringify(report.technicalErrorsByCategory) !== JSON.stringify(expectedByCategory)
+    ) {
+      issue(["technicalErrorsByCategory"], "Categorias técnicas estão inconsistentes.");
+    }
+    if (
+      report.technicalErrorsByStage !== undefined &&
+      JSON.stringify(report.technicalErrorsByStage) !== JSON.stringify(expectedByStage)
+    ) {
+      issue(["technicalErrorsByStage"], "Estágios técnicos estão inconsistentes.");
+    }
+    const expectedSignatures = buildTechnicalErrorSignatureCounts(technicalResults);
+    if (
+      report.technicalErrorSignatures !== undefined &&
+      JSON.stringify(report.technicalErrorSignatures) !== JSON.stringify(expectedSignatures)
+    ) {
+      issue(["technicalErrorSignatures"], "Assinaturas técnicas estão inconsistentes.");
     }
 
     const validDecisions = report.totalRuns - report.technicalErrors;
@@ -678,6 +795,7 @@ export type ProfessorContextToolSelectionEvalExecutionOutcome =
   | {
       status: "technical_error";
       errorCode: string;
+      technicalErrorDetails?: ProfessorContextToolSelectionTechnicalErrorDetails;
       technicalErrorSignature?: string;
       telemetry: ProfessorContextToolSelectionTelemetry;
     };
@@ -727,41 +845,242 @@ export function getProfessorContextToolSelectionSanitizedErrorCode(
   return "UNEXPECTED_ERROR";
 }
 
-type TechnicalErrorSignatureInput = {
-  category: string;
-  status?: number;
-  type?: string;
-  code?: string;
-  message?: string;
-};
-
-function sanitizeSignatureToken(value: string | undefined): string | null {
-  if (value === undefined) return null;
-  const normalized = value.toUpperCase().replace(/[^A-Z0-9_]/g, "_");
-  return /^[A-Z][A-Z0-9_]{0,63}$/.test(normalized) ? normalized : null;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function classifyTechnicalErrorMessage(message: string | undefined): string | null {
-  if (!message) return null;
-  const normalized = message.toLowerCase();
-  if (normalized.includes("rate limit")) return "RATE_LIMIT";
-  if (normalized.includes("timeout") || normalized.includes("timed out")) return "TIMEOUT";
-  if (normalized.includes("auth") || normalized.includes("api key")) return "AUTHENTICATION";
-  if (normalized.includes("connect") || normalized.includes("network")) return "CONNECTION";
-  if (normalized.includes("invalid request")) return "INVALID_REQUEST";
-  return "OTHER";
+function sanitizedDiagnosticToken(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().replace(/[^A-Za-z0-9_.-]/g, "_");
+  return /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/.test(normalized)
+    ? normalized
+    : null;
+}
+
+function errorChain(error: unknown): Record<string, unknown>[] {
+  const chain: Record<string, unknown>[] = [];
+  let current: unknown = error;
+  for (let depth = 0; depth < 5 && isRecord(current); depth += 1) {
+    chain.push(current);
+    current = current.cause;
+  }
+  return chain;
+}
+
+function firstChainValue(
+  chain: readonly Record<string, unknown>[],
+  key: string,
+): unknown {
+  return chain.find((item) => item[key] !== undefined)?.[key];
+}
+
+const transportCodes = new Set([
+  "ECONNABORTED",
+  "ECONNREFUSED",
+  "ECONNRESET",
+  "EHOSTUNREACH",
+  "ENETUNREACH",
+  "ENOTFOUND",
+  "EPIPE",
+]);
+
+const localStageByCode: Readonly<Record<string, z.infer<typeof technicalErrorStageSchema>>> = {
+  FIRST_RESPONSE_OUTPUT_INVALID: "initial_response_validation",
+  FIRST_RESPONSE_INCOMPLETE: "initial_response_validation",
+  FIRST_RESPONSE_REFUSED: "initial_response_validation",
+  MULTIPLE_TOOL_CALLS_UNEXPECTED: "tool_call_validation",
+  TOOL_NAME_NOT_SUPPORTED: "tool_call_validation",
+  TOOL_CONTEXT_MISMATCH: "tool_call_validation",
+  TOOL_CALL_ID_INVALID: "tool_call_validation",
+  TOOL_ARGUMENTS_JSON_INVALID: "tool_call_validation",
+  TOOL_ARGUMENTS_INVALID: "tool_call_validation",
+  SNAPSHOT_MISSING: "preparation",
+  SNAPSHOT_INVALID: "preparation",
+  GAME_CONTEXT_NOT_AUTHORIZED: "preparation",
+  POSITION_CONTEXT_NOT_AUTHORIZED: "preparation",
+  TOOL_EXECUTION_FAILED: "tool_execution",
+  FINAL_RESPONSE_OUTPUT_INVALID: "final_output_validation",
+  FINAL_RESPONSE_INCOMPLETE: "final_output_validation",
+  FINAL_RESPONSE_REFUSED: "final_output_validation",
+  FINAL_STRUCTURED_OUTPUT_UNAVAILABLE: "final_output_validation",
+  FLOW_RESULT_INVALID: "final_output_validation",
+  INVALID_EVAL_CASE_SET: "preparation",
+  REPORT_WRITE_FAILED: "report_generation",
+};
+
+export function createProfessorContextToolSelectionTechnicalErrorDetails(
+  error: unknown,
+  fallbackCode?: string,
+): ProfessorContextToolSelectionTechnicalErrorDetails {
+  const chain = errorChain(error);
+  const httpStatusValue = firstChainValue(chain, "status");
+  const httpStatus = Number.isInteger(httpStatusValue) &&
+      Number(httpStatusValue) >= 100 && Number(httpStatusValue) <= 599
+    ? Number(httpStatusValue)
+    : null;
+  const providerErrorType = sanitizedDiagnosticToken(
+    firstChainValue(chain, "type"),
+  );
+  const providerErrorCode = chain
+    .map((item) => sanitizedDiagnosticToken(item.code))
+    .find((code) => code !== null && code !== fallbackCode) ?? null;
+  const sdkErrorName = sanitizedDiagnosticToken(
+    [...chain].reverse().find((item) =>
+      typeof item.name === "string" &&
+      item.name !== "ProfessorContextToolFlowError" &&
+      item.name !== "StagedProviderError"
+    )?.name,
+  );
+  const stageValue = firstChainValue(chain, "technicalErrorStage");
+  const localValidationCode = fallbackCode === undefined
+    ? null
+    : sanitizedErrorCodeSchema.safeParse(fallbackCode).success &&
+        fallbackCode !== "PROVIDER_ERROR"
+      ? fallbackCode
+      : null;
+  const stage = technicalErrorStageSchema.safeParse(stageValue).success
+    ? technicalErrorStageSchema.parse(stageValue)
+    : localValidationCode === null
+      ? null
+      : (localStageByCode[localValidationCode] ?? "preparation");
+  const messages = chain
+    .map((item) => item.message)
+    .filter((value): value is string => typeof value === "string")
+    .join(" ")
+    .toLowerCase();
+  const normalizedCode = providerErrorCode?.toLowerCase() ?? "";
+  const timeout =
+    normalizedCode === "etimedout" ||
+    sdkErrorName?.toLowerCase().includes("timeout") === true ||
+    /timeout|timed out/.test(messages);
+  const transportError =
+    transportCodes.has(providerErrorCode?.toUpperCase() ?? "") ||
+    /socket|dns|network|connection|connect/.test(messages);
+  const requestIdPresent = chain.some(
+    (item) =>
+      (typeof item.request_id === "string" && item.request_id.length > 0) ||
+      (typeof item.requestId === "string" && item.requestId.length > 0) ||
+      (typeof item._request_id === "string" && item._request_id.length > 0),
+  );
+
+  let category: z.infer<typeof technicalErrorCategorySchema>;
+  if (httpStatus === 401 || normalizedCode === "invalid_api_key") {
+    category = "authentication_error";
+  } else if (httpStatus === 403) {
+    category = "permission_error";
+  } else if (httpStatus === 429) {
+    category = "rate_limit_or_quota_error";
+  } else if (httpStatus !== null && httpStatus >= 500) {
+    category = "provider_server_error";
+  } else if (timeout) {
+    category = "timeout_error";
+  } else if (transportError) {
+    category = "transport_error";
+  } else if (
+    localValidationCode === "UNEXPECTED_ERROR" ||
+    localValidationCode === "REPORT_WRITE_FAILED"
+  ) {
+    category = "local_preparation_error";
+  } else if (localValidationCode !== null) {
+    category = localValidationCode.includes("INVALID") ||
+        localValidationCode.includes("VALIDATION") ||
+        localValidationCode === "SNAPSHOT_MISSING"
+      ? "validation_error"
+      : "protocol_error";
+  } else if (fallbackCode !== "PROVIDER_ERROR") {
+    category = "local_preparation_error";
+  } else {
+    category = "provider_error_unknown";
+  }
+
+  const sanitizedMessageClass = category === "authentication_error"
+    ? "AUTHENTICATION"
+    : category === "permission_error"
+      ? "PERMISSION"
+      : category === "rate_limit_or_quota_error"
+        ? "RATE_LIMIT_OR_QUOTA"
+        : category === "timeout_error"
+          ? "TIMEOUT"
+          : category === "transport_error"
+            ? "TRANSPORT"
+            : category === "provider_server_error"
+              ? "PROVIDER_SERVER"
+              : category === "protocol_error"
+                ? "PROTOCOL"
+                : category === "validation_error"
+                  ? "VALIDATION"
+                  : category === "local_preparation_error"
+                    ? "LOCAL_PREPARATION"
+                    : "UNKNOWN";
+  const retryable = category === "timeout_error" || category === "transport_error" ||
+      category === "provider_server_error"
+    ? true
+    : category === "authentication_error" || category === "permission_error" ||
+        category === "protocol_error" || category === "validation_error" ||
+        category === "local_preparation_error"
+      ? false
+      : null;
+
+  return professorContextToolSelectionTechnicalErrorDetailsSchema.parse({
+    category,
+    stage,
+    httpStatus,
+    providerErrorType,
+    providerErrorCode,
+    sanitizedMessageClass,
+    requestIdPresent,
+    retryable,
+    timeout,
+    transportError,
+    sdkErrorName,
+    localValidationCode,
+  });
 }
 
 export function createProfessorContextToolSelectionTechnicalErrorSignature(
-  input: TechnicalErrorSignatureInput,
+  details: ProfessorContextToolSelectionTechnicalErrorDetails,
 ): string {
   return JSON.stringify({
-    category: sanitizeSignatureToken(input.category) ?? "TECHNICAL_ERROR",
-    status: Number.isInteger(input.status) ? input.status : null,
-    type: sanitizeSignatureToken(input.type),
-    code: sanitizeSignatureToken(input.code),
-    messageClass: classifyTechnicalErrorMessage(input.message),
+    category: details.category,
+    stage: details.stage,
+    httpStatus: details.httpStatus,
+    providerErrorType: details.providerErrorType,
+    providerErrorCode: details.providerErrorCode,
+    sanitizedMessageClass: details.sanitizedMessageClass,
   });
+}
+
+type TechnicalResult = ProfessorContextToolSelectionEvalRunResult & {
+  classification: "technical_error";
+};
+
+function countTechnicalErrorsBy(
+  results: readonly ProfessorContextToolSelectionEvalRunResult[],
+  field: "category" | "stage",
+): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const result of results) {
+    const value = result.technicalErrorDetails?.[field];
+    if (value !== null && value !== undefined) counts[value] = (counts[value] ?? 0) + 1;
+  }
+  return counts;
+}
+
+function buildTechnicalErrorSignatureCounts(
+  results: readonly ProfessorContextToolSelectionEvalRunResult[],
+) {
+  const counts = new Map<string, number>();
+  for (const result of results as readonly TechnicalResult[]) {
+    if (
+      result.technicalErrorDetails === null ||
+      result.technicalErrorDetails === undefined
+    ) continue;
+    const signature = createProfessorContextToolSelectionTechnicalErrorSignature(
+      result.technicalErrorDetails,
+    );
+    counts.set(signature, (counts.get(signature) ?? 0) + 1);
+  }
+  return [...counts].map(([signature, count]) => ({ signature, count }));
 }
 
 export function getProfessorContextToolSelectionObservedWrongTool(
@@ -951,6 +1270,11 @@ export async function runProfessorContextToolSelectionEvals({
         const totalLatencyMs = Math.max(0, clock.monotonicNow() - start);
 
         if (outcome.status === "technical_error") {
+          const technicalErrorDetails = outcome.technicalErrorDetails ??
+            createProfessorContextToolSelectionTechnicalErrorDetails(
+              { code: outcome.errorCode },
+              outcome.errorCode,
+            );
           results.push(
             professorContextToolSelectionEvalRunResultSchema.parse({
               caseId: evalCase.id,
@@ -963,13 +1287,13 @@ export async function runProfessorContextToolSelectionEvals({
               toolCallCount: null,
               evidenceStatus: null,
               errorCode: sanitizedErrorCodeSchema.parse(outcome.errorCode),
+              technicalErrorDetails,
             }),
           );
           const signature = outcome.technicalErrorSignature ??
-            createProfessorContextToolSelectionTechnicalErrorSignature({
-              category: "technical_error",
-              code: outcome.errorCode,
-            });
+            createProfessorContextToolSelectionTechnicalErrorSignature(
+              technicalErrorDetails,
+            );
           consecutiveTechnicalErrors =
             signature === previousTechnicalErrorSignature
               ? consecutiveTechnicalErrors + 1
@@ -1001,6 +1325,7 @@ export async function runProfessorContextToolSelectionEvals({
               toolCallCount: 1,
               evidenceStatus: null,
               errorCode: null,
+              technicalErrorDetails: null,
             }),
           );
           continue;
@@ -1025,6 +1350,7 @@ export async function runProfessorContextToolSelectionEvals({
             toolCallCount: flowResult.toolDecision.callCount,
             evidenceStatus: flowResult.data.evidenceStatus,
             errorCode: null,
+            technicalErrorDetails: null,
           }),
         );
       } catch (error: unknown) {
@@ -1042,6 +1368,9 @@ export async function runProfessorContextToolSelectionEvals({
                 finalInteractionLatencyMs: null,
               }
             : telemetry;
+        const errorCode = getProfessorContextToolSelectionSanitizedErrorCode(error);
+        const technicalErrorDetails =
+          createProfessorContextToolSelectionTechnicalErrorDetails(error, errorCode);
         results.push(
           professorContextToolSelectionEvalRunResultSchema.parse({
             caseId: evalCase.id,
@@ -1053,13 +1382,13 @@ export async function runProfessorContextToolSelectionEvals({
             ...compatibleTelemetry,
             toolCallCount: null,
             evidenceStatus: null,
-            errorCode: getProfessorContextToolSelectionSanitizedErrorCode(error),
+            errorCode,
+            technicalErrorDetails,
           }),
         );
-        const signature = createProfessorContextToolSelectionTechnicalErrorSignature({
-          category: "runner_error",
-          code: getProfessorContextToolSelectionSanitizedErrorCode(error),
-        });
+        const signature = createProfessorContextToolSelectionTechnicalErrorSignature(
+          technicalErrorDetails,
+        );
         consecutiveTechnicalErrors =
           signature === previousTechnicalErrorSignature
             ? consecutiveTechnicalErrors + 1
@@ -1081,6 +1410,9 @@ export async function runProfessorContextToolSelectionEvals({
     results.filter((result) => result.classification === classification).length;
   const correct = count("correct");
   const technicalErrors = count("technical_error");
+  const technicalResults = results.filter(
+    (result) => result.classification === "technical_error",
+  );
   const validDecisions = results.length - technicalErrors;
   const confusionMatrix = emptyConfusionMatrix();
   for (const result of results) {
@@ -1114,6 +1446,13 @@ export async function runProfessorContextToolSelectionEvals({
     falseNegatives: count("false_negative"),
     wrongTools: count("wrong_tool"),
     technicalErrors,
+    technicalErrorsByCategory: countTechnicalErrorsBy(
+      technicalResults,
+      "category",
+    ),
+    technicalErrorsByStage: countTechnicalErrorsBy(technicalResults, "stage"),
+    technicalErrorSignatures:
+      buildTechnicalErrorSignatureCounts(technicalResults),
     decisionAccuracy:
       validDecisions === 0 ? null : correct / validDecisions,
     endToEndSuccessRate: results.length === 0 ? 0 : correct / results.length,

@@ -4,7 +4,10 @@ import {
   professorContextToolSelectionCases,
 } from "../lib/ai/evals/professor-context-tool-selection-cases";
 import type { ProfessorContextToolSelectionEvalRunnerClock } from "../lib/ai/evals/run-professor-context-tool-selection-evals";
-import { createProfessorContextToolSelectionTechnicalErrorSignature } from "../lib/ai/evals/run-professor-context-tool-selection-evals";
+import {
+  createProfessorContextToolSelectionTechnicalErrorDetails,
+  createProfessorContextToolSelectionTechnicalErrorSignature,
+} from "../lib/ai/evals/run-professor-context-tool-selection-evals";
 import {
   PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_DISABLED_EXIT_CODE,
   PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_ERROR_EXIT_CODE,
@@ -578,17 +581,64 @@ test("CLI mantém Tool desconhecida como erro técnico sanitizado", async () => 
 test("falha de escrita é sanitizada e retorna código 1", async () => {
   const fake = fakeClient();
   const lines: string[] = [];
+  let attemptedReport = "";
   const exitCode = await runProfessorContextToolSelectionEvalCli({
     readEnvironment: environmentReader(readyEnvironment),
     createClient: () => fake.client as never,
-    writeJsonReport: async () => {
+    writeJsonReport: async (_path, contents) => {
+      attemptedReport = contents;
       throw new Error("/home/user/secret sk-private stack");
     },
     writeLine: (line) => lines.push(line),
     clock: clock(),
   });
   assert.equal(exitCode, PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_ERROR_EXIT_CODE);
-  assert.deepEqual(lines, ["Falha técnica sanitizada: REPORT_WRITE_FAILED."]);
+  assert.equal(fake.state.createCalls, 12);
+  assert.equal(fake.state.parseCalls, 12);
+  const report = JSON.parse(attemptedReport) as {
+    totalRuns: number;
+    correct: number;
+    technicalErrors: number;
+    reportCompleteness: string;
+  };
+  assert.deepEqual(report, {
+    ...report,
+    totalRuns: 12,
+    correct: 12,
+    technicalErrors: 0,
+    reportCompleteness: "complete",
+  });
+  assert.equal(lines.length, 1);
+  const diagnostic = JSON.parse(
+    lines[0].replace("Falha técnica sanitizada: ", ""),
+  ) as {
+    errorCode: string;
+    technicalErrorDetails: Record<string, unknown>;
+  };
+  assert.equal(diagnostic.errorCode, "REPORT_WRITE_FAILED");
+  assert.deepEqual(diagnostic.technicalErrorDetails, {
+    category: "local_preparation_error",
+    stage: "report_generation",
+    httpStatus: null,
+    providerErrorType: null,
+    providerErrorCode: null,
+    sanitizedMessageClass: "LOCAL_PREPARATION",
+    requestIdPresent: false,
+    retryable: false,
+    timeout: false,
+    transportError: false,
+    sdkErrorName: "Error",
+    localValidationCode: "REPORT_WRITE_FAILED",
+  });
+  const output = lines.join("\n");
+  for (const forbidden of [
+    "/home/user/secret",
+    "sk-private",
+    "stack",
+    "Relatório JSON sanitizado gravado",
+  ]) {
+    assert.equal(output.includes(forbidden), false);
+  }
 });
 
 test("a CLI não modifica o ambiente e o harness restaura os valores temporários", async () => {
@@ -731,23 +781,93 @@ test("CLI aborta após três erros iguais, grava parcial e retorna código não 
 });
 
 test("assinatura técnica ignora request_id e segredos e preserva campos estáveis", () => {
-  const first = createProfessorContextToolSelectionTechnicalErrorSignature({
-    category: "provider_error",
+  const firstDetails = createProfessorContextToolSelectionTechnicalErrorDetails({
     status: 429,
     type: "rate_limit_error",
     code: "rate_limit_exceeded",
     message: "Rate limit reached; request_id=req-a; key=sk-secret-a",
-  });
-  const second = createProfessorContextToolSelectionTechnicalErrorSignature({
-    category: "provider_error",
+    request_id: "req-a",
+  }, "PROVIDER_ERROR");
+  const secondDetails = createProfessorContextToolSelectionTechnicalErrorDetails({
     status: 429,
     type: "rate_limit_error",
     code: "rate_limit_exceeded",
     message: "Rate limit reached; request_id=req-b; key=sk-secret-b",
-  });
+    request_id: "req-b",
+  }, "PROVIDER_ERROR");
+  const first = createProfessorContextToolSelectionTechnicalErrorSignature(firstDetails);
+  const second = createProfessorContextToolSelectionTechnicalErrorSignature(secondDetails);
   assert.equal(first, second);
-  assert.match(first, /RATE_LIMIT_ERROR/);
+  assert.match(first, /rate_limit_or_quota_error/);
   for (const forbidden of ["request_id", "req-a", "req-b", "sk-secret"]) {
     assert.equal(first.includes(forbidden), false);
+  }
+});
+
+test("CLI mockada preserva 401 sanitizado no estágio da primeira resposta", async () => {
+  const privateRequestId = "req-private-authentication";
+  const privateKeyFragment = "sk-private-fragment";
+  let reportContents = "";
+  let createCalls = 0;
+  let parseCalls = 0;
+  const client = {
+    responses: {
+      async create() {
+        createCalls += 1;
+        throw {
+          name: "AuthenticationError",
+          status: 401,
+          type: "invalid_request_error",
+          code: "invalid_api_key",
+          request_id: privateRequestId,
+          message: `Incorrect API key ${privateKeyFragment}`,
+          stack: "private stack trace",
+        };
+      },
+      async parse() {
+        parseCalls += 1;
+        assert.fail("segunda interação não deveria ocorrer");
+      },
+    },
+  };
+  const exitCode = await runProfessorContextToolSelectionEvalCli({
+    readEnvironment: environmentReader({
+      ...readyEnvironment,
+      AI_EVAL_ABORT_AFTER_CONSECUTIVE_TECHNICAL_ERRORS: "1",
+      AI_EVAL_OUTPUT_PATH: "/tmp/mock-auth-report.json",
+    }),
+    createClient: () => client as never,
+    writeJsonReport: async (_path, contents) => { reportContents = contents; },
+    writeLine: () => undefined,
+    clock: clock(),
+  });
+  const report = JSON.parse(reportContents) as {
+    reportCompleteness: string;
+    technicalErrorsByCategory: Record<string, number>;
+    technicalErrorsByStage: Record<string, number>;
+    results: Array<{ technicalErrorDetails: Record<string, unknown> }>;
+  };
+  assert.equal(exitCode, 1);
+  assert.equal(createCalls, 1);
+  assert.equal(parseCalls, 0);
+  assert.equal(report.reportCompleteness, "partial");
+  assert.deepEqual(report.technicalErrorsByCategory, { authentication_error: 1 });
+  assert.deepEqual(report.technicalErrorsByStage, { first_response_create: 1 });
+  assert.deepEqual(report.results[0].technicalErrorDetails, {
+    category: "authentication_error",
+    stage: "first_response_create",
+    httpStatus: 401,
+    providerErrorType: "invalid_request_error",
+    providerErrorCode: "invalid_api_key",
+    sanitizedMessageClass: "AUTHENTICATION",
+    requestIdPresent: true,
+    retryable: false,
+    timeout: false,
+    transportError: false,
+    sdkErrorName: "AuthenticationError",
+    localValidationCode: null,
+  });
+  for (const forbidden of [privateRequestId, privateKeyFragment, "Authorization", "private stack trace"]) {
+    assert.equal(reportContents.includes(forbidden), false);
   }
 });

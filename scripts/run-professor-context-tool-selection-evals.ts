@@ -10,6 +10,7 @@ import {
 } from "../lib/ai/evals/professor-context-tool-selection-cases";
 import {
   combineProfessorContextToolSelectionUsages,
+  createProfessorContextToolSelectionTechnicalErrorDetails,
   createProfessorContextToolSelectionTechnicalErrorSignature,
   getProfessorContextToolSelectionObservedWrongTool,
   getProfessorContextToolSelectionSanitizedErrorCode,
@@ -194,6 +195,21 @@ type UsageFields = Pick<
   "input_tokens" | "output_tokens" | "total_tokens"
 >;
 
+class StagedProviderError extends Error {
+  readonly technicalErrorStage:
+    | "first_response_create"
+    | "second_response_parse";
+
+  constructor(
+    stage: "first_response_create" | "second_response_parse",
+    cause: unknown,
+  ) {
+    super("Falha sanitizada no transporte do provider.", { cause });
+    this.name = "StagedProviderError";
+    this.technicalErrorStage = stage;
+  }
+}
+
 function getUsage(response: unknown): UsageFields | null {
   if (typeof response !== "object" || response === null || !("usage" in response)) {
     return null;
@@ -233,6 +249,8 @@ function createMeasuredTransport(
         const response: Response = await client.responses.create(params);
         firstUsage = getUsage(response);
         return response;
+      } catch (error: unknown) {
+        throw new StagedProviderError("first_response_create", error);
       } finally {
         firstInteractionLatencyMs = Math.max(
           0,
@@ -246,6 +264,8 @@ function createMeasuredTransport(
         const response = await client.responses.parse(params);
         finalUsage = getUsage(response);
         return response;
+      } catch (error: unknown) {
+        throw new StagedProviderError("second_response_parse", error);
       } finally {
         finalInteractionLatencyMs = Math.max(
           0,
@@ -376,29 +396,20 @@ export async function runProfessorContextToolSelectionEvalCli(
             telemetry: measured.telemetry(),
           } satisfies ProfessorContextToolSelectionEvalExecutionOutcome;
         }
+        const errorCode = getProfessorContextToolSelectionSanitizedErrorCode(error);
+        const technicalErrorDetails =
+          createProfessorContextToolSelectionTechnicalErrorDetails(
+            error,
+            errorCode,
+          );
         return {
           status: "technical_error",
-          errorCode: getProfessorContextToolSelectionSanitizedErrorCode(error),
+          errorCode,
+          technicalErrorDetails,
           technicalErrorSignature:
-            createProfessorContextToolSelectionTechnicalErrorSignature({
-              category: "provider_or_flow_error",
-              status:
-                typeof error === "object" && error !== null &&
-                "status" in error && typeof error.status === "number"
-                  ? error.status
-                  : undefined,
-              type:
-                typeof error === "object" && error !== null &&
-                "type" in error && typeof error.type === "string"
-                  ? error.type
-                  : undefined,
-              code:
-                typeof error === "object" && error !== null &&
-                "code" in error && typeof error.code === "string"
-                  ? error.code
-                  : getProfessorContextToolSelectionSanitizedErrorCode(error),
-              message: error instanceof Error ? error.message : undefined,
-            }),
+            createProfessorContextToolSelectionTechnicalErrorSignature(
+              technicalErrorDetails,
+            ),
           telemetry: measured.telemetry(),
         } satisfies ProfessorContextToolSelectionEvalExecutionOutcome;
       }
@@ -411,8 +422,22 @@ export async function runProfessorContextToolSelectionEvalCli(
       environment.outputPath,
       json,
     );
-  } catch {
-    dependencies.writeLine("Falha técnica sanitizada: REPORT_WRITE_FAILED.");
+  } catch (error: unknown) {
+    const technicalErrorDetails =
+      createProfessorContextToolSelectionTechnicalErrorDetails(
+        {
+          name: error instanceof Error ? error.name : undefined,
+          code: "REPORT_WRITE_FAILED",
+          technicalErrorStage: "report_generation",
+        },
+        "REPORT_WRITE_FAILED",
+      );
+    dependencies.writeLine(
+      `Falha técnica sanitizada: ${JSON.stringify({
+        errorCode: "REPORT_WRITE_FAILED",
+        technicalErrorDetails,
+      })}`,
+    );
     return PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_ERROR_EXIT_CODE;
   }
 

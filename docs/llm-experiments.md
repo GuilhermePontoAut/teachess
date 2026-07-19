@@ -1394,3 +1394,17 @@ RUN_REAL_AI_EVALS=true AI_EVAL_REPETITIONS=3 AI_EVAL_ABORT_AFTER_CONSECUTIVE_TEC
 ```
 
 Nenhuma chave deve ser incluída nesses comandos. O limite de três erros será ativado explicitamente apenas na execução real autorizada.
+
+## Etapa 7F-B3 — preservação sanitizada do diagnóstico de erros técnicos
+
+A execução parcial anterior da V2 terminou após três `technical_error` registrados apenas como `PROVIDER_ERROR`. Em diagnóstico posterior, uma credencial com um caractere incorreto produziu HTTP `401`, `invalid_request_error` e `invalid_api_key`. Depois da correção, uma chamada mínima retornou HTTP `200` e `completed`, e a primeira interação isolada de `GAME-SEL-001` retornou `completed` com `function_call` para `get_game_context`.
+
+Esses fatos tornam plausível que os `PROVIDER_ERROR` anteriores tenham relação com a credencial incorreta, mas não comprovam essa causa histórica. O relatório parcial antigo não preservou status HTTP, tipo e código do provedor; portanto, nenhuma reclassificação retrospectiva é válida.
+
+Para evitar a mesma perda, cada novo `technical_error` passa a incluir `technicalErrorDetails` com categoria e estágio fechados, status HTTP, tipo e código sanitizados do provedor, classe fechada de mensagem, mera presença de request ID, retryability conservadora, flags de timeout e transporte, nome sanitizado do erro do SDK e código local de validação. O relatório agrega `technicalErrorsByCategory`, `technicalErrorsByStage` e `technicalErrorSignatures`.
+
+A assinatura do circuit breaker usa somente categoria, estágio, status HTTP, tipo, código e classe sanitizada da mensagem. Request ID, timestamp, duração, stack, headers, mensagem bruta e segredos permanecem excluídos. Limite, consecutividade, resets, relatório parcial e código de saída não mudaram. Esta etapa foi validada apenas com clientes mockados e não executou V2 ou V3.
+
+O schema de leitura mantém compatibilidade com relatórios anteriores à 7F-B3: a ausência dos novos detalhes e agregados significa diagnóstico indisponível e não provoca migração, reescrita ou preenchimento com zeros fictícios. Relatórios novos continuam emitindo todos esses campos.
+
+Quando existe status HTTP utilizável, ele prevalece: 401, 403, 429 e 5xx são classificados pela resposta, mesmo que a mensagem mencione timeout ou conexão. `timeout_error` e `transport_error` são usados somente quando não há resposta HTTP confiável. Falha ao gerar ou gravar o relatório é operacional, usa estágio `report_generation`, não cria execução adicional nem altera métricas ou circuit breaker. Como a própria escrita falhou, seu diagnóstico sanitizado pode existir apenas na saída do processo, sem garantia de persistência no JSON.

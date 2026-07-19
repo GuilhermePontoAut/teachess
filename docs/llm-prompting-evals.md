@@ -623,3 +623,17 @@ Comandos apenas preparados, não executados:
 RUN_REAL_AI_EVALS=true AI_EVAL_REPETITIONS=3 AI_EVAL_ABORT_AFTER_CONSECUTIVE_TECHNICAL_ERRORS=3 AI_EVAL_PROMPT_VERSION=professor-ia-v2 AI_EVAL_OUTPUT_PATH=/tmp/teachess-professor-context-tool-selection-v2-r3.json npm run eval:professor-context-tool-selection
 RUN_REAL_AI_EVALS=true AI_EVAL_REPETITIONS=3 AI_EVAL_ABORT_AFTER_CONSECUTIVE_TECHNICAL_ERRORS=3 AI_EVAL_PROMPT_VERSION=professor-ia-v3 AI_EVAL_OUTPUT_PATH=/tmp/teachess-professor-context-tool-selection-v3-r3.json npm run eval:professor-context-tool-selection
 ```
+
+## Etapa 7F-B3 — preservação sanitizada do diagnóstico de erros técnicos
+
+O campo histórico `classification: "technical_error"` e todas as métricas semânticas permanecem inalterados. Como diagnóstico adicional, execuções técnicas agora registram `technicalErrorDetails` com `category`, `stage`, `httpStatus`, `providerErrorType`, `providerErrorCode`, `sanitizedMessageClass`, `requestIdPresent`, `retryable`, `timeout`, `transportError`, `sdkErrorName` e `localValidationCode`; indisponibilidade é representada por `null`, nunca por inferência sem evidência.
+
+As categorias distinguem autenticação, permissão, rate limit ou quota, timeout, transporte, erro 5xx do provedor, protocolo, validação, preparação local e erro desconhecido do provedor. Os estágios possíveis são `preparation`, `first_response_create`, `initial_response_validation`, `tool_call_validation`, `tool_execution`, `second_response_parse`, `final_output_validation` e `report_generation`.
+
+O resumo acrescenta contagens por categoria e estágio e frequências das assinaturas sanitizadas. A assinatura usada pelo circuit breaker contém apenas categoria, estágio, status HTTP, tipo, código e classe fechada de mensagem. Ela não contém request ID, horários, duração, stack, headers, mensagem bruta, chave ou payload.
+
+Um 401 com `invalid_api_key` foi confirmado em chamada isolada com uma credencial que continha um caractere incorreto. Após a correção, a chamada mínima e a primeira interação de `GAME-SEL-001` com Tools funcionaram. É plausível, porém não comprovado, que a credencial explique os `PROVIDER_ERROR` da execução parcial anterior: o artefato histórico perdeu os campos necessários para uma atribuição causal definitiva. A 7F-B3 corrige a observabilidade futura sem executar nova avaliação real.
+
+Relatórios anteriores sem `technicalErrorDetails`, `technicalErrorsByCategory`, `technicalErrorsByStage` ou `technicalErrorSignatures` continuam válidos. A ausência representa informação não disponível; o leitor não inventa categorias, contagens ou assinaturas e não migra o arquivo. Novos relatórios emitem normalmente os quatro campos.
+
+Status HTTP explícito tem precedência sobre texto: 401, 403, 429 e 5xx mantêm suas categorias mesmo quando a mensagem contém termos de timeout ou conexão. Timeout e transporte só prevalecem sem resposta HTTP utilizável. Erros de `report_generation` ficam fora das decisões e métricas dos casos, encerram a CLI com falha e são emitidos de forma sanitizada no processo. Se a gravação falhar, esse diagnóstico não tem garantia de existir no próprio arquivo que não pôde ser persistido.
