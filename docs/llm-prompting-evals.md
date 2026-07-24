@@ -673,3 +673,25 @@ Por repetição, V2 acertou 8, 9 e 8; V3 acertou 10, 11 e 10. Por decisão esper
 Como `wrong_tool` pode encerrar antes da segunda interação, os totais brutos não são diretamente comparáveis sem considerar os denominadores. Mesmo normalizada por amostra completa, V3 consumiu mais tokens. A mediana de latência permaneceu semelhante, apesar do aumento da média. Não houve conversão monetária.
 
 A V3 foi superior neste conjunto curado e sob esta configuração controlada. O resultado não representa uma estimativa de precisão geral, não comprova generalização e não autoriza promoção automática para produção. `professor-ia-v2` permanece baseline e `professor-ia-v3`, candidata principal. A amostra de 12 casos e três repetições não demonstra significância estatística nem qualidade pedagógica geral.
+
+## Etapa 7F-B7 — desenho controlado de professor-ia-v4
+
+A comparação `E-027 × E-028` permanece concluída: V2 obteve 25/36 acertos (69,44%) e V3, 31/36 (86,11%), ambas com `completionRate` de 100% e zero erro técnico. A V2 continua baseline; a V3 continua candidata principal e padrão atual do protótipo. Nenhuma promoção foi realizada.
+
+Dois padrões residuais motivaram uma nova candidata experimental. Em `GAME-SEL-004`, V2 e V3 escolheram posição em 3/3 repetições, embora a intenção completa solicitasse fatos da partida autorizada; a hipótese é que o identificador textual de posição recebeu peso superficial maior que o escopo global. Em `NO-TOOL-SEL-004`, V2 escolheu partida em 3/3 e V3 oscilou entre posição, nenhuma Tool e posição; a hipótese é que o modelo tentou normalizar a ordem imperativa para a Tool compatível disponível, mesmo sem uma pergunta factual.
+
+`professor-ia-v4` herda integralmente a V3 e acrescenta somente uma fronteira operacional ordenada:
+
+1. fatos concretos da partida completa ou metadados usam `get_game_context`;
+2. caso contrário, fatos concretos de uma posição local e específica usam `get_position_context`;
+3. caso contrário, quando dados privados não são necessários, nenhuma Tool é chamada.
+
+Na ambiguidade, a intenção completa prevalece sobre palavras isoladas; fatos globais têm precedência sobre referências locais ou IDs escritos pelo usuário; contexto disponível não basta para chamar Tool; e ordenar ou nomear uma Tool não cria necessidade factual nem altera autorização. Exemplos novos são semanticamente equivalentes às fronteiras, mas não copiam mensagens canônicas.
+
+Essa mudança pode reduzir os erros observados, mas ainda não há evidência experimental. A proximidade entre as regras e dois casos curados cria risco de overfitting. Também pode haver regressão se “fato global” for interpretado amplamente demais, se perguntas locais forem desviadas para partida ou se pedidos ambíguos antes resolvidos com o contexto autorizado passarem a nenhuma Tool. Os dez casos atualmente resolvidos pela V3 devem ser tratados como conjunto obrigatório de não regressão.
+
+A avaliação futura está preparada no mesmo runner e deverá ser executada manualmente no terminal normal, nunca nesta etapa. Deve preservar `gpt-5-mini`, os mesmos 12 casos, expectativas, ordem, Tools, schemas, `tool_choice`, `parallel_tool_calls`, `store`, fluxo de duas interações, métricas e circuit breaker; usar três repetições e um novo caminho de relatório. São 36 execuções planejadas e de 36 a 72 chamadas externas possíveis.
+
+V4 somente poderá ser considerada superior à V3 após comparação pareada obrigatória com `E-028`, sem regressão nos 31 pares corretos da V3, correção sistemática ou majoritária de `GAME-SEL-004`, melhora de `NO-TOOL-SEL-004`, `technical_error: 0`, `completionRate: 100%` e análise do custo adicional de tokens e latência. Qualquer perda nos 31 resultados corretos, erro técnico, execução incompleta ou deterioração material de custo/latência conta como sinal de regressão. Esses critérios orientam avaliação; não garantem promoção.
+
+V4 está registrada e selecionável apenas de forma explícita para avaliação. Ela não foi executada, não foi ativada no aplicativo e não alterou `AI_PROFESSOR_PROMPT_VERSION`. V3 permanece a candidata principal e o padrão atual; V2 permanece baseline.

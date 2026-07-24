@@ -248,7 +248,7 @@ test("CLI desabilitada emite somente mensagem segura e não cria cliente ou rela
   assert.equal(lines[0].includes("OPENAI_API_KEY"), false);
 });
 
-test("prompt ausente ou fora de professor-ia-v2/v3 falha antes de repetições e chave", () => {
+test("prompt ausente ou fora de professor-ia-v2/v3/v4 falha antes de repetições e chave", () => {
   for (const value of [undefined, "", "professor-ia-v1", "professor-ia-v99"]) {
     const reads: string[] = [];
     const result = resolveProfessorContextToolSelectionEvalEnvironment(
@@ -263,8 +263,8 @@ test("prompt ausente ou fora de professor-ia-v2/v3 falha antes de repetições e
   }
 });
 
-test("ambiente aceita professor-ia-v2 e professor-ia-v3 e preserva a versão", () => {
-  for (const promptVersion of ["professor-ia-v2", "professor-ia-v3"] as const) {
+test("ambiente aceita professor-ia-v2, professor-ia-v3 e professor-ia-v4 e preserva a versão", () => {
+  for (const promptVersion of ["professor-ia-v2", "professor-ia-v3", "professor-ia-v4"] as const) {
     const result = resolveProfessorContextToolSelectionEvalEnvironment(
       environmentReader({ ...readyEnvironment, AI_EVAL_PROMPT_VERSION: promptVersion }),
     );

@@ -7,6 +7,9 @@ import {
 import {
   PROFESSOR_IA_PROMPT_VERSION_V3,
 } from "../prompts/professor-ia-system-prompt-v3";
+import {
+  PROFESSOR_IA_PROMPT_VERSION_V4,
+} from "../prompts/professor-ia-system-prompt-v4";
 import { PROVISIONAL_TEACHER_RESPONSE_SCHEMA_VERSION } from "../schemas/provisional-teacher-response";
 import {
   getProfessorContextToolFlowObservedToolName,
@@ -66,6 +69,7 @@ const latencySchema = z.number().finite().nonnegative();
 const comparablePromptVersionSchema = z.enum([
   PROFESSOR_IA_PROMPT_VERSION_V2,
   PROFESSOR_IA_PROMPT_VERSION_V3,
+  PROFESSOR_IA_PROMPT_VERSION_V4,
 ]);
 const technicalErrorCategorySchema = z.enum([
   "authentication_error",

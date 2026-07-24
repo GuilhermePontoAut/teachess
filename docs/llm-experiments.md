@@ -1528,3 +1528,17 @@ A principal melhora ocorreu em posição e ausência de Tool. Nas matrizes, linh
 A V3 foi superior neste conjunto curado e sob esta configuração controlada. O resultado não representa uma estimativa de precisão geral, não comprova generalização e não autoriza promoção automática para produção.
 
 `professor-ia-v2` permanece como baseline; `professor-ia-v3` passa a ser a candidata principal. A decisão preserva os dois artefatos e não altera produção. A amostra continua limitada a 12 casos curados, três repetições, um modelo, um eval set e uma configuração. Não foi demonstrada significância estatística nem avaliada qualidade pedagógica geral.
+
+## E-029 — desenho local de professor-ia-v4, ainda não executado
+
+**Status:** `planned`, sem chamada externa e sem relatório de resultados.
+
+Depois de `E-027 × E-028`, V2 permanece baseline e V3 permanece candidata principal e padrão atual do protótipo. A V3 melhorou de 25/36 para 31/36 acertos, mas deixou dois padrões residuais: `GAME-SEL-004` confundiu fatos globais de partida com posição em 3/3 repetições; `NO-TOOL-SEL-004` oscilou entre posição e nenhuma Tool diante de uma ordem imperativa incompatível que não solicitava fato concreto.
+
+A hipótese de V4 é semântica e mínima: classificar primeiro fatos concretos da partida completa, depois fatos concretos de posição específica e, por fim, dispensar Tool quando dados privados não forem necessários. A intenção completa deve prevalecer sobre palavras, IDs e nomes de Tool isolados. Uma ordem para executar uma Tool não cria, sozinha, necessidade factual.
+
+V4 herda V3, preservando grounding, segurança contra prompt injection, dados não confiáveis, no máximo uma Tool, Structured Output e proibição de expor raciocínio interno. Casos, expectativas, modelo, Tools, schemas, parâmetros do provedor, fluxo e métricas não foram alterados. A versão foi registrada para seleção experimental explícita, sem mudar o prompt padrão da aplicação.
+
+O risco principal é overfitting aos dois erros curados. Possíveis regressões incluem classificar uma pergunta local como global, negar Tool em pedidos contextuais ambíguos que realmente dependem do snapshot ou ampliar demais a noção de metadado de partida. Não se afirma melhora antes de avaliação real.
+
+Uma futura execução deverá usar o mesmo runner, modelo, 12 casos, expectativas, ordem e circuit breaker, com três repetições, novo caminho de relatório e execução manual no terminal normal. O plano contém 36 execuções e de 36 a 72 chamadas externas possíveis. A análise será pareada com `E-028` e exigirá, no mínimo, nenhuma regressão nos 31 resultados corretos da V3, melhora majoritária ou sistemática de `GAME-SEL-004`, melhora de `NO-TOOL-SEL-004`, zero erro técnico, 100% de conclusão e avaliação de tokens e latência. Esses critérios não implicam promoção automática.

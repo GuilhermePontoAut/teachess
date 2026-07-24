@@ -97,7 +97,8 @@ export function resolveProfessorContextToolSelectionEvalEnvironment(
   }
   if (
     promptVersion !== "professor-ia-v2" &&
-    promptVersion !== "professor-ia-v3"
+    promptVersion !== "professor-ia-v3" &&
+    promptVersion !== "professor-ia-v4"
   ) {
     return {
       status: "invalid",
