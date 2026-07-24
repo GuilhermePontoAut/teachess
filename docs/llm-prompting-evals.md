@@ -637,3 +637,39 @@ Um 401 com `invalid_api_key` foi confirmado em chamada isolada com uma credencia
 Relatórios anteriores sem `technicalErrorDetails`, `technicalErrorsByCategory`, `technicalErrorsByStage` ou `technicalErrorSignatures` continuam válidos. A ausência representa informação não disponível; o leitor não inventa categorias, contagens ou assinaturas e não migra o arquivo. Novos relatórios emitem normalmente os quatro campos.
 
 Status HTTP explícito tem precedência sobre texto: 401, 403, 429 e 5xx mantêm suas categorias mesmo quando a mensagem contém termos de timeout ou conexão. Timeout e transporte só prevalecem sem resposta HTTP utilizável. Erros de `report_generation` ficam fora das decisões e métricas dos casos, encerram a CLI com falha e são emitidos de forma sanitizada no processo. Se a gravação falhar, esse diagnóstico não tem garantia de existir no próprio arquivo que não pôde ser persistido.
+
+## Etapa 7F-B6 — comparação de estabilidade V2 × V3
+
+A metodologia permaneceu congelada: `professor-context-tool-selection-runner-v1`, `gpt-5-mini`, `provisional-teacher-response-v1`, `professor-context-tool-selection-evals-v1`, os mesmos 12 casos, ordem, expectativas, Tools, schemas, fluxo, classificações e métricas. A execução anterior dos relatórios completos ocorreu no terminal normal por causa da restrição DNS do ambiente do Codex. Esta consolidação foi inteiramente local, sem executar runner, V2 ou V3 e sem chamadas externas.
+
+`E-025` e `E-026` ficam reservados às tentativas parciais de V2-r3, respectivamente a inicial e a instrumentada com observabilidade; elas são somente histórico diagnóstico. Os relatórios completos, válidos e sanitizados são `E-027/professor-ia-v2` e `E-028/professor-ia-v3`, preservados em `docs/evals/`. Ambos concluíram 36/36 execuções, não foram abortados, têm relatório completo, 36 resultados e zero erros técnicos.
+
+| Métrica | V2 / `E-027` | V3 / `E-028` |
+| --- | ---: | ---: |
+| Acertos | 25/36 | 31/36 |
+| `decisionAccuracy` | 69,44% | 86,11% |
+| `wrong_tool` | 8 | 3 |
+| `false_positive` | 3 | 2 |
+| `false_negative` | 0 | 0 |
+| `technical_error` | 0 | 0 |
+| `completionRate` | 100% | 100% |
+| Casos com decisão 3/3 consistente | 11/12 | 11/12 |
+| Casos 3/3 corretos | 8/12 | 10/12 |
+| Casos com maioria correta | 8/12 | 10/12 |
+| Casos sem decisão dominante | 0/12 | 0/12 |
+
+O pareamento por `caseId + runNumber` confirmou 36 pares únicos, mesma ordem e expectativas, sem ausências ou duplicatas. Seis resultados passaram de incorretos a corretos, nenhum regrediu, 25 permaneceram corretos e cinco permaneceram incorretos. Houve oito mudanças de decisão: seis melhorias e duas mudanças ainda incorretas em `NO-TOOL-SEL-004`.
+
+Por repetição, V2 acertou 8, 9 e 8; V3 acertou 10, 11 e 10. Por decisão esperada, V2 obteve 9/12 em `get_game_context`, 10/12 em `get_position_context` e 6/12 em `not_called`; V3 obteve 9/12, 12/12 e 10/12. A principal melhora ocorreu em posição e ausência de Tool. `GAME-SEL-004` permanece como erro sistemático; `NO-TOOL-SEL-004`, como instabilidade remanescente.
+
+| Telemetria | V2 | V3 |
+| --- | ---: | ---: |
+| Amostras completas | 28 | 33 |
+| Tokens totais | 183.668 | 267.119 |
+| Tokens por amostra completa | 6.559,57 | 8.094,52 |
+| Latência média | 22.902,75 ms | 27.056,12 ms |
+| Latência mediana | 20.102,26 ms | 20.226,92 ms |
+
+Como `wrong_tool` pode encerrar antes da segunda interação, os totais brutos não são diretamente comparáveis sem considerar os denominadores. Mesmo normalizada por amostra completa, V3 consumiu mais tokens. A mediana de latência permaneceu semelhante, apesar do aumento da média. Não houve conversão monetária.
+
+A V3 foi superior neste conjunto curado e sob esta configuração controlada. O resultado não representa uma estimativa de precisão geral, não comprova generalização e não autoriza promoção automática para produção. `professor-ia-v2` permanece baseline e `professor-ia-v3`, candidata principal. A amostra de 12 casos e três repetições não demonstra significância estatística nem qualidade pedagógica geral.

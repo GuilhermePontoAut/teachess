@@ -1408,3 +1408,123 @@ A assinatura do circuit breaker usa somente categoria, estágio, status HTTP, ti
 O schema de leitura mantém compatibilidade com relatórios anteriores à 7F-B3: a ausência dos novos detalhes e agregados significa diagnóstico indisponível e não provoca migração, reescrita ou preenchimento com zeros fictícios. Relatórios novos continuam emitindo todos esses campos.
 
 Quando existe status HTTP utilizável, ele prevalece: 401, 403, 429 e 5xx são classificados pela resposta, mesmo que a mensagem mencione timeout ou conexão. `timeout_error` e `transport_error` são usados somente quando não há resposta HTTP confiável. Falha ao gerar ou gravar o relatório é operacional, usa estágio `report_generation`, não cria execução adicional nem altera métricas ou circuit breaker. Como a própria escrita falhou, seu diagnóstico sanitizado pode existir apenas na saída do processo, sem garantia de persistência no JSON.
+
+## Etapa 7F-B6 — consolidação da estabilidade V2 × V3
+
+### Numeração, fontes e validade
+
+`E-001` a `E-024` já estavam utilizados. As tentativas parciais históricas ficam reservadas como `E-025` (V2-r3 inicial) e `E-026` (V2-r3 com observabilidade); elas serviram somente ao diagnóstico técnico e não entram nas métricas de qualidade. Os próximos IDs livres foram atribuídos aos relatórios completos:
+
+- `E-027`: `professor-ia-v2`, preservado em `docs/evals/E-027-professor-ia-v2-r3-host.json`;
+- `E-028`: `professor-ia-v3`, preservado em `docs/evals/E-028-professor-ia-v3-r3-host.json`.
+
+Os dois relatórios usam `professor-context-tool-selection-runner-v1`, `gpt-5-mini`, schema `provisional-teacher-response-v1`, eval set `professor-context-tool-selection-evals-v1`, 12 casos e três repetições. Ambos são JSONs válidos, têm 36 de 36 execuções concluídas, exatamente 36 resultados, `aborted: false`, `reportCompleteness: "complete"` e zero erros técnicos. A auditoria local não encontrou chave, Authorization, headers, request ID completo, mensagens brutas, stack, payload, snapshot, PGN completo ou conteúdo privado do usuário.
+
+A execução que originou os relatórios ocorreu anteriormente no terminal normal devido à restrição DNS do ambiente do Codex. A consolidação 7F-B6 não fez chamada externa e não executou V2, V3 ou o runner. Modelo, prompts, casos, ordem, expectativas, Tools, schemas, fluxo e métricas permaneceram congelados.
+
+### Resultado consolidado
+
+| Métrica | `E-027` / V2 | `E-028` / V3 | Diferença |
+| --- | ---: | ---: | ---: |
+| `correct` | 25/36 | 31/36 | +6 |
+| `wrong_tool` | 8 | 3 | -5 |
+| `false_positive` | 3 | 2 | -1 |
+| `false_negative` | 0 | 0 | 0 |
+| `technical_error` | 0 | 0 | 0 |
+| `decisionAccuracy` | 69,44% | 86,11% | +16,67 p.p. |
+| `endToEndSuccessRate` | 69,44% | 86,11% | +16,67 p.p. |
+| `completionRate` | 100% | 100% | 0 p.p. |
+
+### Comparação pareada
+
+Os 36 resultados foram pareados por `caseId + runNumber`. Os relatórios possuem os mesmos 12 casos, as mesmas três repetições, a mesma ordem e as mesmas expectativas, sem caso ausente ou duplicado.
+
+| Situação pareada | Quantidade |
+| --- | ---: |
+| V2 incorreta → V3 correta | 6 |
+| V2 correta → V3 incorreta | 0 |
+| Ambas corretas | 25 |
+| Ambas incorretas | 5 |
+| Mudança de `actualDecision` | 8 |
+
+As seis melhorias foram `POSITION-SEL-004` nas repetições 1 e 3, `NO-TOOL-SEL-003` nas repetições 1, 2 e 3 e `NO-TOOL-SEL-004` na repetição 2. As outras duas mudanças ocorreram em `NO-TOOL-SEL-004`, repetições 1 e 3: V2 escolheu `get_game_context` e V3 escolheu `get_position_context`; ambas continuaram incorretas, agora classificadas como `false_positive`. Não houve regressão pareada. Os cinco pares incorretos nas duas versões foram as três repetições de `GAME-SEL-004` e as repetições 1 e 3 de `NO-TOOL-SEL-004`.
+
+### Estabilidade por caso
+
+Cada sequência abaixo apresenta as decisões das repetições 1/2/3. “Maioria” indica ao menos dois acertos; “varia” indica mais de uma decisão observada.
+
+| Caso | Esperada | V2: decisões; acertos; dominante; 3/3; maioria; varia | V3: decisões; acertos; dominante; 3/3; maioria; varia |
+| --- | --- | --- | --- |
+| `GAME-SEL-001` | game | game/game/game; 3; game; sim; sim; não | game/game/game; 3; game; sim; sim; não |
+| `GAME-SEL-002` | game | game/game/game; 3; game; sim; sim; não | game/game/game; 3; game; sim; sim; não |
+| `GAME-SEL-003` | game | game/game/game; 3; game; sim; sim; não | game/game/game; 3; game; sim; sim; não |
+| `GAME-SEL-004` | game | position/position/position; 0; position; sim; não; não | position/position/position; 0; position; sim; não; não |
+| `POSITION-SEL-001` | position | position/position/position; 3; position; sim; sim; não | position/position/position; 3; position; sim; sim; não |
+| `POSITION-SEL-002` | position | position/position/position; 3; position; sim; sim; não | position/position/position; 3; position; sim; sim; não |
+| `POSITION-SEL-003` | position | position/position/position; 3; position; sim; sim; não | position/position/position; 3; position; sim; sim; não |
+| `POSITION-SEL-004` | position | game/position/game; 1; game; não; não; sim | position/position/position; 3; position; sim; sim; não |
+| `NO-TOOL-SEL-001` | none | none/none/none; 3; none; sim; sim; não | none/none/none; 3; none; sim; sim; não |
+| `NO-TOOL-SEL-002` | none | none/none/none; 3; none; sim; sim; não | none/none/none; 3; none; sim; sim; não |
+| `NO-TOOL-SEL-003` | none | game/game/game; 0; game; sim; não; não | none/none/none; 3; none; sim; sim; não |
+| `NO-TOOL-SEL-004` | none | game/game/game; 0; game; sim; não; não | position/none/position; 1; position; não; não; sim |
+
+Abreviações: `game` = `get_game_context`, `position` = `get_position_context` e `none` = `not_called`.
+
+| Indicador | V2 | V3 |
+| --- | ---: | ---: |
+| Casos com decisão 3/3 consistente | 11/12 | 11/12 |
+| Casos 3/3 corretos | 8/12 | 10/12 |
+| Casos com maioria correta | 8/12 | 10/12 |
+| Casos sem decisão dominante | 0/12 | 0/12 |
+
+O erro sistemático remanescente é `GAME-SEL-004`, incorreto e consistente nas duas versões. A instabilidade remanescente é `NO-TOOL-SEL-004`; na V3, a decisão variou entre `get_position_context` e `not_called`. Ter decisão dominante não equivale a consistência 3/3.
+
+### Repetições, decisões esperadas e matrizes de confusão
+
+| Repetição | V2 | V3 |
+| --- | ---: | ---: |
+| 1 | 8/12 | 10/12 |
+| 2 | 9/12 | 11/12 |
+| 3 | 8/12 | 10/12 |
+
+| Decisão esperada | V2 | V3 |
+| --- | ---: | ---: |
+| `get_game_context` | 9/12 (75,00%) | 9/12 (75,00%) |
+| `get_position_context` | 10/12 (83,33%) | 12/12 (100%) |
+| `not_called` | 6/12 (50,00%) | 10/12 (83,33%) |
+
+A principal melhora ocorreu em posição e ausência de Tool. Nas matrizes, linhas são decisões esperadas e colunas são decisões observadas.
+
+| V2 | `get_game_context` | `get_position_context` | `not_called` |
+| --- | ---: | ---: | ---: |
+| `get_game_context` | 9 | 3 | 0 |
+| `get_position_context` | 2 | 10 | 0 |
+| `not_called` | 6 | 0 | 6 |
+
+| V3 | `get_game_context` | `get_position_context` | `not_called` |
+| --- | ---: | ---: | ---: |
+| `get_game_context` | 9 | 3 | 0 |
+| `get_position_context` | 0 | 12 | 0 |
+| `not_called` | 0 | 2 | 10 |
+
+### Tokens e latência
+
+| Telemetria | V2 | V3 |
+| --- | ---: | ---: |
+| `sampleCount` | 28 | 33 |
+| Tokens de entrada | 139.416 | 204.161 |
+| Tokens de saída | 44.252 | 62.958 |
+| Tokens totais | 183.668 | 267.119 |
+| Tokens médios por amostra completa | 6.559,57 | 8.094,52 |
+| Latência mínima | 8.852,17 ms | 12.331,34 ms |
+| Latência máxima | 51.278,52 ms | 75.787,88 ms |
+| Latência média | 22.902,75 ms | 27.056,12 ms |
+| Latência mediana | 20.102,26 ms | 20.226,92 ms |
+
+`wrong_tool` pode encerrar antes da segunda interação; por isso V2 teve 28 amostras completas e V3 teve 33. Os totais brutos não são diretamente comparáveis sem esses denominadores. Mesmo normalizada por amostra completa, V3 consumiu mais tokens: aproximadamente 8.095 contra 6.560, aumento de 23,40%. A latência média aumentou, enquanto a mediana permaneceu semelhante. Tokens não foram convertidos em valor monetário.
+
+### Conclusão metodológica
+
+A V3 foi superior neste conjunto curado e sob esta configuração controlada. O resultado não representa uma estimativa de precisão geral, não comprova generalização e não autoriza promoção automática para produção.
+
+`professor-ia-v2` permanece como baseline; `professor-ia-v3` passa a ser a candidata principal. A decisão preserva os dois artefatos e não altera produção. A amostra continua limitada a 12 casos curados, três repetições, um modelo, um eval set e uma configuração. Não foi demonstrada significância estatística nem avaliada qualidade pedagógica geral.
