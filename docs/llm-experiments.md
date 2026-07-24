@@ -1542,3 +1542,141 @@ V4 herda V3, preservando grounding, segurança contra prompt injection, dados n�
 O risco principal é overfitting aos dois erros curados. Possíveis regressões incluem classificar uma pergunta local como global, negar Tool em pedidos contextuais ambíguos que realmente dependem do snapshot ou ampliar demais a noção de metadado de partida. Não se afirma melhora antes de avaliação real.
 
 Uma futura execução deverá usar o mesmo runner, modelo, 12 casos, expectativas, ordem e circuit breaker, com três repetições, novo caminho de relatório e execução manual no terminal normal. O plano contém 36 execuções e de 36 a 72 chamadas externas possíveis. A análise será pareada com `E-028` e exigirá, no mínimo, nenhuma regressão nos 31 resultados corretos da V3, melhora majoritária ou sistemática de `GAME-SEL-004`, melhora de `NO-TOOL-SEL-004`, zero erro técnico, 100% de conclusão e avaliação de tokens e latência. Esses critérios não implicam promoção automática.
+
+## E-030 — consolidação pareada de professor-ia-v4 contra E-028
+
+### Identificação, validade e metodologia
+
+`E-029` já identifica o desenho local da hipótese V4, por isso a execução completa recebeu o próximo ID livre, `E-030`, sem reutilizar ou sobrescrever o experimento planejado. O relatório válido e sanitizado foi preservado em `docs/evals/E-030-professor-ia-v4-r3-host.json`; o arquivo de origem em `/tmp` foi mantido.
+
+O JSON declara `professor-context-tool-selection-runner-v1`, `gpt-5-mini`, `professor-ia-v4`, schema `provisional-teacher-response-v1`, eval set `professor-context-tool-selection-evals-v1`, 12 casos e três repetições. Foram confirmados 36/36 case-runs, exatamente 36 resultados e 36 chaves únicas `caseId + runNumber`, `aborted: false`, `reportCompleteness: "complete"`, `technicalErrors: 0` e `completionRate: 100%`. Os agregados, a matriz de confusão, tokens e latências foram recalculados a partir dos resultados e conferem com o relatório.
+
+A metodologia permaneceu congelada entre `E-028` e `E-030`: runner, modelo, schema, eval set, 12 casos, `expectedDecision`, três repetições, Tools, fluxo, parâmetros, classificações e métricas não mudaram. Esta consolidação foi inteiramente local: não executou V3, V4 ou runner e não fez chamada externa.
+
+A auditoria não encontrou `OPENAI_API_KEY`, Authorization, headers, request ID completo, mensagens brutas, stack, payload completo, PGN integral, snapshot, dados privados ou conteúdo de `.env.local`. Nenhum conteúdo sensível foi incorporado à documentação.
+
+### Resultado agregado e comparação pareada
+
+| Métrica | `E-028` / V3 | `E-030` / V4 | Diferença V4 − V3 |
+| --- | ---: | ---: | ---: |
+| `correct` | 31/36 | 33/36 | +2 |
+| `wrong_tool` | 3 | 1 | -2 |
+| `false_positive` | 2 | 2 | 0 |
+| `false_negative` | 0 | 0 | 0 |
+| `technical_error` | 0 | 0 | 0 |
+| `decisionAccuracy` | 86,11% | 91,67% | +5,56 p.p. |
+| `completionRate` | 100% | 100% | 0 p.p. |
+
+Os relatórios contêm os mesmos 12 casos, três repetições por caso e as mesmas expectativas, sem ausência ou duplicidade.
+
+| Situação pareada | Quantidade |
+| --- | ---: |
+| V3 incorreta → V4 correta | 4 |
+| V3 correta → V4 incorreta | 2 |
+| Ambas corretas | 29 |
+| Ambas incorretas | 1 |
+| Mudança de `actualDecision` | 6 |
+
+As quatro melhorias foram `GAME-SEL-004` nas repetições 1 e 2, de `get_position_context` para `get_game_context`, e `NO-TOOL-SEL-004` nas repetições 1 e 3, de `get_position_context` para `not_called`. As duas regressões foram `NO-TOOL-SEL-003` nas repetições 2 e 3, de `not_called` para `get_game_context`. O único par incorreto nas duas versões foi `GAME-SEL-004`, repetição 3, que permaneceu `get_position_context`.
+
+Portanto, houve regressão explícita em 2 dos 31 resultados corretos da V3. O ganho líquido agregado de dois acertos não satisfaz o critério pareado de preservar todos os acertos anteriores.
+
+### Erros remanescentes da V4
+
+| Caso e repetição | Esperada | Observada na V4 | Classe | Comportamento na V3 | Interpretação |
+| --- | --- | --- | --- | --- | --- |
+| `GAME-SEL-004` #3 | `get_game_context` | `get_position_context` | `wrong_tool` | mesmo erro | erro persistente dentro de um caso parcialmente melhorado |
+| `NO-TOOL-SEL-003` #2 | `not_called` | `get_game_context` | `false_positive` | `not_called`, correto | regressão e nova instabilidade |
+| `NO-TOOL-SEL-003` #3 | `not_called` | `get_game_context` | `false_positive` | `not_called`, correto | regressão e nova instabilidade |
+
+`GAME-SEL-004` passou de position/position/position na V3 para game/game/position na V4: houve melhora majoritária, mas não correção 3/3. `NO-TOOL-SEL-004` passou de position/none/position para none/none/none e foi corrigido nas três repetições. Os dois falsos positivos da V4 vieram exclusivamente de `NO-TOOL-SEL-003`, não de `NO-TOOL-SEL-004`.
+
+### Estabilidade por caso
+
+As sequências mostram as repetições 1/2/3. `game`, `position` e `none` abreviam, respectivamente, `get_game_context`, `get_position_context` e `not_called`. “Cons.” significa decisão 3/3 consistente; “3/3” significa correto nas três; “maioria” significa ao menos dois acertos.
+
+| Caso | Esperada | V3: decisões; acertos; dominante; cons.; 3/3; maioria; varia | V4: decisões; acertos; dominante; cons.; 3/3; maioria; varia |
+| --- | --- | --- | --- |
+| `GAME-SEL-001` | game | game/game/game; 3; game; sim; sim; sim; não | game/game/game; 3; game; sim; sim; sim; não |
+| `GAME-SEL-002` | game | game/game/game; 3; game; sim; sim; sim; não | game/game/game; 3; game; sim; sim; sim; não |
+| `GAME-SEL-003` | game | game/game/game; 3; game; sim; sim; sim; não | game/game/game; 3; game; sim; sim; sim; não |
+| `GAME-SEL-004` | game | position/position/position; 0; position; sim; não; não; não | game/game/position; 2; game; não; não; sim; sim |
+| `POSITION-SEL-001` | position | position/position/position; 3; position; sim; sim; sim; não | position/position/position; 3; position; sim; sim; sim; não |
+| `POSITION-SEL-002` | position | position/position/position; 3; position; sim; sim; sim; não | position/position/position; 3; position; sim; sim; sim; não |
+| `POSITION-SEL-003` | position | position/position/position; 3; position; sim; sim; sim; não | position/position/position; 3; position; sim; sim; sim; não |
+| `POSITION-SEL-004` | position | position/position/position; 3; position; sim; sim; sim; não | position/position/position; 3; position; sim; sim; sim; não |
+| `NO-TOOL-SEL-001` | none | none/none/none; 3; none; sim; sim; sim; não | none/none/none; 3; none; sim; sim; sim; não |
+| `NO-TOOL-SEL-002` | none | none/none/none; 3; none; sim; sim; sim; não | none/none/none; 3; none; sim; sim; sim; não |
+| `NO-TOOL-SEL-003` | none | none/none/none; 3; none; sim; sim; sim; não | none/game/game; 1; game; não; não; não; sim |
+| `NO-TOOL-SEL-004` | none | position/none/position; 1; position; não; não; não; sim | none/none/none; 3; none; sim; sim; sim; não |
+
+| Indicador | V3 | V4 |
+| --- | ---: | ---: |
+| Casos com decisão 3/3 consistente | 11/12 | 10/12 |
+| Casos corretos 3/3 | 10/12 | 10/12 |
+| Casos com maioria correta | 10/12 | 11/12 |
+| Casos sem decisão dominante | 0/12 | 0/12 |
+| Acertos na repetição 1 | 10/12 | 12/12 |
+| Acertos na repetição 2 | 11/12 | 11/12 |
+| Acertos na repetição 3 | 10/12 | 10/12 |
+
+`NO-TOOL-SEL-004` ficou mais estável e correto. `GAME-SEL-004` melhorou parcialmente em correção, mas ficou menos consistente entre repetições. `NO-TOOL-SEL-003` ficou menos estável e regrediu de 3/3 correto para maioria incorreta. Não restou caso 3/3 sistematicamente errado na V4; o resíduo de `GAME-SEL-004` é parcial, e `NO-TOOL-SEL-003` é uma nova instabilidade majoritariamente incorreta.
+
+### Resultados por classe
+
+| Decisão esperada | V3 | V4 | Diferença |
+| --- | ---: | ---: | ---: |
+| G — `get_game_context` | 9/12 (75,00%) | 11/12 (91,67%) | +16,67 p.p. |
+| P — `get_position_context` | 12/12 (100%) | 12/12 (100%) | 0 p.p. |
+| N — `not_called` | 10/12 (83,33%) | 10/12 (83,33%) | 0 p.p. |
+
+Linhas são decisões esperadas e colunas são decisões observadas.
+
+| V3 | G | P | N |
+| --- | ---: | ---: | ---: |
+| G | 9 | 3 | 0 |
+| P | 0 | 12 | 0 |
+| N | 0 | 2 | 10 |
+
+| V4 | G | P | N |
+| --- | ---: | ---: | ---: |
+| G | 11 | 1 | 0 |
+| P | 0 | 12 | 0 |
+| N | 2 | 0 | 10 |
+
+A V4 corrigiu parcialmente a fronteira partida × posição: duas das três confusões G→P desapareceram, mas uma persistiu. Na fronteira contexto privado × nenhuma Tool, corrigiu integralmente `NO-TOOL-SEL-004`, porém transferiu dois falsos positivos para `NO-TOOL-SEL-003`; a acurácia agregada de N permaneceu 10/12. As decisões observadas da V4 somam G=13, P=13 e N=10 para expectativas balanceadas de 12 por classe. Isso mostra um pequeno excesso de chamadas, em particular uma nova atração por G no caso regressivo, mas os 36 pares não bastam para afirmar uma preferência geral do modelo.
+
+### Tokens e latência
+
+As métricas de tokens e latência do relatório usam somente amostras completas. Como `wrong_tool` pode terminar antes da segunda interação, os denominadores são 33 na V3 e 35 na V4.
+
+| Telemetria | V3 | V4 | Diferença absoluta | Diferença percentual |
+| --- | ---: | ---: | ---: | ---: |
+| `sampleCount` | 33 | 35 | +2 | +6,06% |
+| Tokens de entrada | 204.161 | 245.448 | +41.287 | +20,22% |
+| Tokens de saída | 62.958 | 62.265 | -693 | -1,10% |
+| Tokens totais | 267.119 | 307.713 | +40.594 | +15,20% |
+| Tokens por amostra completa | 8.094,52 | 8.791,80 | +697,28 | +8,61% |
+| Latência mínima | 12.331,34 ms | 8.890,82 ms | -3.440,52 ms | -27,90% |
+| Latência máxima | 75.787,88 ms | 35.653,86 ms | -40.134,02 ms | -52,96% |
+| Latência média | 27.056,12 ms | 17.414,11 ms | -9.642,00 ms | -35,64% |
+| Latência mediana | 20.226,92 ms | 15.904,07 ms | -4.322,85 ms | -21,37% |
+
+O crescimento bruto de tokens totais (15,20%) ficou próximo do aumento aproximado de 16,6% no tamanho do prompt, mas é confundido pelo aumento de 33 para 35 amostras completas. Normalizado, o total cresceu 8,61% por amostra; tokens de entrada por amostra passaram de 6.186,70 para 7.012,80 (+13,35%), enquanto saída por amostra caiu de 1.907,82 para 1.779,00 (-6,75%). Assim, o prompt maior aparece no consumo de entrada, mas não se converteu proporcionalmente em crescimento do total normalizado. A latência observada caiu em todos os agregados, embora essa pequena execução controlada não isole causalmente o efeito do prompt. Não houve conversão monetária.
+
+### Critérios previamente definidos
+
+| Critério | Classificação | Evidência |
+| --- | --- | --- |
+| `technical_error: 0` | atendido | zero em 36 resultados |
+| `completionRate: 100%` | atendido | 36/36 concluídos, relatório completo |
+| melhora de `GAME-SEL-004` | parcialmente atendido | 0/3 → 2/3, ainda um `wrong_tool` |
+| melhora de `NO-TOOL-SEL-004` | atendido | 1/3 → 3/3 e decisão consistente |
+| ausência de regressão nos 31 acertos da V3 | não atendido | duas regressões em `NO-TOOL-SEL-003` |
+| avaliação do custo adicional de tokens e latência | atendido | tokens normalizados +8,61%; latência média -35,64%, com denominadores explícitos |
+
+### Conclusão metodológica e estado da aplicação
+
+A V4 foi superior neste conjunto curado e nesta configuração controlada no agregado: 33/36 contra 31/36. O resultado não estima precisão geral nem comprova generalização. A comparação também revelou duas regressões pareadas, uma correção apenas parcial de `GAME-SEL-004` e risco concreto de overfitting: a regra direcionada corrigiu os dois resíduos que motivaram a hipótese, mas deslocou falsos positivos para outro caso de nenhuma Tool.
+
+Por isso, `professor-ia-v4` permanece experimental e não foi ativada. A V3 continua sendo o padrão atual da aplicação nesta etapa. Não houve alteração de prompt, código, casos, expectativas, modelo, Tools, schemas, parâmetros, métricas, rota padrão ou `.env.local`.

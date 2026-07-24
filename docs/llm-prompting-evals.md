@@ -695,3 +695,30 @@ A avaliação futura está preparada no mesmo runner e deverá ser executada man
 V4 somente poderá ser considerada superior à V3 após comparação pareada obrigatória com `E-028`, sem regressão nos 31 pares corretos da V3, correção sistemática ou majoritária de `GAME-SEL-004`, melhora de `NO-TOOL-SEL-004`, `technical_error: 0`, `completionRate: 100%` e análise do custo adicional de tokens e latência. Qualquer perda nos 31 resultados corretos, erro técnico, execução incompleta ou deterioração material de custo/latência conta como sinal de regressão. Esses critérios orientam avaliação; não garantem promoção.
 
 V4 está registrada e selecionável apenas de forma explícita para avaliação. Ela não foi executada, não foi ativada no aplicativo e não alterou `AI_PROFESSOR_PROMPT_VERSION`. V3 permanece a candidata principal e o padrão atual; V2 permanece baseline.
+
+## Etapa 7F-B9 — consolidação pareada de V3 × V4
+
+`E-029` já estava reservado ao desenho não executado da V4. A nova execução completa foi, portanto, preservada sem sobrescrita como `E-030`, em `docs/evals/E-030-professor-ia-v4-r3-host.json`. O relatório passou pela validação local: JSON válido, runner v1, `gpt-5-mini`, `professor-ia-v4`, schema e eval set v1, três repetições, 12 casos, 36/36 execuções, 36 resultados e chaves pareadas únicas, relatório completo, não abortado e zero erro técnico. A varredura não encontrou credenciais, Authorization, headers, request ID completo, mensagens ou payloads brutos, stack, PGN integral, snapshot, dados privados ou `.env.local`.
+
+A metodologia foi mantida: `E-028` e `E-030` usam os mesmos casos, expectativas, runner, modelo, Tools, schemas, parâmetros, fluxo, classificações e métricas. A consolidação não fez chamadas externas e não executou runner ou avaliação.
+
+| Resultado | V3 / `E-028` | V4 / `E-030` |
+| --- | ---: | ---: |
+| acertos | 31/36 (86,11%) | 33/36 (91,67%) |
+| `wrong_tool` | 3 | 1 |
+| `false_positive` | 2 | 2 |
+| `false_negative` | 0 | 0 |
+| `technical_error` | 0 | 0 |
+| conclusão | 100% | 100% |
+
+O pareamento mostrou quatro melhorias, duas regressões, 29 pares corretos nas duas versões e um par incorreto nas duas; seis decisões mudaram. `GAME-SEL-004` melhorou de position/position/position para game/game/position, ainda com erro na repetição 3. `NO-TOOL-SEL-004` melhorou de position/none/position para none/none/none. Em contrapartida, `NO-TOOL-SEL-003`, antes none/none/none, passou a none/game/game; suas repetições 2 e 3 são os dois falsos positivos da V4 e regressões entre os 31 acertos da V3.
+
+Em estabilidade, V3 e V4 tiveram, respectivamente, 11 e 10 casos com decisão 3/3 consistente, 10 e 10 casos 3/3 corretos, 10 e 11 com maioria correta e nenhum caso sem decisão dominante. Os acertos por repetição foram 10/12, 11/12 e 10/12 na V3 e 12/12, 11/12 e 10/12 na V4. `NO-TOOL-SEL-004` ficou estável e correto; `GAME-SEL-004` melhorou parcialmente, mas passou a variar; `NO-TOOL-SEL-003` tornou-se uma nova instabilidade majoritariamente incorreta.
+
+Por classe esperada, V3→V4 foi 9/12→11/12 para partida, 12/12→12/12 para posição e 10/12→10/12 para nenhuma Tool. A matriz V4, com linhas G/P/N e colunas G/P/N, é `[[11,1,0],[0,12,0],[2,0,10]]`; a V3 era `[[9,3,0],[0,12,0],[0,2,10]]`. A fronteira partida × posição melhorou parcialmente. A fronteira contexto privado × nenhuma Tool teve correção de `NO-TOOL-SEL-004`, mas regressão equivalente em `NO-TOOL-SEL-003`, com nova atração por `get_game_context`.
+
+Os denominadores completos foram 33 na V3 e 35 na V4, pois `wrong_tool` pode encerrar antes da segunda interação. Tokens de entrada foram 204.161→245.448 (+20,22%), saída 62.958→62.265 (-1,10%) e total 267.119→307.713 (+15,20%). Por amostra completa, o total foi 8.094,52→8.791,80 (+8,61%). A latência mínima foi 12.331,34→8.890,82 ms (-27,90%), máxima 75.787,88→35.653,86 ms (-52,96%), média 27.056,12→17.414,11 ms (-35,64%) e mediana 20.226,92→15.904,07 ms (-21,37%). O aumento aproximado de 16,6% do prompt aparece mais diretamente nos tokens de entrada por amostra (+13,35%); o total normalizado cresceu menos, e esta amostra não permite atribuição causal da queda de latência.
+
+Os critérios de zero erro técnico, conclusão integral, melhora de `NO-TOOL-SEL-004` e análise de tokens/latência foram atendidos. A melhora de `GAME-SEL-004` foi parcial. A ausência de regressão nos 31 resultados corretos da V3 não foi atendida.
+
+A V4 foi superior neste conjunto curado e nesta configuração controlada no agregado. O resultado não estima precisão geral nem comprova generalização. A correção dos casos que motivaram a hipótese, acompanhada por regressão em outro caso próximo, mantém relevante o risco de overfitting. V4 continua experimental e não foi ativada; V3 continua sendo o padrão atual da aplicação.
