@@ -1680,3 +1680,39 @@ O crescimento bruto de tokens totais (15,20%) ficou próximo do aumento aproxima
 A V4 foi superior neste conjunto curado e nesta configuração controlada no agregado: 33/36 contra 31/36. O resultado não estima precisão geral nem comprova generalização. A comparação também revelou duas regressões pareadas, uma correção apenas parcial de `GAME-SEL-004` e risco concreto de overfitting: a regra direcionada corrigiu os dois resíduos que motivaram a hipótese, mas deslocou falsos positivos para outro caso de nenhuma Tool.
 
 Por isso, `professor-ia-v4` permanece experimental e não foi ativada. A V3 continua sendo o padrão atual da aplicação nesta etapa. Não houve alteração de prompt, código, casos, expectativas, modelo, Tools, schemas, parâmetros, métricas, rota padrão ou `.env.local`.
+## E-031 planejado — V3 com autorização determinística de Tools
+
+Esta etapa prepara, mas não executa, uma comparação controlada com E-028. A
+única variável metodológica será `toolExposurePolicy`:
+`all_context_tools` descreve o comportamento histórico;
+`authorized_context_only` oferece somente a Tool correspondente ao contexto
+autorizado, ou nenhuma para `none`.
+
+| Caso | contexto | `all_context_tools` | `authorized_context_only` | esperado |
+|---|---|---|---|---|
+| GAME-SEL-001 | game | game, position | game | game |
+| GAME-SEL-002 | game | game, position | game | game |
+| GAME-SEL-003 | game | game, position | game | game |
+| GAME-SEL-004 | game | game, position | game | game |
+| POSITION-SEL-001 | position | game, position | position | position |
+| POSITION-SEL-002 | position | game, position | position | position |
+| POSITION-SEL-003 | position | game, position | position | position |
+| POSITION-SEL-004 | position | game, position | position | position |
+| NO-TOOL-SEL-001 | none | game, position | nenhuma | nenhuma |
+| NO-TOOL-SEL-002 | none | game, position | nenhuma | nenhuma |
+| NO-TOOL-SEL-003 | game | game, position | game | nenhuma |
+| NO-TOOL-SEL-004 | position | game, position | position | nenhuma |
+
+Sem inferir nova acurácia, os três erros G→P de `GAME-SEL-004` em E-028 se
+tornam impossíveis por construção. Os dois erros de `NO-TOOL-SEL-004`
+continuam dependendo da decisão usar a única Tool autorizada ou não usá-la.
+Também permanecem difíceis os casos ambíguos, os casos factuais em que omissão
+vira `false_negative` e os dois casos adversariais sem necessidade de Tool, em
+que uma chamada compatível ainda seria `false_positive`.
+
+Plano manual futuro: V3, `gpt-5-mini`, 12 casos, três repetições, mesma ordem,
+expectativas, parâmetros, schemas e circuit breaker, novo caminho de relatório
+e `AI_EVAL_TOOL_EXPOSURE_POLICY=authorized_context_only`. O relatório será
+comparado par a par com E-028 para contar confusões eliminadas, falsos positivos,
+falsos negativos, tokens, latência e adequação sem Tool. Não há previsão de
+resultado, promoção de V4 ou alteração de prompt.

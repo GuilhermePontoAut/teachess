@@ -62,6 +62,7 @@ export type ResolvedProfessorContextToolSelectionEvalEnvironment =
         | "PROMPT_VERSION_INVALID"
         | "REPETITIONS_REQUIRED"
         | "REPETITIONS_INVALID"
+        | "TOOL_EXPOSURE_POLICY_INVALID"
         | "OUTPUT_PATH_INVALID"
         | "OPENAI_API_KEY_REQUIRED";
     }
@@ -128,6 +129,19 @@ export function resolveProfessorContextToolSelectionEvalEnvironment(
     };
   }
 
+  const toolExposurePolicy =
+    readEnvironment("AI_EVAL_TOOL_EXPOSURE_POLICY") ?? "all_context_tools";
+  if (
+    toolExposurePolicy !== "all_context_tools" &&
+    toolExposurePolicy !== "authorized_context_only"
+  ) {
+    return {
+      status: "invalid",
+      exitCode: PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_ERROR_EXIT_CODE,
+      errorCode: "TOOL_EXPOSURE_POLICY_INVALID",
+    };
+  }
+
   const configuredOutputPath = readEnvironment("AI_EVAL_OUTPUT_PATH");
   if (configuredOutputPath !== undefined && configuredOutputPath.length === 0) {
     return {
@@ -166,6 +180,7 @@ export function resolveProfessorContextToolSelectionEvalEnvironment(
       schemaVersion: PROVISIONAL_TEACHER_RESPONSE_SCHEMA_VERSION,
       evalSetVersion: PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_SET_VERSION,
       repetitions,
+      toolExposurePolicy,
     },
     prompt,
     outputPath,
@@ -375,6 +390,7 @@ export async function runProfessorContextToolSelectionEvalCli(
             authorizedContext,
             promptVersion: prompt.version,
             systemPrompt: prompt.systemPrompt,
+            toolExposurePolicy: environment.config.toolExposurePolicy,
           },
           {
             transport: measured.transport,

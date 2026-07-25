@@ -722,3 +722,26 @@ Os denominadores completos foram 33 na V3 e 35 na V4, pois `wrong_tool` pode enc
 Os critérios de zero erro técnico, conclusão integral, melhora de `NO-TOOL-SEL-004` e análise de tokens/latência foram atendidos. A melhora de `GAME-SEL-004` foi parcial. A ausência de regressão nos 31 resultados corretos da V3 não foi atendida.
 
 A V4 foi superior neste conjunto curado e nesta configuração controlada no agregado. O resultado não estima precisão geral nem comprova generalização. A correção dos casos que motivaram a hipótese, acompanhada por regressão em outro caso próximo, mantém relevante o risco de overfitting. V4 continua experimental e não foi ativada; V3 continua sendo o padrão atual da aplicação.
+## Política comparável de exposição de Tools (7F-C1)
+
+O runner agora declara `toolExposurePolicy`. O padrão
+`all_context_tools` preserva a metodologia histórica e oferece as duas Tools.
+Uma avaliação da arquitetura nova deve definir explicitamente
+`AI_EVAL_TOOL_EXPOSURE_POLICY=authorized_context_only`; nessa política, cada
+execução registra apenas nomes não sensíveis em `offeredToolNames`: game oferece
+`["get_game_context"]`, position oferece `["get_position_context"]` e none
+oferece `[]`. Relatórios anteriores, sem esses campos, continuam válidos.
+
+As classificações e métricas permanecem iguais. Não chamar a única Tool quando
+ela era necessária continua `false_negative`; chamá-la sem necessidade continua
+`false_positive`; uma tentativa incompatível ou desconhecida é erro de
+protocolo/`technical_error` no fluxo restrito e jamais é executada. A observação
+histórica de `wrong_tool` continua disponível em `all_context_tools`.
+
+Nenhuma avaliação foi executada nesta etapa. A comparação futura deve usar V3,
+`gpt-5-mini`, os mesmos 12 casos na mesma ordem, três repetições, 36 execuções,
+mesmas expectativas, parâmetros, schemas, circuit breaker e novo relatório,
+mudando somente a política para `authorized_context_only`. A análise será
+pareada com E-028 e verificará confusões game/position eliminadas por construção,
+falsos positivos restantes, eventuais falsos negativos, tokens, latência e
+qualidade das respostas sem Tool. V3 continua padrão e V4 não foi ativada.

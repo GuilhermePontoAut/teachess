@@ -301,6 +301,7 @@ test("chave só é consultada depois das configurações e nunca entra no result
     "RUN_REAL_AI_EVALS",
     "AI_EVAL_PROMPT_VERSION",
     "AI_EVAL_REPETITIONS",
+    "AI_EVAL_TOOL_EXPOSURE_POLICY",
     "AI_EVAL_OUTPUT_PATH",
     "AI_EVAL_ALLOW_OVERWRITE",
     "AI_EVAL_ABORT_AFTER_CONSECUTIVE_TECHNICAL_ERRORS",

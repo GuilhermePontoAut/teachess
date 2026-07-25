@@ -390,3 +390,21 @@ O diagrama representa o caminho conceitual com tool calling. Em fluxos futuros, 
 - privacidade deve ser aplicada por minimização de contexto;
 - conteúdo simulado, reconhecido, calculado e inferido deve permanecer distinguível;
 - ausência de evidência não deve ser preenchida com uma resposta plausível.
+## Restrição de Tools pelo contexto autorizado (7F-C1)
+
+O fluxo público é: `AiProfessorDemo` constrói `{ message, authorizedContext }`;
+o Route Handler valida o union discriminado e a autorização do snapshot; o
+servidor deriva a lista de Tools; `responses.create` permite zero ou uma chamada;
+a function call é validada e executada localmente contra o mesmo snapshot; e
+`responses.parse` produz o Structured Output existente.
+
+Antes, `responses.create` recebia simultaneamente `get_game_context` e
+`get_position_context`. Agora a interface define qual domínio privado pode ser
+consultado e o modelo decide apenas se precisa consultá-lo. Autorização e
+necessidade são distintas. O frontend não envia `allowedTools`, `toolName` ou
+`forceTool`, e a defesa não depende do cliente nem do prompt.
+
+O fluxo continua com `gpt-5-mini`, `store: false`, no máximo uma Tool,
+`parallel_tool_calls: false` quando há Tool, duas interações, o mesmo Structured
+Output e prompts inalterados. Professor IA V3 continua padrão; V4 não foi
+ativada.

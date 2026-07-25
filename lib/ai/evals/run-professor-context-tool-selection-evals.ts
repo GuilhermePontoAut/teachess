@@ -25,6 +25,10 @@ import {
 import { authorizedGameSnapshotSchema } from "../tools/get-game-context.schemas";
 import { authorizedPositionSnapshotSchema } from "../tools/get-position-context.schemas";
 import {
+  getOfferedProfessorContextToolNames,
+  PROFESSOR_TOOL_EXPOSURE_POLICIES,
+} from "../tools/professor-context-tool-policy";
+import {
   PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_SET_VERSION,
   professorContextToolSelectionEvalCasesSchema,
   professorContextToolSelectionCases,
@@ -71,6 +75,12 @@ const comparablePromptVersionSchema = z.enum([
   PROFESSOR_IA_PROMPT_VERSION_V3,
   PROFESSOR_IA_PROMPT_VERSION_V4,
 ]);
+export const professorToolExposurePolicySchema = z.enum(
+  PROFESSOR_TOOL_EXPOSURE_POLICIES,
+);
+const offeredToolNamesSchema = z.array(
+  z.enum(["get_game_context", "get_position_context"]),
+).max(2);
 const technicalErrorCategorySchema = z.enum([
   "authentication_error",
   "permission_error",
@@ -183,6 +193,8 @@ export const professorContextToolSelectionEvalRunConfigSchema = z
       .int()
       .min(1)
       .max(PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_MAX_REPETITIONS),
+    toolExposurePolicy: professorToolExposurePolicySchema
+      .default("all_context_tools"),
   })
   .strict();
 
@@ -222,6 +234,7 @@ export const professorContextToolSelectionEvalRunResultSchema = z
     errorCode: sanitizedErrorCodeSchema.nullable(),
     technicalErrorDetails:
       professorContextToolSelectionTechnicalErrorDetailsSchema.nullable().optional(),
+    offeredToolNames: offeredToolNamesSchema.optional(),
   })
   .strict()
   .superRefine((result, context) => {
@@ -447,6 +460,7 @@ export const professorContextToolSelectionEvalReportSchema = z
       .int()
       .min(1)
       .max(PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_MAX_REPETITIONS),
+    toolExposurePolicy: professorToolExposurePolicySchema.optional(),
     caseCount: z.literal(12),
     plannedCaseRuns: nonnegativeIntegerSchema,
     completedCaseRuns: nonnegativeIntegerSchema,
@@ -1262,6 +1276,10 @@ export async function runProfessorContextToolSelectionEvals({
         finalInteractionLatencyMs: null,
         tokens: null,
       };
+      const offeredToolNames = getOfferedProfessorContextToolNames(
+        evalCase.authorizedContextType,
+        parsedConfig.toolExposurePolicy,
+      );
       try {
         const outcome = await executeCase({
           message: evalCase.message,
@@ -1292,6 +1310,7 @@ export async function runProfessorContextToolSelectionEvals({
               evidenceStatus: null,
               errorCode: sanitizedErrorCodeSchema.parse(outcome.errorCode),
               technicalErrorDetails,
+              offeredToolNames,
             }),
           );
           const signature = outcome.technicalErrorSignature ??
@@ -1330,6 +1349,7 @@ export async function runProfessorContextToolSelectionEvals({
               evidenceStatus: null,
               errorCode: null,
               technicalErrorDetails: null,
+              offeredToolNames,
             }),
           );
           continue;
@@ -1355,6 +1375,7 @@ export async function runProfessorContextToolSelectionEvals({
             evidenceStatus: flowResult.data.evidenceStatus,
             errorCode: null,
             technicalErrorDetails: null,
+            offeredToolNames,
           }),
         );
       } catch (error: unknown) {
@@ -1388,6 +1409,7 @@ export async function runProfessorContextToolSelectionEvals({
             evidenceStatus: null,
             errorCode,
             technicalErrorDetails,
+            offeredToolNames,
           }),
         );
         const signature = createProfessorContextToolSelectionTechnicalErrorSignature(
@@ -1432,6 +1454,7 @@ export async function runProfessorContextToolSelectionEvals({
     schemaVersion: parsedConfig.schemaVersion,
     evalSetVersion: parsedConfig.evalSetVersion,
     repetitions: parsedConfig.repetitions,
+    toolExposurePolicy: parsedConfig.toolExposurePolicy,
     caseCount: canonicalCases.length,
     plannedCaseRuns: canonicalCases.length * parsedConfig.repetitions,
     completedCaseRuns: results.length,

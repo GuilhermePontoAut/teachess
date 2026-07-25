@@ -31,6 +31,7 @@ const baseConfig = {
   schemaVersion: "provisional-teacher-response-v1",
   evalSetVersion: "professor-context-tool-selection-evals-v1",
   repetitions: 1,
+  toolExposurePolicy: "all_context_tools",
 } as const;
 
 const finalData = {
@@ -103,11 +104,17 @@ function run(
     clock?: ProfessorContextToolSelectionEvalRunnerClock;
     consecutiveTechnicalErrorThreshold?: number | null;
     outputPath?: string;
+    toolExposurePolicy?: "all_context_tools" | "authorized_context_only";
   } = {},
 ) {
   return runProfessorContextToolSelectionEvals({
     cases: changes.cases ?? professorContextToolSelectionCases,
-    config: { ...baseConfig, repetitions: changes.repetitions ?? 1 },
+    config: {
+      ...baseConfig,
+      repetitions: changes.repetitions ?? 1,
+      toolExposurePolicy:
+        changes.toolExposurePolicy ?? baseConfig.toolExposurePolicy,
+    },
     prompt,
     executeCase,
     clock: changes.clock ?? deterministicClock(),
@@ -170,6 +177,42 @@ test("configuração aceita professor-ia-v2, v3 e v4 com repetições de 1 a 5",
       promptVersion: "professor-ia-v1",
     }).success,
     false,
+  );
+});
+
+test("relatório registra política e Tools oferecidas sem dados privados", async () => {
+  const report = await run(
+    async (input) => success(caseForInput(input).expectedDecision),
+    { toolExposurePolicy: "authorized_context_only" },
+  );
+  assert.equal(report.toolExposurePolicy, "authorized_context_only");
+  for (const result of report.results) {
+    const evalCase = professorContextToolSelectionCases.find(
+      (candidate) => candidate.id === result.caseId,
+    );
+    assert.ok(evalCase);
+    assert.deepEqual(
+      result.offeredToolNames,
+      evalCase.authorizedContextType === "game"
+        ? ["get_game_context"]
+        : evalCase.authorizedContextType === "position"
+          ? ["get_position_context"]
+          : [],
+    );
+  }
+});
+
+test("schema continua lendo relatório histórico sem metadados de exposição", async () => {
+  const report = await run(
+    async (input) => success(caseForInput(input).expectedDecision),
+  );
+  const historical = structuredClone(report) as Record<string, unknown>;
+  delete historical.toolExposurePolicy;
+  const results = historical.results as Array<Record<string, unknown>>;
+  for (const result of results) delete result.offeredToolNames;
+  assert.equal(
+    professorContextToolSelectionEvalReportSchema.safeParse(historical).success,
+    true,
   );
 });
 

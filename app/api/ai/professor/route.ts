@@ -6,11 +6,15 @@ import { PROFESSOR_IA_PROMPT_VERSION_V3 } from "@/lib/ai/prompts/professor-ia-sy
 
 export const runtime = "nodejs";
 
+export function getPublicProfessorPromptVersion(
+  configuredVersion = process.env.AI_PROFESSOR_PROMPT_VERSION,
+): string {
+  return configuredVersion ?? PROFESSOR_IA_PROMPT_VERSION_V3;
+}
+
 const publicRouteOptions: ProfessorContextRouteOptions = {
   isEnabled: () => true,
-  promptVersion: () =>
-    process.env.AI_PROFESSOR_PROMPT_VERSION ??
-    PROFESSOR_IA_PROMPT_VERSION_V3,
+  promptVersion: () => getPublicProfessorPromptVersion(),
   logPrefix: "[api/ai/professor]",
   promptVersionErrorMessage:
     "A versão configurada do Professor IA é inválida.",

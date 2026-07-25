@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { getPublicProfessorPromptVersion } from "../../../professor/route";
 import type { ResponseCreateParamsNonStreaming } from "openai/resources/responses/responses";
 import { MissingOpenAIApiKeyError } from "@/lib/ai/openai-client";
 import { selectProfessorIaPrompt } from "@/lib/ai/prompts/professor-ia-prompts";
@@ -14,6 +15,14 @@ import {
   PROFESSOR_CONTEXT_TOOL_REQUEST_MAX_BYTES,
   type ProfessorContextRouteDependencies,
 } from "./route";
+
+test("regressão da rota pública mantém professor-ia-v3 como padrão", () => {
+  assert.equal(getPublicProfessorPromptVersion(undefined), "professor-ia-v3");
+  assert.equal(
+    getPublicProfessorPromptVersion("professor-ia-v2"),
+    "professor-ia-v2",
+  );
+});
 
 const FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 const PGN = "1. e4 e5 2. Nf3 Nc6 1-0";

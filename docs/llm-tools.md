@@ -950,3 +950,18 @@ O fluxo agora valida os discriminadores e os campos estruturais efetivamente con
 Quando um output final ainda falha estruturalmente, o erro pode expor internamente um diagnóstico sanitizado com status normalizado, tipos conhecidos ou normalizados dos itens e conteúdos, presença de `output_parsed`, resultado booleano do schema e código interno. O diagnóstico não contém texto, reasoning, mensagem, argumento, `call_id`, ID do SDK, snapshot, FEN, PGN, nome, chave, stack, `cause` ou objeto bruto, e não integra a resposta pública normal.
 
 Para `TOOL_CONTEXT_MISMATCH`, o erro guarda em metadado interno não serializável somente o nome já validado de uma das duas Tools suportadas. A verificação de compatibilidade continua antes do executor, que permanece sem ser chamado. A CLI transforma exclusivamente essa observação em `actualDecision`, `classification: "wrong_tool"` e `toolCallCount: 1`; `evidenceStatus` e a latência final permanecem nulos porque o ciclo foi bloqueado na primeira interação. Tool desconhecida ou protocolo impossível de interpretar continua `technical_error`. O metadado não aparece na mensagem nem em `toJSON`, e o relatório continua sem argumentos, IDs, `call_id`, snapshots ou objetos do SDK.
+## Etapa 7F-C1 — exposição determinística por contexto
+
+A seleção feita pela interface é agora uma autorização server-side, não uma
+sugestão ao modelo. `game` expõe somente `get_game_context`, `position` expõe
+somente `get_position_context` e `none` não expõe Tool. A presença de contexto
+não obriga uma chamada: quando existe Tool, `tool_choice` permanece `auto` e o
+modelo ainda pode responder sem consultar dados privados. Sem Tool, `tools`,
+`tool_choice` e `parallel_tool_calls` são omitidos do primeiro payload.
+
+A política pura `getAllowedProfessorContextTools` reutiliza as definições
+canônicas e não consulta pergunta, palavras-chave nem campos de Tool vindos do
+navegador. Depois da resposta, nome, quantidade, argumentos, compatibilidade
+com o tipo e ID contra o snapshot autorizado são validados antes da execução.
+Uma Tool incompatível ou desconhecida nunca é executada, não produz fallback e
+vira erro sanitizado de protocolo/autorização.

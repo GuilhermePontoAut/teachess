@@ -22,10 +22,7 @@ import {
   executeGetGameContext,
   type ExecuteGetGameContextInput,
 } from "./get-game-context";
-import {
-  getGameContextOpenAITool,
-  GET_GAME_CONTEXT_TOOL_NAME,
-} from "./get-game-context.openai";
+import { GET_GAME_CONTEXT_TOOL_NAME } from "./get-game-context.openai";
 import {
   getPositionContextResultSchema,
   type GetPositionContextResult,
@@ -34,10 +31,13 @@ import {
   executeGetPositionContext,
   type ExecuteGetPositionContextInput,
 } from "./get-position-context";
+import { GET_POSITION_CONTEXT_TOOL_NAME } from "./get-position-context.openai";
 import {
-  getPositionContextOpenAITool,
-  GET_POSITION_CONTEXT_TOOL_NAME,
-} from "./get-position-context.openai";
+  assertToolAllowedForAuthorizedContext,
+  getProfessorContextToolsForExposurePolicy,
+  type ProfessorToolExposurePolicy,
+} from "./professor-context-tool-policy";
+export { professorContextOpenAITools } from "./professor-context-tool-policy";
 import {
   authorizedProfessorContextSchema,
   PROFESSOR_CONTEXT_TOOL_FLOW_MODEL,
@@ -50,11 +50,6 @@ import { GameContextToolError, PositionContextToolError } from "./tool-errors";
 export const PROFESSOR_CONTEXT_TOOL_CALL_ID_MAX_LENGTH = 256;
 
 // Ordem estável para inspeção e testes. Ela não representa prioridade semântica.
-export const professorContextOpenAITools = [
-  getGameContextOpenAITool,
-  getPositionContextOpenAITool,
-] as const;
-
 type FirstProviderResponse = Pick<
   Response,
   "status" | "output" | "incomplete_details"
@@ -93,6 +88,7 @@ export type ProfessorContextToolFlowInput = {
   authorizedContext?: unknown;
   promptVersion: string;
   systemPrompt: string;
+  toolExposurePolicy?: ProfessorToolExposurePolicy;
 };
 
 export type ProfessorContextToolFlowErrorCode =
@@ -574,16 +570,13 @@ function parseOptionalFunctionCall(
   return { name: call.name, callId: call.call_id, rawArguments };
 }
 
-function assertCompatibleContext(
+export function assertCompatibleContext(
   call: ParsedFunctionCall,
   context: AuthorizedProfessorContext,
 ): void {
-  const compatible =
-    (context.type === "game" && call.name === GET_GAME_CONTEXT_TOOL_NAME) ||
-    (context.type === "position" &&
-      call.name === GET_POSITION_CONTEXT_TOOL_NAME);
-
-  if (!compatible) {
+  try {
+    assertToolAllowedForAuthorizedContext(call.name, context.type);
+  } catch {
     throw new ProfessorContextToolFlowError("TOOL_CONTEXT_MISMATCH", {
       observedToolName: call.name,
     });
@@ -723,6 +716,18 @@ async function runValidatedProfessorContextToolFlow(
 ): Promise<ProfessorContextToolFlowResult> {
   const context = validateAuthorizedContext(input.authorizedContext);
   const originalInput = buildOriginalInput(input.message, context);
+  const tools = getProfessorContextToolsForExposurePolicy(
+    context.type,
+    input.toolExposurePolicy ?? "authorized_context_only",
+  );
+  const toolConfiguration =
+    tools.length === 0
+      ? {}
+      : {
+          tools,
+          tool_choice: "auto" as const,
+          parallel_tool_calls: false,
+        };
 
   let firstResponse: FirstProviderResponse;
   try {
@@ -730,9 +735,7 @@ async function runValidatedProfessorContextToolFlow(
       model: PROFESSOR_CONTEXT_TOOL_FLOW_MODEL,
       instructions: input.systemPrompt,
       input: originalInput,
-      tools: [...professorContextOpenAITools],
-      tool_choice: "auto",
-      parallel_tool_calls: false,
+      ...toolConfiguration,
       store: false,
     });
   } catch (error: unknown) {

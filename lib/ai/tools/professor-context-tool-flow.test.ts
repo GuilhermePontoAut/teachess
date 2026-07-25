@@ -38,6 +38,10 @@ import {
   GET_POSITION_CONTEXT_TOOL_NAME,
 } from "./get-position-context.openai";
 import { GameContextToolError, PositionContextToolError } from "./tool-errors";
+import {
+  getAllowedProfessorContextTools,
+  getProfessorContextToolsForExposurePolicy,
+} from "./professor-context-tool-policy";
 
 const FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 const PGN = "1. e4 e5 2. Nf3 Nc6 1-0";
@@ -322,6 +326,43 @@ test("as duas definições existentes são oferecidas em ordem estável sem prio
   );
 });
 
+test("política server-side deriva Tools somente do tipo autorizado", () => {
+  assert.deepEqual(getAllowedProfessorContextTools("game"), [
+    getGameContextOpenAITool,
+  ]);
+  assert.deepEqual(getAllowedProfessorContextTools("position"), [
+    getPositionContextOpenAITool,
+  ]);
+  assert.deepEqual(getAllowedProfessorContextTools("none"), []);
+  assert.deepEqual(
+    getProfessorContextToolsForExposurePolicy("none", "all_context_tools"),
+    [getGameContextOpenAITool, getPositionContextOpenAITool],
+  );
+});
+
+test("modo histórico ainda oferece as duas Tools explicitamente", async () => {
+  const state = createDependencies(firstResponse([message]));
+  await runProfessorContextToolFlow(
+    {
+      message: "Pergunta geral.",
+      authorizedContext: context("game"),
+      promptVersion: "professor-ia-v3",
+      systemPrompt: "Prompt imutável.",
+      toolExposurePolicy: "all_context_tools",
+    },
+    state.dependencies,
+  );
+  const first = state.providerCalls[0].params as Parameters<
+    ProfessorContextToolTransport["createResponse"]
+  >[0];
+  assert.deepEqual(first.tools, [
+    getGameContextOpenAITool,
+    getPositionContextOpenAITool,
+  ]);
+  assert.equal(first.tool_choice, "auto");
+  assert.equal(first.parallel_tool_calls, false);
+});
+
 test("contexto game chama somente get_game_context e produz decisão pública mínima", async () => {
   const snapshot = gameSnapshot();
   const output = [reasoning, message, functionCall(GET_GAME_CONTEXT_TOOL_NAME)];
@@ -409,13 +450,20 @@ test("primeira interação envia mensagem separada e somente tipo/ID técnico", 
       >[0];
 
       assert.equal(params.model, "gpt-5-mini");
-      assert.equal(params.tool_choice, "auto");
-      assert.equal(params.parallel_tool_calls, false);
       assert.equal(params.store, false);
-      assert.deepEqual(params.tools, [
-        getGameContextOpenAITool,
-        getPositionContextOpenAITool,
-      ]);
+      if (type === "none") {
+        assert.equal("tools" in params, false);
+        assert.equal("tool_choice" in params, false);
+        assert.equal("parallel_tool_calls" in params, false);
+      } else {
+        assert.equal(params.tool_choice, "auto");
+        assert.equal(params.parallel_tool_calls, false);
+        assert.deepEqual(params.tools, [
+          type === "game"
+            ? getGameContextOpenAITool
+            : getPositionContextOpenAITool,
+        ]);
+      }
       assert.ok(Array.isArray(params.input));
       assert.deepEqual(params.input[0], { role: "user", content: userMessage });
       const technical = params.input[1];
