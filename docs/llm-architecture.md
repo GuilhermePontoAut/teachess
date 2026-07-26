@@ -408,3 +408,23 @@ O fluxo continua com `gpt-5-mini`, `store: false`, no máximo uma Tool,
 `parallel_tool_calls: false` quando há Tool, duas interações, o mesmo Structured
 Output e prompts inalterados. Professor IA V3 continua padrão; V4 não foi
 ativada.
+
+## Consolidação da autorização determinística (7F-C3)
+
+E-032 comparou, par a par, a V3 com `authorized_context_only` ao histórico E-028.
+Nos 36 resultados, nenhuma execução recebeu as duas Tools ou uma Tool
+incompatível; os três `wrong_tool` históricos desapareceram. Dois viraram
+acertos e um virou `false_negative`. Um resultado antes correto regrediu para
+`false_positive`, deixando três chamadas compatíveis desnecessárias e uma
+omissão necessária.
+
+O objetivo de segurança é independente do objetivo de qualidade. A política
+`authorized_context_only` elimina por construção a exposição da Tool
+incompatível. O modelo ainda decide probabilisticamente se precisa chamar a
+única Tool permitida. A matriz server-side resolve a fronteira de autorização,
+enquanto falsos positivos e negativos permanecem na fronteira de necessidade.
+
+O agregado observado foi 32/36 contra 31/36 em E-028, com uma regressão pareada;
+isso vale somente para este conjunto controlado e não demonstra precisão geral
+ou generalização. Nenhum código, prompt ou padrão foi alterado nesta
+consolidação. V3 continua padrão e V4 inativa.

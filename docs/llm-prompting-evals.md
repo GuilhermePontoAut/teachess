@@ -745,3 +745,41 @@ mudando somente a política para `authorized_context_only`. A análise será
 pareada com E-028 e verificará confusões game/position eliminadas por construção,
 falsos positivos restantes, eventuais falsos negativos, tokens, latência e
 qualidade das respostas sem Tool. V3 continua padrão e V4 não foi ativada.
+
+## Etapa 7F-C3 — consolidação pareada da política
+
+O desenho E-031 já ocupava esse ID; a execução completa foi preservada como
+E-032. A validação local confirmou `gpt-5-mini`, `professor-ia-v3`,
+`authorized_context_only`, 12 casos, três repetições, 36/36 resultados únicos e
+completos, zero erro técnico e 100% de conclusão. A consolidação não executou o
+runner nem fez chamada externa.
+
+Contra E-028, E-032 passou de 31/36 para 32/36 acertos, eliminou os três
+`wrong_tool`, aumentou `false_positive` de dois para três e introduziu um
+`false_negative`. O pareamento encontrou duas correções, uma regressão, 30 pares
+corretos em ambas, três incorretos em ambas e quatro decisões/classificações
+alteradas: `GAME-SEL-004#1/#2/#3` e `NO-TOOL-SEL-004#2`.
+
+`GAME-SEL-004` foi P/P/P → N/G/G; `NO-TOOL-SEL-003` permaneceu N/N/N; e
+`NO-TOOL-SEL-004` foi P/N/P → P/P/P. Os erros restantes são
+`GAME-SEL-004#1` (`false_negative`) e `NO-TOOL-SEL-004#1/#2/#3`
+(`false_positive`).
+
+E-028→E-032 teve 11→11 casos consistentes, 10→10 casos 3/3 corretos, 10→11
+casos com maioria correta e 0→0 sem decisão dominante; os acertos por repetição
+foram 10/11/10 → 10/11/11. Por classe, G/P/N foi 9/12, 12/12, 10/12 →
+11/12, 12/12, 9/12. As matrizes G/P/N foram
+`[[9,3,0],[0,12,0],[0,2,10]]` → `[[11,0,1],[0,12,0],[0,3,9]]`.
+
+As 33→36 amostras completas somaram 267.119→283.896 tokens e
+8.094,52→7.886,00 tokens por amostra. Latências mínima/máxima/média/mediana
+foram 12.331,34/75.787,88/27.056,12/20.226,92 ms →
+7.516,30/38.305,92/19.703,04/18.481,17 ms. Os denominadores diferem porque
+`wrong_tool` pode terminar antes da segunda interação; não há inferência causal
+de latência nem conversão monetária.
+
+Todas as execuções receberam zero ou uma Tool compatível, nunca as duas. A
+política `authorized_context_only` elimina por construção a exposição da Tool
+incompatível. O modelo ainda decide probabilisticamente se precisa chamar a
+única Tool permitida. Isso não demonstra precisão geral ou generalização. V3
+continua padrão e V4 inativa.

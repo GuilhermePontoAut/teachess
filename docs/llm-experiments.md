@@ -1716,3 +1716,107 @@ e `AI_EVAL_TOOL_EXPOSURE_POLICY=authorized_context_only`. O relatório será
 comparado par a par com E-028 para contar confusões eliminadas, falsos positivos,
 falsos negativos, tokens, latência e adequação sem Tool. Não há previsão de
 resultado, promoção de V4 ou alteração de prompt.
+
+## E-032 — V3 com `authorized_context_only` contra E-028
+
+`E-031` permanece reservado ao desenho da política; após inspeção dos IDs em
+uso, a execução completa recebeu o próximo ID livre, `E-032`. O relatório válido
+e sanitizado foi preservado sem sobrescrita em
+`docs/evals/E-032-professor-ia-v3-authorized-context-only-r3-host.json`, mantendo
+intacto o original em `/tmp`. A consolidação foi inteiramente local: não executou
+runner, V2, V3 ou V4 e não fez chamadas externas.
+
+O relatório registra `gpt-5-mini`, `professor-ia-v3`,
+`authorized_context_only`, três repetições, 12 casos, 36/36 execuções, 36
+resultados com chaves `caseId + runNumber` únicas, `aborted: false`,
+`reportCompleteness: complete`, zero erro técnico e 100% de conclusão. O
+pareamento confirmou os mesmos casos, repetições e `expectedDecision` de E-028,
+sem ausência ou duplicata. A única variável metodológica deliberadamente
+alterada foi a política de exposição das Tools.
+
+| Resultado | E-028 / histórico | E-032 / `authorized_context_only` |
+| --- | ---: | ---: |
+| acertos | 31/36 (86,11%) | 32/36 (88,89%) |
+| `wrong_tool` | 3 | 0 |
+| `false_positive` | 2 | 3 |
+| `false_negative` | 0 | 1 |
+| `technical_error` | 0 | 0 |
+| conclusão | 100% | 100% |
+
+No pareamento, dois resultados passaram de incorretos a corretos, um correto
+regrediu, 30 ficaram corretos nas duas políticas e três ficaram incorretos nas
+duas. Quatro decisões e quatro classificações mudaram:
+
+- `GAME-SEL-004#1`: position/`wrong_tool` → none/`false_negative`;
+- `GAME-SEL-004#2`: position/`wrong_tool` → game/`correct`;
+- `GAME-SEL-004#3`: position/`wrong_tool` → game/`correct`;
+- `NO-TOOL-SEL-004#2`: none/`correct` → position/`false_positive`.
+
+Os três `wrong_tool` de E-028 foram eliminados. A escolha position quando apenas
+game era autorizado e a escolha game quando apenas position era autorizado
+ficaram impossíveis por construção: dois erros viraram acertos e um virou
+`false_negative`. Houve uma regressão e surgiu um novo `false_positive`.
+`GAME-SEL-004` mudou de P/P/P para N/G/G; `NO-TOOL-SEL-003` permaneceu N/N/N;
+`NO-TOOL-SEL-004` mudou de P/N/P para P/P/P.
+
+| par | contexto | Tools oferecidas | esperado → observado | classe | E-028 | leitura |
+| --- | --- | --- | --- | --- | --- | --- |
+| `GAME-SEL-004#1` | game | `get_game_context` | game → none | `false_negative` | position / `wrong_tool` | Tool compatível necessária não chamada; efeito novo da restrição, sem regressão de acerto |
+| `NO-TOOL-SEL-004#1` | position | `get_position_context` | none → position | `false_positive` | position / `false_positive` | Tool compatível chamada desnecessariamente; erro persistente |
+| `NO-TOOL-SEL-004#2` | position | `get_position_context` | none → position | `false_positive` | none / `correct` | Tool compatível chamada desnecessariamente; regressão e efeito novo |
+| `NO-TOOL-SEL-004#3` | position | `get_position_context` | none → position | `false_positive` | position / `false_positive` | Tool compatível chamada desnecessariamente; erro persistente |
+
+### Estabilidade e classes
+
+Os outros dez casos repetiram a decisão esperada em 3/3 nas duas políticas.
+E-028 e E-032 tiveram, respectivamente, 11/12 e 11/12 casos consistentes, 10/12
+e 10/12 casos 3/3 corretos, 10/12 e 11/12 com maioria correta e 0/12 e 0/12
+sem decisão dominante. Os acertos por repetição foram 10/12, 11/12 e 10/12 em
+E-028; e 10/12, 11/12 e 11/12 em E-032. `GAME-SEL-004` melhorou de 0/3 para
+2/3, mas ficou menos estável; `NO-TOOL-SEL-004` regrediu de 1/3 para 0/3 e
+ficou mais estável na decisão errada. Nenhum outro caso mudou.
+
+Por classe esperada, game passou de 9/12 para 11/12, position permaneceu 12/12
+e `not_called` caiu de 10/12 para 9/12. As decisões observadas G/P/N foram
+9/17/10 em E-028 e 11/15/10 em E-032. Com linhas esperadas e colunas observadas
+G/P/N, as matrizes são `[[9,3,0],[0,12,0],[0,2,10]]` e
+`[[11,0,1],[0,12,0],[0,3,9]]`. A troca entre tipos de contexto desapareceu;
+separadamente, usar Tool versus não usar ainda contém uma omissão necessária e
+três chamadas desnecessárias.
+
+### Tools, tokens, latência e conclusão
+
+Todos os 36 `offeredToolNames` obedecem ao contexto canônico: game oferece
+somente `["get_game_context"]`, position somente
+`["get_position_context"]`, e none `[]`; isso inclui game em
+`NO-TOOL-SEL-003` e position em `NO-TOOL-SEL-004`. Nenhuma execução recebeu as
+duas Tools ou uma Tool incompatível. O relatório não registra argumentos,
+snapshots, dados privados, mensagens brutas ou payloads.
+
+| Telemetria | E-028 | E-032 |
+| --- | ---: | ---: |
+| amostras completas | 33 | 36 |
+| tokens de entrada | 204.161 | 214.648 |
+| tokens de saída | 62.958 | 69.248 |
+| tokens totais | 267.119 | 283.896 |
+| tokens por amostra completa | 8.094,52 | 7.886,00 |
+| latência mínima | 12.331,34 ms | 7.516,30 ms |
+| latência máxima | 75.787,88 ms | 38.305,92 ms |
+| latência média | 27.056,12 ms | 19.703,04 ms |
+| latência mediana | 20.226,92 ms | 18.481,17 ms |
+
+Os denominadores diferem porque `wrong_tool` pode encerrar antes da segunda
+interação. Não houve conversão em dinheiro nem atribuição causal da latência.
+
+A política `authorized_context_only` elimina por construção a exposição da
+Tool incompatível. O modelo ainda decide probabilisticamente se precisa chamar
+a única Tool permitida. O objetivo de segurança/autorização foi atendido no
+artefato; o objetivo de qualidade melhorou no agregado desta amostra de 31 para
+32 acertos, mas incluiu uma regressão pareada. Isso não estima precisão geral
+nem generalização. V3 continua padrão e V4 permanece inativa.
+
+A sanitização não encontrou chave, `Authorization`, request ID completo,
+headers, payload, snapshot, argumentos privados, PGN integral, conteúdo de
+`.env.local`, mensagens brutas ou stack trace. Nenhum código, prompt, modelo,
+caso, expectativa, ordem, repetição, Tool, schema, classificação ou métrica foi
+alterado.

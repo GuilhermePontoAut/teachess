@@ -965,3 +965,21 @@ navegador. Depois da resposta, nome, quantidade, argumentos, compatibilidade
 com o tipo e ID contra o snapshot autorizado são validados antes da execução.
 Uma Tool incompatível ou desconhecida nunca é executada, não produz fallback e
 vira erro sanitizado de protocolo/autorização.
+
+### Evidência pareada da política — E-032
+
+A execução V3 com `authorized_context_only` foi consolidada localmente contra
+E-028, sem executar runner ou fazer chamadas externas. Foram 32/36 acertos,
+zero `wrong_tool`, três `false_positive`, um `false_negative`, zero erro técnico
+e 100% de conclusão, contra 31/36, três, dois, zero, zero e 100% em E-028.
+
+Os 36 `offeredToolNames` obedeceram à matriz: game recebeu apenas
+`get_game_context`, position apenas `get_position_context` e none nenhuma Tool.
+Nenhuma execução recebeu ambas ou uma Tool incompatível, e o relatório não
+registrou argumentos, snapshots ou dados privados. Dos três `wrong_tool`
+históricos, dois viraram acertos e um virou `false_negative`; surgiu ainda um
+novo `false_positive`. Impedir a Tool incompatível é determinístico, mas chamar
+ou não a única Tool compatível continua sendo decisão probabilística do modelo.
+
+E-032 não alterou Tools, schemas, executores, prompts ou padrão da aplicação.
+V3 continua padrão e V4 permanece inativa.
