@@ -1868,3 +1868,136 @@ representar linguagem natural livre, e alguns snapshots game são mais ricos que
 uma pergunta isolada exige. Os resultados deverão ser examinados por tags, e
 uma versão com snapshots menores exigirá outro `evalSetVersion`. Nenhuma
 avaliação foi executada; V3 continua padrão, V4 inativa e não existe V5.
+
+## E-033 — smoke test independente de necessidade de Tool
+
+`E-001` a `E-032` já estavam ocupados; a inspeção dos registros e de
+`docs/evals/` confirmou `E-033` como próximo ID livre. O original permaneceu em
+`/tmp/teachess-professor-context-tool-necessity-v3-r1-host.json`; sua cópia
+byte a byte foi preservada em
+`docs/evals/E-033-professor-ia-v3-tool-necessity-r1-smoke-host.json`.
+
+### Validação e configuração
+
+A consolidação foi inteiramente local: não executou runner, V2, V3 ou V4 e não
+fez chamada externa. O JSON válido de 17.979 bytes também passou no schema
+local e registra `professor-context-tool-selection-runner-v1`,
+`gpt-5-mini`, `professor-ia-v3`, `provisional-teacher-response-v1`,
+`professor-context-tool-necessity-evals-v2`, `authorized_context_only`, uma
+repetição, 24 casos, 24/24 execuções, `aborted: false`,
+`reportCompleteness: complete` e exit code observado 0. Há 24 resultados, 24
+pares únicos `caseId + runNumber`, todos com `runNumber: 1`.
+
+O SHA-256 canônico foi recalculado e permaneceu
+`d78e2d379e7230ad7c1f5aa8de5779b316fc0b8ccb6434636e0b5d25fd6f6cbe`.
+Nenhum caso, snapshot, `expectedDecision`, prompt, Tool, schema, parâmetro,
+modelo ou rota pública foi alterado.
+
+### Métricas recalculadas
+
+| Métrica | Resultado |
+| --- | ---: |
+| acertos | 21/24 |
+| `false_positive` | 3 |
+| `false_negative` | 0 |
+| `wrong_tool` | 0 |
+| `technical_error` | 0 |
+| `decisionAccuracy` | 87,50% |
+| `endToEndSuccessRate` | 87,50% |
+| `completionRate` | 100% |
+
+Matriz com linhas esperadas e colunas observadas:
+
+| esperado \ observado | game | position | `not_called` |
+| --- | ---: | ---: | ---: |
+| game | 8 | 0 | 0 |
+| position | 0 | 8 | 0 |
+| `not_called` | 2 | 1 | 5 |
+
+Por decisão esperada, game obteve 8/8 (100%), position 8/8 (100%) e
+`not_called` 5/8 (62,50%). Entre os negativos, game obteve 2/4 (50%) e
+position 3/4 (75%). Por `necessity`, `required` obteve 11/11,
+`mixed_required` 5/5 e `not_required` 5/8.
+
+Por tag, os recortes não perfeitos foram `named_tool_instruction` 0/2,
+`conceptual_with_game` 1/2 e `hybrid_context_optional` 3/4. Foram perfeitos
+nesta repetição: `casual_chess_term` 2/2, `colloquial_or_indirect` 5/5,
+`conceptual_with_position` 2/2, `deliberately_ambiguous` 4/4,
+`hybrid_context_required` 4/4, `incompatible_reference` 2/2,
+`missing_or_unconfirmed_data` 2/2, `negative_tool_request` 2/2,
+`no_explicit_demonstrative` 4/4, `partially_answerable` 2/2,
+`simple_game_fact` 4/4 e `simple_position_fact` 3/3. Tags se sobrepõem; esses
+grupos pequenos descrevem apenas a amostra e não são estimativas gerais.
+
+### Três falsos positivos
+
+| Caso | contexto | esperado → observado | Tool oferecida | `necessity` | tags | resumo sanitizado | por que a Tool não era necessária |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `NECESSITY-NONE-GAME-002` | game | N → G | `get_game_context` | `not_required` | `conceptual_with_game`, `hybrid_context_optional` | pede método geral de revisão com uma partida apenas ilustrativa | o método independe do snapshot |
+| `NECESSITY-NONE-GAME-004` | game | N → G | `get_game_context` | `not_required` | `named_tool_instruction` | manda acionar a Tool só para comprovar que existe | nomear o mecanismo não solicita fato da partida |
+| `NECESSITY-NONE-POSITION-004` | position | N → P | `get_position_context` | `not_required` | `named_tool_instruction` | manda executar a Tool como teste, sem relatar o tabuleiro | o pedido exclui necessidade factual |
+
+Dois erros concentram-se em linguagem imperativa com nome explícito da Tool, um
+por contexto; o terceiro é conceitual/híbrido opcional com game ilustrativo.
+Não houve erro nas tags de ambiguidade deliberada, termos casuais ou híbridos
+factualmente obrigatórios. A divisão 2 game × 1 position é pequena demais para
+inferir tendência geral por contexto.
+
+### Ausência de falsos negativos e exposição
+
+Os 16 casos factuais chamaram a Tool compatível: 8/8 `get_game_context` e 8/8
+`get_position_context`. Nenhum deixou de chamar, recebeu ou chamou Tool
+incompatível; `wrong_tool` ficou zero.
+
+Nos 24 resultados, game recebeu exatamente `["get_game_context"]` e position
+`["get_position_context"]`. Nenhum recebeu ambas. A lista deriva server-side
+do contexto autorizado, não de lista controlada pelo navegador. O relatório
+não contém argumentos, snapshots, payloads ou dados privados. A política
+garantiu autorização; chamar ou não a única Tool segue probabilístico.
+
+### Tokens, latência e sanitização
+
+| Telemetria | Resultado |
+| --- | ---: |
+| `sampleCount` | 24 |
+| tokens de entrada / saída / total | 144.111 / 42.556 / 186.667 |
+| tokens por amostra | 7.777,79 |
+| latência total mín./máx./média/mediana | 11.483,06 / 33.241,00 / 15.616,84 / 14.221,73 ms |
+| primeira interação mín./máx./média/mediana | 1.170,87 / 15.424,59 / 4.775,12 / 2.739,09 ms |
+| segunda interação mín./máx./média/mediana | 2.291,86 / 28.877,18 / 10.840,02 / 10.766,80 ms |
+
+A segunda interação esteve disponível em 24/24. Não houve conversão monetária
+nem atribuição causal. A inspeção confirmou ausência de `OPENAI_API_KEY`,
+`Authorization`, request ID completo, headers, payload completo, snapshot
+privado, argumentos privados, PGN integral desnecessário, `.env.local`,
+mensagem bruta e stack trace. `technicalErrorDetails` é nulo em 24/24.
+
+### Caráter preliminar e plano não executado
+
+Foi somente uma repetição de smoke test: não mede estabilidade e 21/24 não
+promove nem rejeita prompt. Os casos não serão alterados após o resultado, o
+eval set não será usado para desenvolver V5 e resultados futuros serão lidos
+por caso e tags. Não se compara diretamente a acurácia com E-032, pois os eval
+sets são diferentes. V3 continua padrão, V4 inativa e nenhuma V5 foi criada.
+
+A avaliação completa futura mantém V3, `gpt-5-mini`, o eval set v2,
+`authorized_context_only`, 24 casos, três repetições, 72 execuções e circuit
+breaker 3. Deve ocorrer manualmente em terminal normal, carregando `.env.local`
+explicitamente, sem `AI_EVAL_ALLOW_OVERWRITE=true`, depois de confirmar que o
+novo caminho
+`/tmp/teachess-professor-context-tool-necessity-v3-r3-host.json` não existe:
+
+```bash
+(
+  set -a
+  source .env.local
+  set +a
+  if [ -z "${OPENAI_API_KEY:-}" ]; then
+    echo "OPENAI_API_KEY_NOT_LOADED"
+    exit 1
+  fi
+  RUN_REAL_AI_EVALS=true AI_EVAL_PROMPT_VERSION=professor-ia-v3 AI_EVAL_SET_VERSION=professor-context-tool-necessity-evals-v2 AI_EVAL_TOOL_EXPOSURE_POLICY=authorized_context_only AI_EVAL_REPETITIONS=3 AI_EVAL_ABORT_AFTER_CONSECUTIVE_TECHNICAL_ERRORS=3 AI_EVAL_OUTPUT_PATH=/tmp/teachess-professor-context-tool-necessity-v3-r3-host.json npm run eval:professor-context-tool-selection
+)
+```
+
+Esse comando é somente plano e não foi executado.

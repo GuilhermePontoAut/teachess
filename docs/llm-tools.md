@@ -1009,3 +1009,20 @@ portanto, é recusada; valor explícito incompatível ou desconhecido também
 falha. A validação acontece depois da seleção do eval set e antes de caminho de
 saída, chave, cliente, transporte ou primeiro caso. Não há coerção nem fallback.
 O conjunto histórico preserva o comportamento anterior.
+
+### Smoke test independente — E-033
+
+Em uma repetição dos 24 casos, game recebeu somente `get_game_context`,
+position somente `get_position_context`, nunca ambas, e nenhuma Tool
+incompatível foi oferecida ou chamada. Os 16 pedidos factuais chamaram a Tool
+compatível, sem falso negativo ou `wrong_tool`.
+
+Houve três falsos positivos: um contexto game meramente ilustrativo para um
+método geral e duas ordens que nomeavam a Tool sem pedir fatos, uma por tipo de
+contexto. Assim, `authorized_context_only` funcionou como barreira de
+autorização, mas a necessidade continuou probabilística. O relatório
+sanitizado não registra argumentos, snapshots, payloads ou dados privados.
+
+E-033 não alterou Tools, schemas, fluxo ou rota pública. É somente smoke test,
+não mede estabilidade e não autoriza ajuste dos casos. V3 continua padrão, V4
+inativa e nenhuma V5 foi criada.

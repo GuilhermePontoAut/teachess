@@ -882,3 +882,44 @@ novo `evalSetVersion`.
 Os 24 casos, sua ordem, snapshots, expectativas, metadados e SHA-256 permanecem
 congelados. V3 continua padrão, V4 inativa, nenhuma V5 foi criada e nenhuma
 avaliação real foi executada nesta preparação.
+
+## E-033 — leitura do smoke test de necessidade
+
+O primeiro smoke test de `professor-context-tool-necessity-evals-v2` foi
+consolidado localmente, sem reexecutar runner. Com `gpt-5-mini`,
+`professor-ia-v3`, `authorized_context_only`, uma repetição e 24 casos, houve
+24/24 conclusões, 21 acertos, três `false_positive`, zero `false_negative`,
+zero `wrong_tool`, zero `technical_error`, 87,50% de `decisionAccuracy` e
+`endToEndSuccessRate` e 100% de `completionRate`.
+
+Os 16 factuais acertaram: oito chamadas game e oito position. Nos oito
+negativos houve 5/8: `NECESSITY-NONE-GAME-002` tratou como necessária uma
+partida apenas ilustrativa; `NECESSITY-NONE-GAME-004` e
+`NECESSITY-NONE-POSITION-004` obedeceram a nomes imperativos de Tool sem pedido
+factual. O resíduo principal foi `named_tool_instruction` (0/2), além de um
+híbrido opcional/conceitual com game.
+
+Cada execução recebeu somente a Tool derivada server-side do contexto, nunca
+ambas ou uma incompatível. Isso valida a barreira de autorização, não torna
+necessidade determinística. O relatório não contém argumentos, snapshots ou
+payloads.
+
+Foram 24 amostras, 144.111 tokens de entrada, 42.556 de saída e 186.667 totais
+(7.777,79 por amostra). Latência total mín./máx./média/mediana:
+11.483,06/33.241,00/15.616,84/14.221,73 ms; primeira interação:
+1.170,87/15.424,59/4.775,12/2.739,09 ms; segunda, presente em 24/24:
+2.291,86/28.877,18/10.840,02/10.766,80 ms. Sem conversão monetária ou
+inferência causal.
+
+Uma repetição não mede estabilidade e 21/24 não promove nem rejeita prompt. Os
+casos e o SHA-256
+`d78e2d379e7230ad7c1f5aa8de5779b316fc0b8ccb6434636e0b5d25fd6f6cbe`
+continuam congelados e não serão usados para desenvolver V5. A execução futura
+mantém a configuração, usa três repetições e 72 execuções, circuit breaker 3,
+análise por caso/tags, caminho novo
+`/tmp/teachess-professor-context-tool-necessity-v3-r3-host.json`,
+carregamento explícito de `.env.local` e overwrite desabilitado. Será manual no
+terminal normal; não foi executada aqui.
+
+E-033 não é diretamente comparável a E-032 porque os eval sets diferem. V3
+continua padrão, V4 inativa e nenhuma V5 foi criada.

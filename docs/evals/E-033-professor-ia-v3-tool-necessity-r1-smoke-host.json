@@ -1,0 +1,614 @@
+{
+  "runnerVersion": "professor-context-tool-selection-runner-v1",
+  "model": "gpt-5-mini",
+  "promptVersion": "professor-ia-v3",
+  "schemaVersion": "provisional-teacher-response-v1",
+  "evalSetVersion": "professor-context-tool-necessity-evals-v2",
+  "repetitions": 1,
+  "toolExposurePolicy": "authorized_context_only",
+  "caseCount": 24,
+  "plannedCaseRuns": 24,
+  "completedCaseRuns": 24,
+  "aborted": false,
+  "abortReason": null,
+  "consecutiveTechnicalErrorThreshold": 3,
+  "outputPath": "/tmp/teachess-professor-context-tool-necessity-v3-r1-host.json",
+  "reportCompleteness": "complete",
+  "startedAt": "2026-07-27T00:56:08.349Z",
+  "completedAt": "2026-07-27T01:02:23.157Z",
+  "totalRuns": 24,
+  "correct": 21,
+  "falsePositives": 3,
+  "falseNegatives": 0,
+  "wrongTools": 0,
+  "technicalErrors": 0,
+  "technicalErrorsByCategory": {},
+  "technicalErrorsByStage": {},
+  "technicalErrorSignatures": [],
+  "decisionAccuracy": 0.875,
+  "endToEndSuccessRate": 0.875,
+  "completionRate": 1,
+  "confusionMatrix": {
+    "get_game_context": {
+      "get_game_context": 8,
+      "get_position_context": 0,
+      "not_called": 0
+    },
+    "get_position_context": {
+      "get_game_context": 0,
+      "get_position_context": 8,
+      "not_called": 0
+    },
+    "not_called": {
+      "get_game_context": 2,
+      "get_position_context": 1,
+      "not_called": 5
+    }
+  },
+  "metricsByExpectedDecision": {
+    "get_game_context": {
+      "totalRuns": 8,
+      "validDecisions": 8,
+      "correct": 8,
+      "technicalErrors": 0,
+      "accuracy": 1
+    },
+    "get_position_context": {
+      "totalRuns": 8,
+      "validDecisions": 8,
+      "correct": 8,
+      "technicalErrors": 0,
+      "accuracy": 1
+    },
+    "not_called": {
+      "totalRuns": 8,
+      "validDecisions": 8,
+      "correct": 5,
+      "technicalErrors": 0,
+      "accuracy": 0.625
+    }
+  },
+  "latency": {
+    "sampleCount": 24,
+    "minimumMs": 11483.056413999991,
+    "maximumMs": 33240.99945099998,
+    "averageMs": 15616.843793708334,
+    "medianMs": 14221.729881499981
+  },
+  "tokens": {
+    "sampleCount": 24,
+    "inputTokens": 144111,
+    "outputTokens": 42556,
+    "totalTokens": 186667
+  },
+  "results": [
+    {
+      "caseId": "NECESSITY-GAME-001",
+      "runNumber": 1,
+      "expectedDecision": "get_game_context",
+      "actualDecision": "get_game_context",
+      "classification": "correct",
+      "totalLatencyMs": 11565.2779,
+      "firstInteractionLatencyMs": 2973.0620630000003,
+      "finalInteractionLatencyMs": 8582.50098,
+      "toolCallCount": 1,
+      "evidenceStatus": "sufficient",
+      "tokens": {
+        "inputTokens": 5802,
+        "outputTokens": 1094,
+        "totalTokens": 6896
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_game_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-GAME-002",
+      "runNumber": 1,
+      "expectedDecision": "get_game_context",
+      "actualDecision": "get_game_context",
+      "classification": "correct",
+      "totalLatencyMs": 12964.806816,
+      "firstInteractionLatencyMs": 2271.311898,
+      "finalInteractionLatencyMs": 10690.750283000001,
+      "toolCallCount": 1,
+      "evidenceStatus": "sufficient",
+      "tokens": {
+        "inputTokens": 5872,
+        "outputTokens": 1507,
+        "totalTokens": 7379
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_game_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-GAME-003",
+      "runNumber": 1,
+      "expectedDecision": "get_game_context",
+      "actualDecision": "get_game_context",
+      "classification": "correct",
+      "totalLatencyMs": 19547.301010000003,
+      "firstInteractionLatencyMs": 4261.796075999999,
+      "finalInteractionLatencyMs": 15281.703372,
+      "toolCallCount": 1,
+      "evidenceStatus": "partial",
+      "tokens": {
+        "inputTokens": 6135,
+        "outputTokens": 2240,
+        "totalTokens": 8375
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_game_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-GAME-004",
+      "runNumber": 1,
+      "expectedDecision": "get_game_context",
+      "actualDecision": "get_game_context",
+      "classification": "correct",
+      "totalLatencyMs": 14579.511583000007,
+      "firstInteractionLatencyMs": 2202.949876000006,
+      "finalInteractionLatencyMs": 12374.114398999998,
+      "toolCallCount": 1,
+      "evidenceStatus": "sufficient",
+      "tokens": {
+        "inputTokens": 5898,
+        "outputTokens": 1966,
+        "totalTokens": 7864
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_game_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-GAME-005",
+      "runNumber": 1,
+      "expectedDecision": "get_game_context",
+      "actualDecision": "get_game_context",
+      "classification": "correct",
+      "totalLatencyMs": 15102.024906999999,
+      "firstInteractionLatencyMs": 2130.751228999994,
+      "finalInteractionLatencyMs": 12970.349027000004,
+      "toolCallCount": 1,
+      "evidenceStatus": "sufficient",
+      "tokens": {
+        "inputTokens": 5814,
+        "outputTokens": 1803,
+        "totalTokens": 7617
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_game_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-GAME-006",
+      "runNumber": 1,
+      "expectedDecision": "get_game_context",
+      "actualDecision": "get_game_context",
+      "classification": "correct",
+      "totalLatencyMs": 13515.407099000004,
+      "firstInteractionLatencyMs": 2530.626497999998,
+      "finalInteractionLatencyMs": 10982.142089,
+      "toolCallCount": 1,
+      "evidenceStatus": "sufficient",
+      "tokens": {
+        "inputTokens": 5815,
+        "outputTokens": 1533,
+        "totalTokens": 7348
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_game_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-GAME-007",
+      "runNumber": 1,
+      "expectedDecision": "get_game_context",
+      "actualDecision": "get_game_context",
+      "classification": "correct",
+      "totalLatencyMs": 20188.776758000007,
+      "firstInteractionLatencyMs": 2947.562321999998,
+      "finalInteractionLatencyMs": 17238.617567999987,
+      "toolCallCount": 1,
+      "evidenceStatus": "sufficient",
+      "tokens": {
+        "inputTokens": 5992,
+        "outputTokens": 2621,
+        "totalTokens": 8613
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_game_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-GAME-008",
+      "runNumber": 1,
+      "expectedDecision": "get_game_context",
+      "actualDecision": "get_game_context",
+      "classification": "correct",
+      "totalLatencyMs": 17061.749618999995,
+      "firstInteractionLatencyMs": 2141.365233999997,
+      "finalInteractionLatencyMs": 14918.493170000002,
+      "toolCallCount": 1,
+      "evidenceStatus": "sufficient",
+      "tokens": {
+        "inputTokens": 5876,
+        "outputTokens": 2093,
+        "totalTokens": 7969
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_game_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-POSITION-001",
+      "runNumber": 1,
+      "expectedDecision": "get_position_context",
+      "actualDecision": "get_position_context",
+      "classification": "correct",
+      "totalLatencyMs": 12692.376283000005,
+      "firstInteractionLatencyMs": 1846.5980199999904,
+      "finalInteractionLatencyMs": 10842.848153999992,
+      "toolCallCount": 1,
+      "evidenceStatus": "sufficient",
+      "tokens": {
+        "inputTokens": 5655,
+        "outputTokens": 1560,
+        "totalTokens": 7215
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_position_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-POSITION-002",
+      "runNumber": 1,
+      "expectedDecision": "get_position_context",
+      "actualDecision": "get_position_context",
+      "classification": "correct",
+      "totalLatencyMs": 15535.918628999993,
+      "firstInteractionLatencyMs": 1550.6674080000084,
+      "finalInteractionLatencyMs": 13984.174776999978,
+      "toolCallCount": 1,
+      "evidenceStatus": "sufficient",
+      "tokens": {
+        "inputTokens": 5626,
+        "outputTokens": 1886,
+        "totalTokens": 7512
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_position_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-POSITION-003",
+      "runNumber": 1,
+      "expectedDecision": "get_position_context",
+      "actualDecision": "get_position_context",
+      "classification": "correct",
+      "totalLatencyMs": 11483.056413999991,
+      "firstInteractionLatencyMs": 1942.7872300000163,
+      "finalInteractionLatencyMs": 9539.83540099999,
+      "toolCallCount": 1,
+      "evidenceStatus": "sufficient",
+      "tokens": {
+        "inputTokens": 5694,
+        "outputTokens": 1411,
+        "totalTokens": 7105
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_position_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-POSITION-004",
+      "runNumber": 1,
+      "expectedDecision": "get_position_context",
+      "actualDecision": "get_position_context",
+      "classification": "correct",
+      "totalLatencyMs": 22416.571421,
+      "firstInteractionLatencyMs": 3037.19724899999,
+      "finalInteractionLatencyMs": 19378.64090300002,
+      "toolCallCount": 1,
+      "evidenceStatus": "sufficient",
+      "tokens": {
+        "inputTokens": 5868,
+        "outputTokens": 2965,
+        "totalTokens": 8833
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_position_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-POSITION-005",
+      "runNumber": 1,
+      "expectedDecision": "get_position_context",
+      "actualDecision": "get_position_context",
+      "classification": "correct",
+      "totalLatencyMs": 11520.535789999994,
+      "firstInteractionLatencyMs": 2337.91911800002,
+      "finalInteractionLatencyMs": 9181.900760999997,
+      "toolCallCount": 1,
+      "evidenceStatus": "insufficient",
+      "tokens": {
+        "inputTokens": 5698,
+        "outputTokens": 1255,
+        "totalTokens": 6953
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_position_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-POSITION-006",
+      "runNumber": 1,
+      "expectedDecision": "get_position_context",
+      "actualDecision": "get_position_context",
+      "classification": "correct",
+      "totalLatencyMs": 11851.017645000014,
+      "firstInteractionLatencyMs": 2091.053737999988,
+      "finalInteractionLatencyMs": 9759.308363000018,
+      "toolCallCount": 1,
+      "evidenceStatus": "sufficient",
+      "tokens": {
+        "inputTokens": 5686,
+        "outputTokens": 1487,
+        "totalTokens": 7173
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_position_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-POSITION-007",
+      "runNumber": 1,
+      "expectedDecision": "get_position_context",
+      "actualDecision": "get_position_context",
+      "classification": "correct",
+      "totalLatencyMs": 12281.284333000018,
+      "firstInteractionLatencyMs": 3141.1650059999956,
+      "finalInteractionLatencyMs": 9139.676521000016,
+      "toolCallCount": 1,
+      "evidenceStatus": "sufficient",
+      "tokens": {
+        "inputTokens": 5864,
+        "outputTokens": 1568,
+        "totalTokens": 7432
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_position_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-POSITION-008",
+      "runNumber": 1,
+      "expectedDecision": "get_position_context",
+      "actualDecision": "get_position_context",
+      "classification": "correct",
+      "totalLatencyMs": 11842.351793999987,
+      "firstInteractionLatencyMs": 2404.6086420000065,
+      "finalInteractionLatencyMs": 9437.397083999997,
+      "toolCallCount": 1,
+      "evidenceStatus": "sufficient",
+      "tokens": {
+        "inputTokens": 5730,
+        "outputTokens": 1256,
+        "totalTokens": 6986
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_position_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-NONE-GAME-001",
+      "runNumber": 1,
+      "expectedDecision": "not_called",
+      "actualDecision": "not_called",
+      "classification": "correct",
+      "totalLatencyMs": 13594.146450999979,
+      "firstInteractionLatencyMs": 11301.636337999982,
+      "finalInteractionLatencyMs": 2291.8644050000003,
+      "toolCallCount": 0,
+      "evidenceStatus": "sufficient",
+      "tokens": {
+        "inputTokens": 6728,
+        "outputTokens": 1480,
+        "totalTokens": 8208
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_game_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-NONE-GAME-002",
+      "runNumber": 1,
+      "expectedDecision": "not_called",
+      "actualDecision": "get_game_context",
+      "classification": "false_positive",
+      "totalLatencyMs": 33240.99945099998,
+      "firstInteractionLatencyMs": 4361.548443000007,
+      "finalInteractionLatencyMs": 28877.178459999996,
+      "toolCallCount": 1,
+      "evidenceStatus": "partial",
+      "tokens": {
+        "inputTokens": 6069,
+        "outputTokens": 3687,
+        "totalTokens": 9756
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_game_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-NONE-GAME-003",
+      "runNumber": 1,
+      "expectedDecision": "not_called",
+      "actualDecision": "not_called",
+      "classification": "correct",
+      "totalLatencyMs": 11941.76598200004,
+      "firstInteractionLatencyMs": 9644.991152000031,
+      "finalInteractionLatencyMs": 2296.507706000004,
+      "toolCallCount": 0,
+      "evidenceStatus": "insufficient",
+      "tokens": {
+        "inputTokens": 6445,
+        "outputTokens": 1209,
+        "totalTokens": 7654
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_game_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-NONE-GAME-004",
+      "runNumber": 1,
+      "expectedDecision": "not_called",
+      "actualDecision": "get_game_context",
+      "classification": "false_positive",
+      "totalLatencyMs": 14290.826433999988,
+      "firstInteractionLatencyMs": 2971.7016050000093,
+      "finalInteractionLatencyMs": 11316.837336000055,
+      "toolCallCount": 1,
+      "evidenceStatus": "sufficient",
+      "tokens": {
+        "inputTokens": 5964,
+        "outputTokens": 1664,
+        "totalTokens": 7628
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_game_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-NONE-POSITION-001",
+      "runNumber": 1,
+      "expectedDecision": "not_called",
+      "actualDecision": "not_called",
+      "classification": "correct",
+      "totalLatencyMs": 17722.952066999977,
+      "firstInteractionLatencyMs": 14781.107273000001,
+      "finalInteractionLatencyMs": 2941.6066190000274,
+      "toolCallCount": 0,
+      "evidenceStatus": "insufficient",
+      "tokens": {
+        "inputTokens": 6818,
+        "outputTokens": 1677,
+        "totalTokens": 8495
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_position_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-NONE-POSITION-002",
+      "runNumber": 1,
+      "expectedDecision": "not_called",
+      "actualDecision": "not_called",
+      "classification": "correct",
+      "totalLatencyMs": 17990.96831200004,
+      "firstInteractionLatencyMs": 15135.064920999983,
+      "finalInteractionLatencyMs": 2855.5903660000185,
+      "toolCallCount": 0,
+      "evidenceStatus": "insufficient",
+      "tokens": {
+        "inputTokens": 6508,
+        "outputTokens": 1354,
+        "totalTokens": 7862
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_position_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-NONE-POSITION-003",
+      "runNumber": 1,
+      "expectedDecision": "not_called",
+      "actualDecision": "not_called",
+      "classification": "correct",
+      "totalLatencyMs": 17721.99102200003,
+      "firstInteractionLatencyMs": 15424.593169,
+      "finalInteractionLatencyMs": 2297.1312940000207,
+      "toolCallCount": 0,
+      "evidenceStatus": "sufficient",
+      "tokens": {
+        "inputTokens": 6995,
+        "outputTokens": 1791,
+        "totalTokens": 8786
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_position_context"
+      ]
+    },
+    {
+      "caseId": "NECESSITY-NONE-POSITION-004",
+      "runNumber": 1,
+      "expectedDecision": "not_called",
+      "actualDecision": "get_position_context",
+      "classification": "false_positive",
+      "totalLatencyMs": 14152.633328999975,
+      "firstInteractionLatencyMs": 1170.8720670000184,
+      "finalInteractionLatencyMs": 12981.223934999958,
+      "toolCallCount": 1,
+      "evidenceStatus": "sufficient",
+      "tokens": {
+        "inputTokens": 5559,
+        "outputTokens": 1449,
+        "totalTokens": 7008
+      },
+      "errorCode": null,
+      "technicalErrorDetails": null,
+      "offeredToolNames": [
+        "get_position_context"
+      ]
+    }
+  ]
+}
