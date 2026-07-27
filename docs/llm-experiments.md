@@ -2247,3 +2247,25 @@ mantendo separação entre desenvolvimento e este eval congelado.
 Nenhum código, prompt, caso, snapshot, ordem, `expectedDecision`, modelo, Tool,
 schema, parâmetro, política, rota pública ou `.env.local` foi alterado. V3
 continua padrão, V4 inativa, nenhuma V5 foi criada e não houve commit ou push.
+
+## 7F-C15 — decisão arquitetural derivada, sem novo experimento
+
+Esta etapa não reexecuta nem reclassifica E-033 ou E-034. A evidência revisada
+confirma no E-034 72/72 conclusões, 61 acertos, nove falsos positivos, dois
+falsos negativos, zero `wrong_tool` e zero erro técnico. Os três falsos
+positivos persistentes falharam em 3/3; os dois falsos negativos foram
+ocasionais, um em R1 e outro em R3. A exposição de somente uma Tool compatível
+foi estável; a necessidade de chamá-la permaneceu probabilística.
+
+A decisão de produto introduz consentimento como conceito separado. Assim, os
+dois casos que combinavam proibição de consulta com pedido de confirmação
+continuam historicamente `false_negative`, mas passam a revelar uma divergência
+entre a política do eval congelado e a política futura desejada. Nada é
+reescrito: artefatos, casos, perguntas, snapshots, fingerprints,
+`expectedDecision` e classificações permanecem intactos.
+
+Não foi produzido E-035 porque não houve execução. E-033 e E-034 não poderão ser
+reutilizados para desenvolver V5. Qualquer evolução deverá começar com conjunto
+de desenvolvimento novo e depois usar validação independente. V3 permanece
+padrão; V4, experimental e inativa; nenhuma V5 foi criada; e não há alteração
+imediata em produção.

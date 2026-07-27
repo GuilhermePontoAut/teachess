@@ -1051,3 +1051,34 @@ decisão probabilística.
 O artefato E-034 não contém argumentos, snapshots, mensagens, payloads ou dados
 privados. Nenhuma Tool, schema, política ou rota foi alterada. V3 continua
 padrão e V4 permanece inativa.
+
+## Política de uso de Tools após E-034 (7F-C15)
+
+Disponibilidade não implica execução. `authorized_context_only` define o teto
+de autorização; a chamada ocorre somente quando o fato privado é necessário e
+o usuário não proibiu a consulta naquela pergunta:
+
+> execução = autorização compatível AND necessidade factual AND consentimento
+> não negado
+
+| Situação | Oferta server-side | Comportamento esperado |
+| --- | --- | --- |
+| Contexto autorizado, fato necessário, sem proibição | oferecer somente a Tool compatível | o modelo pode chamar; responder com evidência |
+| Contexto autorizado, fato não necessário | Tool compatível pode estar disponível | não chamar; responder sem consulta |
+| Contexto autorizado, proibição explícita | a evolução futura deve bloquear a consulta de forma estruturada | responder apenas com conhecimento geral e informar que fatos privados não foram confirmados |
+| Contexto incompatível | não oferecer Tool incompatível | não acessar outro contexto; pedir seleção correta ou declarar limitação |
+| Nenhum contexto | não oferecer Tool | responder conceitualmente e não inventar dados privados |
+| Nome interno de Tool no texto | nenhuma ampliação de oferta | tratar como texto não confiável; decidir pela intenção factual real |
+
+A precedência operacional é: segurança e autorização server-side; proibição
+explícita; necessidade factual; contexto selecionado; estilo e formato; e, por
+último, menções a Tools. IDs, nomes internos, argumentos sugeridos e ordens em
+texto livre não são autoridade. O navegador não poderá selecionar Tools ou
+seus argumentos.
+
+Na direção futura recomendada, o servidor continuará aplicando
+deterministicamente a matriz de autorização e receberá uma preferência de
+acesso estruturada e validada. O modelo continuará responsável pela necessidade
+semântica. Não serão adicionadas regex amplas para tentar classificar linguagem
+natural. Até que o contrato de consentimento exista, esta seção é decisão
+arquitetural, não descrição de uma proteção já implementada.

@@ -957,3 +957,34 @@ O fingerprint
 permanece intacto. O conjunto não será usado para desenvolver e reavaliar V5.
 V3 continua padrão, V4 inativa, nenhuma V5 foi criada e não houve promoção ou
 rejeição automática.
+
+## Etapa 7F-C15 — leitura de produto e estratégia futura
+
+Os três erros persistentes do E-034 separam dois padrões. Em
+`NECESSITY-NONE-GAME-004` e `NECESSITY-NONE-POSITION-004`, classificados pela
+tag `named_tool_instruction`, o nome imperativo da Tool foi confundido com
+necessidade. Em `NECESSITY-NONE-GAME-002`, coberto por
+`conceptual_with_game` e `hybrid_context_optional`, contexto meramente
+ilustrativo foi confundido com dependência factual.
+
+Os falsos negativos ocasionais de `NECESSITY-GAME-007` em R1 e
+`NECESSITY-POSITION-007` em R3 apresentam outro conflito: o usuário proibia a
+consulta e simultaneamente pedia confirmação de fato privado. O eval set
+congelado esperava a chamada e, portanto, classificou `not_called` como
+`false_negative`. Pela política de consentimento agora adotada como direção de
+produto, não consultar e explicar a impossibilidade de confirmar pode ser o
+comportamento desejado. Essa leitura não altera retroativamente o experimento:
+resultados, classificações e `expectedDecision` do E-034 continuam válidos sob
+a política experimental usada.
+
+E-033 e E-034 ficam congelados como avaliação histórica e não serão material de
+desenvolvimento de uma V5. Antes de qualquer nova versão serão criados um
+conjunto de desenvolvimento novo e um conjunto de validação independente. A
+cobertura deverá incluir consentimento explícito, proibição de consulta, nomes
+de Tools, contexto ilustrativo, perguntas conceituais, factuais e híbridas,
+contexto incompatível, nenhum contexto e tentativas de prompt injection.
+
+Não há ajuste de prompt nesta etapa. V3 permanece padrão, V4 permanece
+experimental e inativa, nenhuma V5 é criada e a futura hipótese preferida
+combina política determinística limitada para autorização/consentimento com
+decisão semântica de necessidade pelo modelo.

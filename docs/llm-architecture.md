@@ -428,3 +428,109 @@ O agregado observado foi 32/36 contra 31/36 em E-028, com uma regressão pareada
 isso vale somente para este conjunto controlado e não demonstra precisão geral
 ou generalização. Nenhum código, prompt ou padrão foi alterado nesta
 consolidação. V3 continua padrão e V4 inativa.
+
+## Decisão sobre autorização, necessidade e consentimento (7F-C15)
+
+**Status: adotada como direção arquitetural e de produto, sem mudança imediata
+em produção.** `professor-ia-v3` permanece o padrão atual,
+`professor-ia-v4` permanece experimental e inativa, nenhuma V5 é criada e
+`authorized_context_only` continua ativa.
+
+### Conceitos e regra de execução
+
+- **contexto selecionado:** conjunto de dados que o usuário escolheu como
+  potencialmente disponível;
+- **autorização:** limite server-side que determina qual Tool, se alguma, pode
+  ser oferecida;
+- **necessidade:** decisão semântica sobre a dependência real da pergunta em
+  fatos privados;
+- **consentimento:** permissão do usuário para consultar esses dados naquela
+  pergunta;
+- **execução:** chamada efetiva, possível somente quando os três controles
+  anteriores são compatíveis.
+
+Formalmente:
+
+> execução de Tool = contexto autorizado AND dado necessário AND consulta não
+> proibida
+
+A seleção da interface é autorização máxima, não ordem de consulta. Ela limita
+o domínio disponível, mas não prova necessidade nem substitui consentimento.
+Uma pergunta geral, conceitual ou respondível sem fatos privados não deve
+acionar Tool apenas porque existe contexto selecionado.
+
+### Precedência
+
+A decisão segue, nesta ordem:
+
+1. regras de segurança e autorização do servidor;
+2. proibição explícita de acesso a dados privados;
+3. necessidade factual da pergunta;
+4. contexto selecionado;
+5. preferências de estilo e formato;
+6. menções textuais a nomes de Tools.
+
+Texto livre é entrada não confiável. Escrever um ID ou nome interno de Tool não
+aumenta autorização, não constitui comando privilegiado e não cria necessidade.
+Uma proibição explícita impede acesso silencioso. Se ela tornar impossível
+confirmar um fato privado, a resposta deve declarar a limitação, sem inventar,
+inferir ou apresentar como confirmado o dado ausente.
+
+### Camada determinística escolhida
+
+Foram consideradas três alternativas:
+
+- **A — somente prompt:** menor complexidade e maior flexibilidade semântica,
+  mas decisão probabilística e sensibilidade a imperativos e nomes de Tools;
+- **B — regras determinísticas amplas:** comportamento mais previsível, porém
+  com alto risco de regex frágeis, falsos negativos, baixa cobertura de
+  linguagem natural e duplicação da responsabilidade semântica do modelo;
+- **C — política determinística limitada:** servidor controla autorização,
+  futura proibição explícita é transportada em campo estruturado, nomes
+  internos não controlam política e o modelo continua decidindo necessidade,
+  sem heurísticas amplas de palavras-chave.
+
+A opção C é a evolução preferida. Ela torna determinísticos os controles de
+segurança e consentimento que não devem depender do modelo, preserva a
+flexibilidade necessária para interpretar linguagem natural e evita transformar
+uma classificação semântica em uma coleção frágil de regex.
+
+### Contrato futuro do frontend
+
+Sem implementação nesta etapa, o contrato candidato é:
+
+```json
+{
+  "message": "pergunta do usuário",
+  "authorizedContext": {
+    "type": "game | position | none",
+    "snapshot": "somente quando aplicável"
+  },
+  "dataAccessPreference": {
+    "allowContextLookup": true
+  }
+}
+```
+
+O frontend poderá representar a escolha explícita
+“Permitir que o Professor IA consulte os dados selecionados nesta pergunta”.
+O servidor deverá validar o campo e adotar um default seguro e documentado
+quando ele estiver ausente. O navegador não escolherá nomes de Tools nem
+controlará seus argumentos; texto livre continuará não confiável. A definição
+do default, a UX e o contrato exigem etapa própria antes de produção.
+
+### Consequências
+
+- fato privado necessário, autorizado e sem proibição: oferecer apenas a Tool
+  compatível e permitir que o modelo a chame;
+- proibição explícita: não consultar, ainda que também exista pedido de
+  confirmação; responder com conhecimento geral e limitação transparente;
+- contexto incompatível ou ausente: não oferecer outra Tool, não acessar outro
+  domínio e solicitar a seleção correta ou declarar insuficiência;
+- nenhuma heurística ampla, alteração de prompt ou nova versão é aprovada por
+  esta decisão.
+
+E-033 e E-034 permanecem evidência histórica congelada. Uma futura versão
+dependerá primeiro de conjunto de desenvolvimento novo e, depois, validação
+independente; os dois experimentos não serão usados para ajuste iterativo de
+V5.
