@@ -4,6 +4,10 @@ import {
   professorContextToolSelectionCases,
 } from "./professor-context-tool-selection-cases";
 import {
+  PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION,
+  professorContextToolNecessityCases,
+} from "./professor-context-tool-necessity-cases";
+import {
   INVALID_PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_CASE_SET,
   InvalidProfessorContextToolSelectionEvalCaseSetError,
   combineProfessorContextToolSelectionUsages,
@@ -180,6 +184,30 @@ test("configuração aceita professor-ia-v2, v3 e v4 com repetições de 1 a 5",
   );
 });
 
+test("configuração do eval de necessidade exige authorized_context_only", () => {
+  assert.equal(
+    professorContextToolSelectionEvalRunConfigSchema.safeParse({
+      ...baseConfig,
+      evalSetVersion: PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION,
+      toolExposurePolicy: "authorized_context_only",
+    }).success,
+    true,
+  );
+  assert.equal(
+    professorContextToolSelectionEvalRunConfigSchema.safeParse({
+      ...baseConfig,
+      evalSetVersion: PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION,
+      toolExposurePolicy: "all_context_tools",
+    }).success,
+    false,
+  );
+  assert.equal(
+    professorContextToolSelectionEvalRunConfigSchema.safeParse(baseConfig)
+      .success,
+    true,
+  );
+});
+
 test("relatório registra política e Tools oferecidas sem dados privados", async () => {
   const report = await run(
     async (input) => success(caseForInput(input).expectedDecision),
@@ -200,6 +228,76 @@ test("relatório registra política e Tools oferecidas sem dados privados", asyn
           : [],
     );
   }
+});
+
+test("novo conjunto executa localmente e registra evalSetVersion sem enviar metadados", async () => {
+  const seenInputs: Array<Record<string, unknown>> = [];
+  const report = await runProfessorContextToolSelectionEvals({
+    cases: professorContextToolNecessityCases,
+    config: {
+      ...baseConfig,
+      evalSetVersion: PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION,
+      toolExposurePolicy: "authorized_context_only",
+    },
+    prompt,
+    executeCase: async (input) => {
+      seenInputs.push(input as unknown as Record<string, unknown>);
+      const evalCase = professorContextToolNecessityCases.find(
+        (candidate) => candidate.message === input.message,
+      );
+      assert.ok(evalCase);
+      return success(evalCase.expectedDecision);
+    },
+    clock: deterministicClock(
+      Array.from({ length: 60 }, (_, index) => index * 10),
+    ),
+  });
+  assert.equal(report.evalSetVersion, PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION);
+  assert.equal(report.caseCount, 24);
+  assert.equal(report.totalRuns, 24);
+  assert.equal(report.correct, 24);
+  assert.equal(
+    professorContextToolSelectionEvalReportSchema.safeParse(report).success,
+    true,
+  );
+  for (const input of seenInputs) {
+    assert.deepEqual(Object.keys(input).sort(), [
+      "authorizedContext",
+      "message",
+      "prompt",
+    ]);
+    for (const metadata of [
+      "rationale",
+      "coverageTags",
+      "necessity",
+      "toolExposurePolicy",
+    ]) {
+      assert.equal(metadata in input, false);
+    }
+  }
+});
+
+test("novo conjunto modificado é rejeitado antes do executor", async () => {
+  const changed = structuredClone(professorContextToolNecessityCases);
+  changed[0].message = "Mensagem alterada depois do congelamento.";
+  let executorCalls = 0;
+  await assert.rejects(
+    runProfessorContextToolSelectionEvals({
+      cases: changed,
+      config: {
+        ...baseConfig,
+        evalSetVersion: PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION,
+        toolExposurePolicy: "authorized_context_only",
+      },
+      prompt,
+      executeCase: async () => {
+        executorCalls += 1;
+        return success("not_called");
+      },
+    }),
+    InvalidProfessorContextToolSelectionEvalCaseSetError,
+  );
+  assert.equal(executorCalls, 0);
 });
 
 test("schema continua lendo relatório histórico sem metadados de exposição", async () => {

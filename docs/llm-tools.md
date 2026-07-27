@@ -983,3 +983,29 @@ ou não a única Tool compatível continua sendo decisão probabilística do mod
 
 E-032 não alterou Tools, schemas, executores, prompts ou padrão da aplicação.
 V3 continua padrão e V4 permanece inativa.
+
+## Etapa 7F-C5 — seleção versionada do eval set
+
+O runner conjunto agora possui um registro local de eval sets. A ausência de
+`AI_EVAL_SET_VERSION` preserva
+`professor-context-tool-selection-evals-v1`; a seleção explícita de
+`professor-context-tool-necessity-evals-v2` usa os 24 casos independentes.
+Valores desconhecidos são rejeitados antes da criação do cliente.
+
+No v2, cada caso contém um snapshot sintético e coerente com seu tipo. O runner
+envia ao fluxo somente `message`, `authorizedContext` e o prompt selecionado.
+Justificativa, tags, classificação de necessidade e política declarativa
+permanecem metadados locais. Com `authorized_context_only`, game oferece somente
+`get_game_context` e position somente `get_position_context`; métricas,
+classificações, Tools, schemas e fluxo público não mudaram.
+
+O schema de relatório aceita 12 ou 24 casos conforme `evalSetVersion` e mantém
+compatibilidade com relatórios históricos. Ordem, identidade e decisão esperada
+continuam validadas contra o conjunto canônico correspondente.
+
+Na preparação C7, o novo conjunto passou a aceitar exclusivamente
+`authorized_context_only`. Política ausente herdaria `all_context_tools` e,
+portanto, é recusada; valor explícito incompatível ou desconhecido também
+falha. A validação acontece depois da seleção do eval set e antes de caminho de
+saída, chave, cliente, transporte ou primeiro caso. Não há coerção nem fallback.
+O conjunto histórico preserva o comportamento anterior.

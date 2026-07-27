@@ -783,3 +783,102 @@ política `authorized_context_only` elimina por construção a exposição da To
 incompatível. O modelo ainda decide probabilisticamente se precisa chamar a
 única Tool permitida. Isso não demonstra precisão geral ou generalização. V3
 continua padrão e V4 inativa.
+
+## Etapa 7F-C5 — conjunto independente de necessidade
+
+`professor-context-tool-necessity-evals-v2` é metodologicamente separado dos 12
+casos de `professor-context-tool-selection-evals-v1`. A regra operacional é:
+uma Tool é necessária somente quando uma parte obrigatória da resposta exige
+um fato que não está na pergunta nem pode vir de conhecimento geral. Em
+perguntas híbridas, uma parte factual obrigatória determina a Tool; uma
+referência meramente ilustrativa mantém `not_called`.
+
+O conjunto contém 24 casos na ordem canônica, distribuídos em 8/8/8 entre game,
+position e nenhuma Tool. Os oito negativos se dividem em quatro contextos game
+e quatro position. A cobertura combina conceitos com contexto selecionado,
+fatos simples, híbridos obrigatórios e opcionais, ambiguidade, respostas
+parciais, dados ausentes ou não confirmados, termos casuais, referências
+incompatíveis, pedidos negativos, nomes de Tool, paráfrases sem demonstrativos e
+linguagem coloquial.
+
+Testes locais comparam texto exato, texto normalizado e similaridade Dice de
+bigramas contra os casos v1 e exemplos dos prompts. IDs também são únicos. O
+hash SHA-256 do conteúdo canônico impede alterações silenciosas. Após a primeira
+execução, qualquer correção requer nova versão; este conjunto não deve ser
+reutilizado como conjunto de desenvolvimento.
+
+O runner mantém v1 como padrão e aceita seleção explícita com
+`AI_EVAL_SET_VERSION=professor-context-tool-necessity-evals-v2`. Valores
+desconhecidos falham localmente. O relatório registra a versão e aceita 24 casos
+sem mudar classificações ou métricas; relatórios v1 continuam legíveis.
+O novo conjunto exige também
+`AI_EVAL_TOOL_EXPOSURE_POLICY=authorized_context_only`: omitir a variável,
+informar `all_context_tools` ou usar valor desconhecido encerra a preparação
+antes do cliente e da rede. Não existe fallback automático. O v1 preserva o
+padrão histórico.
+
+O runner standalone lê `process.env` e não carrega `.env.local`
+automaticamente. Por isso, os comandos futuros usam uma subshell, exportam
+temporariamente as entradas do arquivo e validam somente a presença da chave,
+sem imprimir valor, tamanho, prefixo ou sufixo.
+
+Smoke test futuro, uma repetição, 24 execuções e entre 24 e 48 chamadas:
+
+```bash
+(
+  set -a
+  source .env.local
+  set +a
+
+  if [ -z "${OPENAI_API_KEY:-}" ]; then
+    echo "OPENAI_API_KEY_NOT_LOADED"
+    exit 1
+  fi
+
+  RUN_REAL_AI_EVALS=true AI_EVAL_PROMPT_VERSION=professor-ia-v3 AI_EVAL_SET_VERSION=professor-context-tool-necessity-evals-v2 AI_EVAL_TOOL_EXPOSURE_POLICY=authorized_context_only AI_EVAL_REPETITIONS=1 AI_EVAL_ABORT_AFTER_CONSECUTIVE_TECHNICAL_ERRORS=3 AI_EVAL_OUTPUT_PATH=/tmp/teachess-professor-context-tool-necessity-v3-r1.json npm run eval:professor-context-tool-selection
+)
+```
+
+Comparação principal futura, três repetições, 72 execuções e entre 72 e 144
+chamadas:
+
+```bash
+(
+  set -a
+  source .env.local
+  set +a
+
+  if [ -z "${OPENAI_API_KEY:-}" ]; then
+    echo "OPENAI_API_KEY_NOT_LOADED"
+    exit 1
+  fi
+
+  RUN_REAL_AI_EVALS=true AI_EVAL_PROMPT_VERSION=professor-ia-v3 AI_EVAL_SET_VERSION=professor-context-tool-necessity-evals-v2 AI_EVAL_TOOL_EXPOSURE_POLICY=authorized_context_only AI_EVAL_REPETITIONS=3 AI_EVAL_ABORT_AFTER_CONSECUTIVE_TECHNICAL_ERRORS=3 AI_EVAL_OUTPUT_PATH=/tmp/teachess-professor-context-tool-necessity-v3-r3.json npm run eval:professor-context-tool-selection
+)
+```
+
+Ambos devem ser executados manualmente em terminal normal, fora do Codex. O
+smoke test não substitui estabilidade. Antes da execução ficam registrados:
+`technical_error: 0`, `completionRate: 100%`, `wrong_tool: 0` por construção,
+acurácia separada por decisão, falsos positivos e negativos, estabilidade por
+caso, recortes híbrido e ambíguo, tokens e latência. Não existe limiar de
+promoção baseado apenas na acurácia agregada, e o v1 serve somente como
+referência não equivalente.
+
+### Limitações aceitas antes do congelamento
+
+O conjunto contém ambiguidades e perguntas híbridas, mas 24 casos não cobrem a
+variedade da linguagem natural. A cobertura deliberadamente ambígua é limitada;
+resultados devem ser analisados também pelas tags e nenhuma acurácia agregada,
+isoladamente, comprova generalização.
+
+Alguns snapshots game são mais ricos que o mínimo necessário para uma pergunta
+individual porque preservam o contrato sintético completo da Tool. Isso pode
+influenciar a resposta depois da chamada, embora não revele fatos antes da
+decisão. Eles foram auditados como coerentes e sintéticos e permanecem
+inalterados para preservar o fingerprint. Uma variante mais minimalista exigirá
+novo `evalSetVersion`.
+
+Os 24 casos, sua ordem, snapshots, expectativas, metadados e SHA-256 permanecem
+congelados. V3 continua padrão, V4 inativa, nenhuma V5 foi criada e nenhuma
+avaliação real foi executada nesta preparação.

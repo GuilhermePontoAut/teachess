@@ -1820,3 +1820,51 @@ headers, payload, snapshot, argumentos privados, PGN integral, conteúdo de
 `.env.local`, mensagens brutas ou stack trace. Nenhum código, prompt, modelo,
 caso, expectativa, ordem, repetição, Tool, schema, classificação ou métrica foi
 alterado.
+
+## Etapa 7F-C5 — eval independente de necessidade factual
+
+O conjunto histórico v1 foi inspecionado sem alteração. Ele possui quatro casos
+por decisão e cobre fatos diretos de partida e posição, uma mesma mensagem
+ambígua aplicada aos dois contextos, ausência total de contexto, IDs
+incompatíveis escritos pelo usuário e duas mensagens adversariais. Recorre com
+frequência a “selecionada”, pedidos imperativos e nomes técnicos. As principais
+lacunas eram perguntas conceituais com contexto autorizado, híbridos
+obrigatórios ou apenas ilustrativos, linguagem indireta, dados ausentes,
+negação de consulta e instruções por nome de Tool separadas de pedidos factuais.
+
+Foi criado, mas não executado, o conjunto independente
+`professor-context-tool-necessity-evals-v2`. São 24 casos sintéticos: oito
+esperam `get_game_context`, oito `get_position_context` e oito `not_called`;
+entre estes últimos, quatro autorizam `game` e quatro `position`. Todos são
+compatíveis exclusivamente com `authorized_context_only` e declaram
+justificativa, tags e `necessity` local. Esses metadados e os snapshots não
+integram a mensagem enviada ao modelo nem o relatório sanitizado.
+
+O conjunto foi congelado com SHA-256
+`d78e2d379e7230ad7c1f5aa8de5779b316fc0b8ccb6434636e0b5d25fd6f6cbe`.
+Depois da primeira execução real, nenhum caso poderá mudar; correções exigirão
+outra versão. Resultados deste conjunto não devem alimentar uma reescrita do
+prompt seguida de reavaliação nele mesmo. Otimizações futuras precisam de outro
+conjunto de desenvolvimento.
+
+Nenhuma execução real ocorreu e nenhuma acurácia foi presumida. V3 continua
+padrão, V4 inativa e nenhuma V5 foi criada.
+
+### Ajustes pré-congelamento — Etapa 7F-C7
+
+Sem modificar os 24 casos ou o fingerprint, a preparação passou a rejeitar o
+novo eval set quando `AI_EVAL_TOOL_EXPOSURE_POLICY` está ausente, contém
+`all_context_tools` ou é desconhecida. Somente
+`authorized_context_only` é metodologicamente válida. A falha é sanitizada,
+ocorre antes do cliente e da rede e não aplica fallback; o v1 mantém seu padrão.
+
+Os comandos futuros agora carregam `.env.local` explicitamente dentro de uma
+subshell. O runner standalone lê `process.env` e não carrega o arquivo sozinho.
+A verificação acusa apenas `OPENAI_API_KEY_NOT_LOADED`, sem revelar a chave ou
+qualquer característica dela.
+
+Foram aceitas duas limitações: a cobertura de ambiguidades ainda é pequena para
+representar linguagem natural livre, e alguns snapshots game são mais ricos que
+uma pergunta isolada exige. Os resultados deverão ser examinados por tags, e
+uma versão com snapshots menores exigirá outro `evalSetVersion`. Nenhuma
+avaliação foi executada; V3 continua padrão, V4 inativa e não existe V5.

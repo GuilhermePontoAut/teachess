@@ -34,6 +34,12 @@ import {
   professorContextToolSelectionCases,
   type ProfessorContextToolSelectionEvalCase,
 } from "./professor-context-tool-selection-cases";
+import {
+  PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION,
+  professorContextToolNecessityEvalCasesSchema,
+  professorContextToolNecessityCases,
+  type ProfessorContextToolNecessityEvalCase,
+} from "./professor-context-tool-necessity-cases";
 
 export const PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_RUNNER_VERSION =
   "professor-context-tool-selection-runner-v1" as const;
@@ -74,6 +80,10 @@ const comparablePromptVersionSchema = z.enum([
   PROFESSOR_IA_PROMPT_VERSION_V2,
   PROFESSOR_IA_PROMPT_VERSION_V3,
   PROFESSOR_IA_PROMPT_VERSION_V4,
+]);
+export const professorContextEvalSetVersionSchema = z.enum([
+  PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_SET_VERSION,
+  PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION,
 ]);
 export const professorToolExposurePolicySchema = z.enum(
   PROFESSOR_TOOL_EXPOSURE_POLICIES,
@@ -185,9 +195,7 @@ export const professorContextToolSelectionEvalRunConfigSchema = z
     model: z.literal(PROFESSOR_CONTEXT_TOOL_FLOW_MODEL),
     promptVersion: comparablePromptVersionSchema,
     schemaVersion: z.literal(PROVISIONAL_TEACHER_RESPONSE_SCHEMA_VERSION),
-    evalSetVersion: z.literal(
-      PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_SET_VERSION,
-    ),
+    evalSetVersion: professorContextEvalSetVersionSchema,
     repetitions: z
       .number()
       .int()
@@ -196,7 +204,20 @@ export const professorContextToolSelectionEvalRunConfigSchema = z
     toolExposurePolicy: professorToolExposurePolicySchema
       .default("all_context_tools"),
   })
-  .strict();
+  .strict()
+  .superRefine((config, context) => {
+    if (
+      config.evalSetVersion ===
+        PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION &&
+      config.toolExposurePolicy !== "authorized_context_only"
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["toolExposurePolicy"],
+        message: "A política é incompatível com o eval set selecionado.",
+      });
+    }
+  });
 
 export type ProfessorContextToolSelectionEvalRunConfig = z.infer<
   typeof professorContextToolSelectionEvalRunConfigSchema
@@ -214,7 +235,9 @@ function classifyDecision(
 
 export const professorContextToolSelectionEvalRunResultSchema = z
   .object({
-    caseId: z.string().regex(/^(?:GAME|POSITION|NO-TOOL)-SEL-00[1-4]$/),
+    caseId: z.string().regex(
+      /^(?:(?:GAME|POSITION|NO-TOOL)-SEL-00[1-4]|NECESSITY-(?:GAME|POSITION|NONE-GAME|NONE-POSITION)-00[1-8])$/,
+    ),
     runNumber: z
       .number()
       .int()
@@ -452,16 +475,14 @@ export const professorContextToolSelectionEvalReportSchema = z
     model: z.literal(PROFESSOR_CONTEXT_TOOL_FLOW_MODEL),
     promptVersion: comparablePromptVersionSchema,
     schemaVersion: z.literal(PROVISIONAL_TEACHER_RESPONSE_SCHEMA_VERSION),
-    evalSetVersion: z.literal(
-      PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_SET_VERSION,
-    ),
+    evalSetVersion: professorContextEvalSetVersionSchema,
     repetitions: z
       .number()
       .int()
       .min(1)
       .max(PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_MAX_REPETITIONS),
     toolExposurePolicy: professorToolExposurePolicySchema.optional(),
-    caseCount: z.literal(12),
+    caseCount: z.union([z.literal(12), z.literal(24)]),
     plannedCaseRuns: nonnegativeIntegerSchema,
     completedCaseRuns: nonnegativeIntegerSchema,
     aborted: z.boolean(),
@@ -523,7 +544,11 @@ export const professorContextToolSelectionEvalReportSchema = z
       technicalErrors: count("technical_error"),
     };
 
-    if (report.plannedCaseRuns !== 12 * report.repetitions) {
+    const expectedCases =
+      report.evalSetVersion === PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION
+        ? professorContextToolNecessityCases
+        : professorContextToolSelectionCases;
+    if (report.plannedCaseRuns !== expectedCases.length * report.repetitions) {
       issue(["plannedCaseRuns"], "O total planejado está inconsistente.");
     }
     if (
@@ -538,7 +563,7 @@ export const professorContextToolSelectionEvalReportSchema = z
     }
     const isComplete = report.completedCaseRuns === report.plannedCaseRuns;
     if (
-      report.caseCount !== 12 ||
+      report.caseCount !== expectedCases.length ||
       report.aborted === isComplete ||
       report.reportCompleteness !== (isComplete ? "complete" : "partial") ||
       report.abortReason !==
@@ -612,7 +637,7 @@ export const professorContextToolSelectionEvalReportSchema = z
       issue(["completedAt"], "A ordem temporal do relatório é inválida.");
     }
 
-    const expectedResultOrder = professorContextToolSelectionCases.flatMap(
+    const expectedResultOrder = expectedCases.flatMap(
       (evalCase) =>
         Array.from({ length: report.repetitions }, (_, index) => ({
           caseId: evalCase.id,
@@ -769,7 +794,25 @@ function sameStringArray(received: readonly string[], canonical: readonly string
 
 export function validateProfessorContextToolSelectionEvalCaseSet(
   cases: readonly unknown[],
-): readonly ProfessorContextToolSelectionEvalCase[] {
+  evalSetVersion: ProfessorContextToolSelectionEvalRunConfig["evalSetVersion"] =
+    PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_SET_VERSION,
+): readonly ProfessorContextToolSelectionRunnerCase[] {
+  if (evalSetVersion === PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION) {
+    const parsed = professorContextToolNecessityEvalCasesSchema.safeParse(cases);
+    if (!parsed.success) {
+      throw new InvalidProfessorContextToolSelectionEvalCaseSetError();
+    }
+    const hasUniqueIds =
+      new Set(parsed.data.map((evalCase) => evalCase.id)).size ===
+      parsed.data.length;
+    const matchesCanonical =
+      JSON.stringify(parsed.data) === JSON.stringify(professorContextToolNecessityCases);
+    if (!hasUniqueIds || !matchesCanonical) {
+      throw new InvalidProfessorContextToolSelectionEvalCaseSetError();
+    }
+    return parsed.data;
+  }
+
   const parsed = professorContextToolSelectionEvalCasesSchema.safeParse(cases);
   if (!parsed.success) {
     throw new InvalidProfessorContextToolSelectionEvalCaseSetError();
@@ -795,6 +838,10 @@ export function validateProfessorContextToolSelectionEvalCaseSet(
   }
   return parsed.data;
 }
+
+type ProfessorContextToolSelectionRunnerCase =
+  | ProfessorContextToolSelectionEvalCase
+  | ProfessorContextToolNecessityEvalCase;
 
 export type ProfessorContextToolSelectionEvalExecutionOutcome =
   | {
@@ -1114,9 +1161,10 @@ export function getProfessorContextToolSelectionObservedWrongTool(
 }
 
 function authorizedContextForCase(
-  evalCase: ProfessorContextToolSelectionEvalCase,
+  evalCase: ProfessorContextToolSelectionRunnerCase,
   fixtures: ReturnType<typeof createProfessorContextToolSelectionEvalFixtures>,
 ): AuthorizedProfessorContext {
+  if ("authorizedContext" in evalCase) return evalCase.authorizedContext;
   return fixtures[evalCase.authorizedContextType];
 }
 
@@ -1252,8 +1300,11 @@ export async function runProfessorContextToolSelectionEvals({
   consecutiveTechnicalErrorThreshold = null,
   outputPath = "/tmp/teachess-professor-context-tool-selection-evals.json",
 }: RunProfessorContextToolSelectionEvalsInput): Promise<ProfessorContextToolSelectionEvalReport> {
-  const canonicalCases = validateProfessorContextToolSelectionEvalCaseSet(cases);
   const parsedConfig = professorContextToolSelectionEvalRunConfigSchema.parse(config);
+  const canonicalCases = validateProfessorContextToolSelectionEvalCaseSet(
+    cases,
+    parsedConfig.evalSetVersion,
+  );
   if (prompt.version !== parsedConfig.promptVersion) {
     throw new Error("A versão do prompt não corresponde à configuração do eval.");
   }

@@ -11,6 +11,7 @@
     "target": "ES2022"
   },
   "include": [
+    "app/api/ai/professor/route.ts",
     "app/api/ai/test/tools/position-context/route.ts",
     "app/api/ai/test/tools/position-context/route.test.ts",
     "app/api/ai/test/tools/position-context/auto/route.ts",
@@ -25,6 +26,8 @@
     "lib/ai/evals/run-position-context-tool-selection-evals.test.ts",
     "lib/ai/evals/professor-context-tool-selection-cases.ts",
     "lib/ai/evals/professor-context-tool-selection-cases.test.ts",
+    "lib/ai/evals/professor-context-tool-necessity-cases.ts",
+    "lib/ai/evals/professor-context-tool-necessity-cases.test.ts",
     "lib/ai/evals/run-professor-context-tool-selection-evals.ts",
     "lib/ai/evals/run-professor-context-tool-selection-evals.test.ts",
     "lib/ai/prompts/professor-ia-prompts.test.ts",

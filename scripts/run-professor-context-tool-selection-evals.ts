@@ -9,6 +9,10 @@ import {
   professorContextToolSelectionCases,
 } from "../lib/ai/evals/professor-context-tool-selection-cases";
 import {
+  PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION,
+  professorContextToolNecessityCases,
+} from "../lib/ai/evals/professor-context-tool-necessity-cases";
+import {
   combineProfessorContextToolSelectionUsages,
   createProfessorContextToolSelectionTechnicalErrorDetails,
   createProfessorContextToolSelectionTechnicalErrorSignature,
@@ -62,7 +66,9 @@ export type ResolvedProfessorContextToolSelectionEvalEnvironment =
         | "PROMPT_VERSION_INVALID"
         | "REPETITIONS_REQUIRED"
         | "REPETITIONS_INVALID"
+        | "EVAL_SET_VERSION_INVALID"
         | "TOOL_EXPOSURE_POLICY_INVALID"
+        | "TOOL_EXPOSURE_POLICY_EVAL_SET_INCOMPATIBLE"
         | "OUTPUT_PATH_INVALID"
         | "OPENAI_API_KEY_REQUIRED";
     }
@@ -71,6 +77,7 @@ export type ResolvedProfessorContextToolSelectionEvalEnvironment =
       exitCode: 0;
       config: ProfessorContextToolSelectionEvalRunConfig;
       prompt: SelectedProfessorIaPrompt;
+      cases: readonly unknown[];
       outputPath: string;
       allowOverwrite: boolean;
       consecutiveTechnicalErrorThreshold: number | null;
@@ -129,6 +136,22 @@ export function resolveProfessorContextToolSelectionEvalEnvironment(
     };
   }
 
+  const evalSetVersion =
+    readEnvironment("AI_EVAL_SET_VERSION") ??
+    PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_SET_VERSION;
+  if (
+    evalSetVersion !== PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_SET_VERSION &&
+    evalSetVersion !== PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION
+  ) {
+    return {
+      status: "invalid",
+      exitCode: PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_ERROR_EXIT_CODE,
+      errorCode: "EVAL_SET_VERSION_INVALID",
+    };
+  }
+  const cases = selectProfessorContextToolSelectionEvalSet(evalSetVersion);
+  if (cases === null) throw new Error("Eval set registrado sem casos.");
+
   const toolExposurePolicy =
     readEnvironment("AI_EVAL_TOOL_EXPOSURE_POLICY") ?? "all_context_tools";
   if (
@@ -139,6 +162,16 @@ export function resolveProfessorContextToolSelectionEvalEnvironment(
       status: "invalid",
       exitCode: PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_ERROR_EXIT_CODE,
       errorCode: "TOOL_EXPOSURE_POLICY_INVALID",
+    };
+  }
+  if (
+    evalSetVersion === PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION &&
+    toolExposurePolicy !== "authorized_context_only"
+  ) {
+    return {
+      status: "invalid",
+      exitCode: PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_ERROR_EXIT_CODE,
+      errorCode: "TOOL_EXPOSURE_POLICY_EVAL_SET_INCOMPATIBLE",
     };
   }
 
@@ -178,15 +211,29 @@ export function resolveProfessorContextToolSelectionEvalEnvironment(
       model: PROFESSOR_CONTEXT_TOOL_FLOW_MODEL,
       promptVersion,
       schemaVersion: PROVISIONAL_TEACHER_RESPONSE_SCHEMA_VERSION,
-      evalSetVersion: PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_SET_VERSION,
+      evalSetVersion,
       repetitions,
       toolExposurePolicy,
     },
     prompt,
+    cases,
     outputPath,
     allowOverwrite,
     consecutiveTechnicalErrorThreshold,
   };
+}
+
+export function selectProfessorContextToolSelectionEvalSet(
+  version: string,
+): readonly unknown[] | null {
+  switch (version) {
+    case PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_SET_VERSION:
+      return professorContextToolSelectionCases;
+    case PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION:
+      return professorContextToolNecessityCases;
+    default:
+      return null;
+  }
 }
 
 type EvalOpenAIClient = ReturnType<typeof getOpenAIClient>;
@@ -340,17 +387,18 @@ export function formatProfessorContextToolSelectionEvalSummary(
 export async function runProfessorContextToolSelectionEvalCli(
   dependencies: ProfessorContextToolSelectionEvalCliDependencies,
 ): Promise<number> {
-  const cases = dependencies.cases ?? professorContextToolSelectionCases;
-  try {
-    validateProfessorContextToolSelectionEvalCaseSet(cases);
-  } catch (error: unknown) {
-    if (error instanceof InvalidProfessorContextToolSelectionEvalCaseSetError) {
-      dependencies.writeLine(
-        `Falha técnica sanitizada: ${INVALID_PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_CASE_SET}.`,
-      );
-      return PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_ERROR_EXIT_CODE;
+  if (dependencies.cases !== undefined) {
+    try {
+      validateProfessorContextToolSelectionEvalCaseSet(dependencies.cases);
+    } catch (error: unknown) {
+      if (error instanceof InvalidProfessorContextToolSelectionEvalCaseSetError) {
+        dependencies.writeLine(
+          `Falha técnica sanitizada: ${INVALID_PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_CASE_SET}.`,
+        );
+        return PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_ERROR_EXIT_CODE;
+      }
+      throw error;
     }
-    throw error;
   }
 
   const environment = resolveProfessorContextToolSelectionEvalEnvironment(
@@ -364,7 +412,21 @@ export async function runProfessorContextToolSelectionEvalCli(
     dependencies.writeLine(`Configuração inválida: ${environment.errorCode}.`);
     return environment.exitCode;
   }
-
+  const cases = dependencies.cases ?? environment.cases;
+  try {
+    validateProfessorContextToolSelectionEvalCaseSet(
+      cases,
+      environment.config.evalSetVersion,
+    );
+  } catch (error: unknown) {
+    if (error instanceof InvalidProfessorContextToolSelectionEvalCaseSetError) {
+      dependencies.writeLine(
+        `Falha técnica sanitizada: ${INVALID_PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_CASE_SET}.`,
+      );
+      return PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_ERROR_EXIT_CODE;
+    }
+    throw error;
+  }
   const reportExists = dependencies.reportExists ?? (async () => false);
   if (!environment.allowOverwrite && await reportExists(environment.outputPath)) {
     dependencies.writeLine("Falha técnica sanitizada: REPORT_ALREADY_EXISTS.");

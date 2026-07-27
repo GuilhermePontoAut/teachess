@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { getPublicProfessorPromptVersion } from "../app/api/ai/professor/route";
 import {
   professorContextToolSelectionCases,
 } from "../lib/ai/evals/professor-context-tool-selection-cases";
+import {
+  PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION,
+  professorContextToolNecessityCases,
+} from "../lib/ai/evals/professor-context-tool-necessity-cases";
 import type { ProfessorContextToolSelectionEvalRunnerClock } from "../lib/ai/evals/run-professor-context-tool-selection-evals";
 import {
   createProfessorContextToolSelectionTechnicalErrorDetails,
@@ -14,6 +19,7 @@ import {
   PROFESSOR_CONTEXT_TOOL_SELECTION_EVAL_REPORT_PATH,
   resolveProfessorContextToolSelectionEvalEnvironment,
   runProfessorContextToolSelectionEvalCli,
+  selectProfessorContextToolSelectionEvalSet,
   type ProfessorContextEvalEnvironmentReader,
 } from "./run-professor-context-tool-selection-evals";
 
@@ -275,6 +281,137 @@ test("ambiente aceita professor-ia-v2, professor-ia-v3 e professor-ia-v4 e prese
   }
 });
 
+test("conjunto histórico permanece padrão e o v2 exige seleção explícita", () => {
+  const defaultResult = resolveProfessorContextToolSelectionEvalEnvironment(
+    environmentReader(readyEnvironment),
+  );
+  assert.equal(defaultResult.status, "ready");
+  if (defaultResult.status !== "ready") assert.fail("ambiente pronto esperado");
+  assert.equal(
+    defaultResult.config.evalSetVersion,
+    "professor-context-tool-selection-evals-v1",
+  );
+  assert.equal(defaultResult.cases, professorContextToolSelectionCases);
+
+  const necessityResult = resolveProfessorContextToolSelectionEvalEnvironment(
+    environmentReader({
+      ...readyEnvironment,
+      AI_EVAL_SET_VERSION: PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION,
+      AI_EVAL_TOOL_EXPOSURE_POLICY: "authorized_context_only",
+    }),
+  );
+  assert.equal(necessityResult.status, "ready");
+  if (necessityResult.status !== "ready") assert.fail("ambiente pronto esperado");
+  assert.equal(
+    necessityResult.config.evalSetVersion,
+    PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION,
+  );
+  assert.equal(necessityResult.cases, professorContextToolNecessityCases);
+  assert.equal(
+    necessityResult.config.toolExposurePolicy,
+    "authorized_context_only",
+  );
+});
+
+test("eval de necessidade rejeita política histórica explícita ou implícita", () => {
+  for (const toolExposurePolicy of [undefined, "all_context_tools"] as const) {
+    const reads: string[] = [];
+    const result = resolveProfessorContextToolSelectionEvalEnvironment(
+      environmentReader(
+        {
+          ...readyEnvironment,
+          AI_EVAL_SET_VERSION:
+            PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION,
+          AI_EVAL_TOOL_EXPOSURE_POLICY: toolExposurePolicy,
+        },
+        reads,
+      ),
+    );
+    assert.equal(result.status, "invalid");
+    if (result.status !== "invalid") assert.fail("configuração inválida esperada");
+    assert.equal(
+      result.errorCode,
+      "TOOL_EXPOSURE_POLICY_EVAL_SET_INCOMPATIBLE",
+    );
+    assert.deepEqual(reads, [
+      "RUN_REAL_AI_EVALS",
+      "AI_EVAL_PROMPT_VERSION",
+      "AI_EVAL_REPETITIONS",
+      "AI_EVAL_SET_VERSION",
+      "AI_EVAL_TOOL_EXPOSURE_POLICY",
+    ]);
+    assert.equal(JSON.stringify(result).includes("all_context_tools"), false);
+  }
+});
+
+test("política desconhecida continua rejeitada sem revelar o valor", () => {
+  const privatePolicy = "policy-private-unknown";
+  const result = resolveProfessorContextToolSelectionEvalEnvironment(
+    environmentReader({
+      ...readyEnvironment,
+      AI_EVAL_SET_VERSION: PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION,
+      AI_EVAL_TOOL_EXPOSURE_POLICY: privatePolicy,
+    }),
+  );
+  assert.equal(result.status, "invalid");
+  if (result.status !== "invalid") assert.fail("configuração inválida esperada");
+  assert.equal(result.errorCode, "TOOL_EXPOSURE_POLICY_INVALID");
+  assert.equal(JSON.stringify(result).includes(privatePolicy), false);
+});
+
+test("política incompatível falha antes de cliente, transporte e relatório", async () => {
+  let clients = 0;
+  let writes = 0;
+  const lines: string[] = [];
+  const exitCode = await runProfessorContextToolSelectionEvalCli({
+    readEnvironment: environmentReader({
+      ...readyEnvironment,
+      AI_EVAL_SET_VERSION: PROFESSOR_CONTEXT_TOOL_NECESSITY_EVAL_SET_VERSION,
+      AI_EVAL_TOOL_EXPOSURE_POLICY: "all_context_tools",
+    }),
+    createClient: () => {
+      clients += 1;
+      assert.fail("cliente e transporte não deveriam ser criados");
+    },
+    writeJsonReport: async () => {
+      writes += 1;
+    },
+    writeLine: (line) => lines.push(line),
+  });
+  assert.equal(exitCode, 1);
+  assert.equal(clients, 0);
+  assert.equal(writes, 0);
+  assert.deepEqual(lines, [
+    "Configuração inválida: TOOL_EXPOSURE_POLICY_EVAL_SET_INCOMPATIBLE.",
+  ]);
+});
+
+test("V3 continua padrão da aplicação e V4 permanece inativa", () => {
+  assert.equal(getPublicProfessorPromptVersion(undefined), "professor-ia-v3");
+  assert.notEqual(getPublicProfessorPromptVersion(undefined), "professor-ia-v4");
+});
+
+test("eval set desconhecido é rejeitado antes da política, caminho e chave", () => {
+  const reads: string[] = [];
+  const result = resolveProfessorContextToolSelectionEvalEnvironment(
+    environmentReader(
+      { ...readyEnvironment, AI_EVAL_SET_VERSION: "eval-privado-inexistente" },
+      reads,
+    ),
+  );
+  assert.equal(result.status, "invalid");
+  if (result.status !== "invalid") assert.fail("configuração inválida esperada");
+  assert.equal(result.errorCode, "EVAL_SET_VERSION_INVALID");
+  assert.deepEqual(reads, [
+    "RUN_REAL_AI_EVALS",
+    "AI_EVAL_PROMPT_VERSION",
+    "AI_EVAL_REPETITIONS",
+    "AI_EVAL_SET_VERSION",
+  ]);
+  assert.equal(JSON.stringify(result).includes("eval-privado-inexistente"), false);
+  assert.equal(selectProfessorContextToolSelectionEvalSet("desconhecido"), null);
+});
+
 test("repetições ausentes, zero, negativas, decimais e acima de 5 falham antes da chave", () => {
   for (const value of [undefined, "", "0", "-1", "1.5", "6", "texto"]) {
     const reads: string[] = [];
@@ -301,6 +438,7 @@ test("chave só é consultada depois das configurações e nunca entra no result
     "RUN_REAL_AI_EVALS",
     "AI_EVAL_PROMPT_VERSION",
     "AI_EVAL_REPETITIONS",
+    "AI_EVAL_SET_VERSION",
     "AI_EVAL_TOOL_EXPOSURE_POLICY",
     "AI_EVAL_OUTPUT_PATH",
     "AI_EVAL_ALLOW_OVERWRITE",
