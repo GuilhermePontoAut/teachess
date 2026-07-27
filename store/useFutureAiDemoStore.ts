@@ -6,6 +6,7 @@ import type {
   ProfessorToolDecision,
 } from "@/lib/future-ai/demo";
 import { getSafeStorage, STORAGE_KEYS } from "@/lib/storage/storage";
+import type { ProfessorDataAccessPreference } from "@/lib/future-ai/data-access";
 
 interface FutureAiDemoStore { interactions: FutureAiInteraction[]; addInteraction: (interaction: FutureAiInteraction) => void; clearConversation: () => void; }
 const timestamp = (value: string): number => { const parsed = Date.parse(value); return Number.isFinite(parsed) ? parsed : 0; };
@@ -44,6 +45,12 @@ const toolDecision = (value: unknown): ProfessorToolDecision | null => {
   }
   return null;
 };
+const dataAccessPreference = (
+  value: unknown,
+): ProfessorDataAccessPreference | null =>
+  isRecord(value) && typeof value.allowContextLookup === "boolean"
+    ? { allowContextLookup: value.allowContextLookup }
+    : null;
 const migrateAnswer = (
   answer: Record<string, unknown>,
   label: string,
@@ -75,7 +82,7 @@ const migrateAnswer = (
     evidenceStatus: "insufficient",
   };
 };
-const migrateInteractions = (persisted: unknown): Pick<FutureAiDemoStore, "interactions"> => {
+export const migrateFutureAiInteractions = (persisted: unknown): Pick<FutureAiDemoStore, "interactions"> => {
   if (!isRecord(persisted) || !Array.isArray(persisted.interactions)) return { interactions: [] };
   const interactions = persisted.interactions.filter(isRecord).map((item, index): FutureAiInteraction | null => {
     if (typeof item.question !== "string" || !isRecord(item.answer)) return null;
@@ -84,7 +91,7 @@ const migrateInteractions = (persisted: unknown): Pick<FutureAiDemoStore, "inter
     const current = rawType === "game-analysis" || rawType === "saved-position";
     const label = typeof rawContext.label === "string" && rawContext.label.trim() ? rawContext.label : "Contexto antigo da demonstração";
     const answer = item.answer;
-    return { id: typeof item.id === "string" ? item.id : `legacy-${index}`, question: item.question, answer: migrateAnswer(answer, label), toolDecision: toolDecision(item.toolDecision), createdAt: typeof item.createdAt === "string" ? item.createdAt : new Date(0).toISOString(), context: { type: rawType as FutureAiInteraction["context"]["type"], id: typeof rawContext.id === "string" ? rawContext.id : null, label: current ? label : "Contexto antigo da demonstração", legacy: !current } };
+    return { id: typeof item.id === "string" ? item.id : `legacy-${index}`, question: item.question, answer: migrateAnswer(answer, label), toolDecision: toolDecision(item.toolDecision), dataAccessPreference: dataAccessPreference(item.dataAccessPreference), createdAt: typeof item.createdAt === "string" ? item.createdAt : new Date(0).toISOString(), context: { type: rawType as FutureAiInteraction["context"]["type"], id: typeof rawContext.id === "string" ? rawContext.id : null, label: current ? label : "Contexto antigo da demonstração", legacy: !current } };
   }).filter((item): item is FutureAiInteraction => item !== null);
   return { interactions: sortInteractionsNewestFirst(interactions).slice(0, 30) };
 };
@@ -92,5 +99,5 @@ export const useFutureAiDemoStore = create<FutureAiDemoStore>()(persist((set) =>
   interactions: [],
   addInteraction: (interaction) => set((state) => ({ interactions: sortInteractionsNewestFirst([interaction, ...state.interactions]).slice(0, 30) })),
   clearConversation: () => set({ interactions: [] }),
-}), { name: STORAGE_KEYS.futureAiDemo, version: 3, storage: createJSONStorage(getSafeStorage), skipHydration: true, partialize: ({ interactions }) => ({ interactions }), migrate: migrateInteractions, merge: (persisted, current) => ({ ...current, ...migrateInteractions(persisted) }) }));
+}), { name: STORAGE_KEYS.futureAiDemo, version: 4, storage: createJSONStorage(getSafeStorage), skipHydration: true, partialize: ({ interactions }) => ({ interactions }), migrate: migrateFutureAiInteractions, merge: (persisted, current) => ({ ...current, ...migrateFutureAiInteractions(persisted) }) }));
 export const hydrateFutureAiDemoStore = async (): Promise<void> => { await useFutureAiDemoStore.persist.rehydrate(); };

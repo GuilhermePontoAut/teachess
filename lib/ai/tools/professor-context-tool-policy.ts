@@ -24,7 +24,9 @@ export const professorContextOpenAITools = [
 
 export function getAllowedProfessorContextTools(
   authorizedContextType: AuthorizedProfessorContext["type"],
+  allowContextLookup = true,
 ) {
+  if (!allowContextLookup) return [] as const;
   switch (authorizedContextType) {
     case "game":
       return [getGameContextOpenAITool] as const;
@@ -38,7 +40,9 @@ export function getAllowedProfessorContextTools(
 export function getProfessorContextToolsForExposurePolicy(
   authorizedContextType: AuthorizedProfessorContext["type"],
   policy: ProfessorToolExposurePolicy,
+  allowContextLookup = true,
 ) {
+  if (!allowContextLookup) return [];
   return policy === "all_context_tools"
     ? [...professorContextOpenAITools]
     : [...getAllowedProfessorContextTools(authorizedContextType)];
@@ -47,10 +51,12 @@ export function getProfessorContextToolsForExposurePolicy(
 export function getOfferedProfessorContextToolNames(
   authorizedContextType: AuthorizedProfessorContext["type"],
   policy: ProfessorToolExposurePolicy,
+  allowContextLookup = true,
 ): ProfessorContextToolName[] {
   return getProfessorContextToolsForExposurePolicy(
     authorizedContextType,
     policy,
+    allowContextLookup,
   ).map((tool) => tool.name as ProfessorContextToolName);
 }
 

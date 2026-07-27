@@ -1082,3 +1082,20 @@ acesso estruturada e validada. O modelo continuará responsável pela necessidad
 semântica. Não serão adicionadas regex amplas para tentar classificar linguagem
 natural. Até que o contrato de consentimento exista, esta seção é decisão
 arquitetural, não descrição de uma proteção já implementada.
+
+## Consentimento estruturado implementado (7F-C16)
+
+`professorContextToolRequestSchema` aceita o objeto estrito
+`dataAccessPreference: { allowContextLookup: boolean }` e aplica `false` quando
+ele está ausente. O snapshot continua validado, mas `false` força a política de
+exposição a retornar `[]`.
+
+Nesse caminho, o fluxo chama `responses.parse` uma única vez, com `store:
+false`, o mesmo modelo, prompt e Structured Output. Não há Tools, function call,
+executor nem segunda interação. O input contém somente metadado server-side não
+privado sobre o tipo selecionado e o bloqueio.
+
+Com `true`, permanece o fluxo anterior: game oferece apenas
+`get_game_context`, position apenas `get_position_context`, none nenhuma Tool;
+`tool_choice: auto` e `parallel_tool_calls: false` permanecem. A disponibilidade
+não obriga execução, e o navegador não escolhe Tool nem argumentos.

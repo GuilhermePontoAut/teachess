@@ -41,6 +41,16 @@ export type AuthorizedProfessorContext = z.infer<
   typeof authorizedProfessorContextSchema
 >;
 
+export const dataAccessPreferenceSchema = z
+  .object({
+    allowContextLookup: z.boolean(),
+  })
+  .strict();
+
+export type DataAccessPreference = z.infer<
+  typeof dataAccessPreferenceSchema
+>;
+
 export const professorContextToolRequestSchema = z
   .object({
     message: z
@@ -49,6 +59,9 @@ export const professorContextToolRequestSchema = z
       .min(1)
       .max(PROFESSOR_CONTEXT_TOOL_MESSAGE_MAX_LENGTH),
     authorizedContext: authorizedProfessorContextSchema,
+    dataAccessPreference: dataAccessPreferenceSchema.default({
+      allowContextLookup: false,
+    }),
   })
   .strict();
 

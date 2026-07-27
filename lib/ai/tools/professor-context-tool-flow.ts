@@ -86,6 +86,9 @@ export type ProfessorContextToolFlowDependencies = {
 export type ProfessorContextToolFlowInput = {
   message: string;
   authorizedContext?: unknown;
+  dataAccessPreference?: {
+    allowContextLookup: boolean;
+  };
   promptVersion: string;
   systemPrompt: string;
   toolExposurePolicy?: ProfessorToolExposurePolicy;
@@ -677,13 +680,32 @@ function buildTechnicalContext(context: AuthorizedProfessorContext): string {
   }
 }
 
+function buildBlockedTechnicalContext(
+  context: AuthorizedProfessorContext,
+): string {
+  return JSON.stringify({
+    selectedContextType: context.type,
+    contextLookupAuthorized: false,
+    instruction:
+      context.type === "none"
+        ? "Não há contexto selecionado. Responda somente com conhecimento geral."
+        : "Existe contexto selecionado, mas a consulta foi desativada nesta pergunta. Não confirme fatos privados; declare a limitação quando eles forem necessários.",
+  });
+}
+
 function buildOriginalInput(
   message: string,
   context: AuthorizedProfessorContext,
+  allowContextLookup = true,
 ): ResponseInputItem[] {
   return [
     { role: "user", content: message },
-    { role: "developer", content: buildTechnicalContext(context) },
+    {
+      role: "developer",
+      content: allowContextLookup
+        ? buildTechnicalContext(context)
+        : buildBlockedTechnicalContext(context),
+    },
   ];
 }
 
@@ -715,10 +737,57 @@ async function runValidatedProfessorContextToolFlow(
   dependencies: ProfessorContextToolFlowDependencies,
 ): Promise<ProfessorContextToolFlowResult> {
   const context = validateAuthorizedContext(input.authorizedContext);
-  const originalInput = buildOriginalInput(input.message, context);
+  const allowContextLookup =
+    input.dataAccessPreference?.allowContextLookup ?? true;
+  const originalInput = buildOriginalInput(
+    input.message,
+    context,
+    allowContextLookup,
+  );
+
+  if (!allowContextLookup) {
+    let response: FinalProviderResponse;
+    try {
+      response = await dependencies.transport.parseResponse({
+        model: PROFESSOR_CONTEXT_TOOL_FLOW_MODEL,
+        instructions: input.systemPrompt,
+        input: originalInput,
+        text: {
+          format: zodTextFormat(
+            provisionalTeacherResponseSchema,
+            "provisional_teacher_response",
+          ),
+        },
+        store: false,
+      });
+    } catch (error: unknown) {
+      throw new ProfessorContextToolFlowError("PROVIDER_ERROR", {
+        cause: error,
+      });
+    }
+
+    const parsedOutput = provisionalTeacherResponseSchema.safeParse(
+      response.output_parsed,
+    );
+    const output = validateOutput(response.output, "final");
+    if (hasRefusal(output)) {
+      throw new ProfessorContextToolFlowError("FINAL_RESPONSE_REFUSED");
+    }
+    if (response.status !== "completed") {
+      throw new ProfessorContextToolFlowError("FINAL_RESPONSE_INCOMPLETE");
+    }
+    if (!parsedOutput.success) {
+      throw new ProfessorContextToolFlowError(
+        "FINAL_STRUCTURED_OUTPUT_UNAVAILABLE",
+      );
+    }
+    return buildResult(parsedOutput.data, null);
+  }
+
   const tools = getProfessorContextToolsForExposurePolicy(
     context.type,
     input.toolExposurePolicy ?? "authorized_context_only",
+    allowContextLookup,
   );
   const toolConfiguration =
     tools.length === 0

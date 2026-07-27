@@ -1,4 +1,5 @@
 import type { ChessGame, GameAnalysis, TrainingTopic, UploadedPosition } from "@/lib/types/chess";
+import type { ProfessorDataAccessPreference } from "./data-access";
 
 export type FutureAiContextType = "game-analysis" | "saved-position";
 export type LegacyFutureAiContextType = "game" | "analysis" | "position" | "training" | "none" | "no-context" | "unknown";
@@ -28,7 +29,7 @@ export type ProfessorToolDecision =
       callCount: 0;
       executionStatus: "not_executed";
     };
-export interface FutureAiInteraction { id: string; question: string; context: FutureAiContextRef; answer: ProfessorAnswerContent; toolDecision: ProfessorToolDecision | null; createdAt: string; }
+export interface FutureAiInteraction { id: string; question: string; context: FutureAiContextRef; answer: ProfessorAnswerContent; toolDecision: ProfessorToolDecision | null; dataAccessPreference: ProfessorDataAccessPreference | null; createdAt: string; }
 export interface DemoContextData { game?: ChessGame; analysis?: GameAnalysis; position?: UploadedPosition; training?: TrainingTopic & { progress: number }; }
 
 export const contextTypeLabels: Record<FutureAiContextType, string> = { "game-analysis": "Análise de partida", "saved-position": "Posição específica" };

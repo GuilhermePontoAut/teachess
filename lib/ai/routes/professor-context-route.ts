@@ -168,6 +168,7 @@ export function createProfessorContextRoute(
         {
           message: parsedBody.data.message,
           authorizedContext: parsedBody.data.authorizedContext,
+          dataAccessPreference: parsedBody.data.dataAccessPreference,
           promptVersion: selectedPrompt.version,
           systemPrompt: selectedPrompt.systemPrompt,
         },

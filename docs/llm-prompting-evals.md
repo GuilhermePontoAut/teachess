@@ -988,3 +988,17 @@ Não há ajuste de prompt nesta etapa. V3 permanece padrão, V4 permanece
 experimental e inativa, nenhuma V5 é criada e a futura hipótese preferida
 combina política determinística limitada para autorização/consentimento com
 decisão semântica de necessidade pelo modelo.
+
+## Etapa 7F-C16 — consentimento sem alteração de prompt ou eval
+
+A decisão da C15 foi implementada no contrato e na orquestração, sem modificar
+V2, V3 ou V4 e sem criar V5. O consentimento vem exclusivamente do controle da
+interface e do campo booleano validado; frases digitadas não são heurística de
+autorização. Quando a consulta está autorizada, a necessidade de Tool continua
+probabilística. Quando está bloqueada, a ausência de Tool e snapshot é
+determinística.
+
+Os testes desta etapa são offline e usam transportes falsos. Eles verificam
+contrato, matriz de exposição, uma única interação no bloqueio, ausência de
+execução e minimização do input. Não medem qualidade semântica nem
+reinterpretam classificações históricas.

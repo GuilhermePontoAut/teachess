@@ -534,3 +534,22 @@ E-033 e E-034 permanecem evidência histórica congelada. Uma futura versão
 dependerá primeiro de conjunto de desenvolvimento novo e, depois, validação
 independente; os dois experimentos não serão usados para ajuste iterativo de
 V5.
+
+## Implementação do consentimento por pergunta (7F-C16)
+
+O contrato público agora inclui `dataAccessPreference.allowContextLookup`. O
+frontend sempre envia `true` ou `false`; a ausência em clientes antigos recebe
+o default server-side seguro `false`. O schema continua estrito e não aceita
+nomes, argumentos ou configuração de Tools vindos do navegador.
+
+A política central combina contexto selecionado, autorização e consentimento.
+Com `true`, `authorized_context_only` oferece no máximo a Tool compatível e o
+modelo continua decidindo probabilisticamente a necessidade. Com `false`,
+nenhuma Tool é oferecida ou executada, não há segunda interação e o snapshot
+validado não é encaminhado ao modelo. A entrada operacional informa somente o
+tipo geral selecionado e que sua consulta está bloqueada, sem dados privados.
+
+O checkbox da interface é a origem do consentimento por pergunta. Texto livre
+não altera autorização server-side e não é analisado por regex. A V3 continua
+padrão, a V4 continua inativa, e modelo, Structured Output, schemas de Tools e
+prompts versionados não mudaram.

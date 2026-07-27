@@ -2269,3 +2269,14 @@ reutilizados para desenvolver V5. Qualquer evolução deverá começar com conju
 de desenvolvimento novo e depois usar validação independente. V3 permanece
 padrão; V4, experimental e inativa; nenhuma V5 foi criada; e não há alteração
 imediata em produção.
+
+## 7F-C16 — implementação local, sem novo experimento
+
+O consentimento estruturado por pergunta foi implementado sem executar runner,
+eval ou chamada externa. A mudança não altera retroativamente E-033, E-034 nem
+qualquer relatório histórico: perguntas, expectativas, classificações,
+artefatos e fingerprints permanecem como registrados. Também não representa
+E-035.
+
+V3 continua padrão e V4 continua inativa. Nenhum prompt, modelo, schema de
+Structured Output ou schema de Tool foi modificado, e nenhuma V5 foi criada.

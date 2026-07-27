@@ -1,8 +1,8 @@
 import type {
   FutureAiInteraction,
   ProfessorAnswerContent,
-  ProfessorToolDecision,
 } from "@/lib/future-ai/demo";
+import { professorResponseSourceLabel } from "@/lib/future-ai/data-access";
 
 const evidenceStatusLabels: Record<
   ProfessorAnswerContent["evidenceStatus"],
@@ -12,16 +12,6 @@ const evidenceStatusLabels: Record<
   partial: "Evidências parciais",
   insufficient: "Evidências insuficientes",
 };
-
-function sourceLabel(decision: ProfessorToolDecision | null): string {
-  if (decision === null) return "Resposta preservada do histórico anterior";
-  if (decision.status === "not_called") {
-    return "Resposta sem consulta aos dados selecionados";
-  }
-  return decision.name === "get_game_context"
-    ? "Fonte consultada: partida selecionada"
-    : "Fonte consultada: posição selecionada";
-}
 
 function Section({
   title,
@@ -125,7 +115,10 @@ export function ProfessorConversation({
             </div>
             <ProfessorAnswer answer={item.answer} />
             <p className="mt-4 border-t border-line pt-3 text-xs font-semibold text-muted">
-              {sourceLabel(item.toolDecision)}
+              {professorResponseSourceLabel(
+                item.dataAccessPreference,
+                item.toolDecision,
+              )}
             </p>
           </article>
         </li>

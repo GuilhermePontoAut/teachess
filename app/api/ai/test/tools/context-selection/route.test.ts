@@ -718,6 +718,7 @@ test(
         assert.deepEqual(state.state.receivedInput, {
           message: validBody(type).message,
           authorizedContext: validBody(type).authorizedContext,
+          dataAccessPreference: { allowContextLookup: false },
           promptVersion: selectedPrompt.version,
           systemPrompt: selectedPrompt.systemPrompt,
         });

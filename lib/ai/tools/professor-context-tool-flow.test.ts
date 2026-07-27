@@ -40,6 +40,7 @@ import {
 import { GameContextToolError, PositionContextToolError } from "./tool-errors";
 import {
   getAllowedProfessorContextTools,
+  getOfferedProfessorContextToolNames,
   getProfessorContextToolsForExposurePolicy,
 } from "./professor-context-tool-policy";
 
@@ -283,13 +284,14 @@ test("contrato autorizado aceita exatamente game, position ou none", () => {
 });
 
 test("schema HTTP aplica trim, limite e propriedades estritas", () => {
-  assert.equal(
-    professorContextToolRequestSchema.parse({
+  const parsed = professorContextToolRequestSchema.parse({
       message: "  pergunta  ",
       authorizedContext: context("none"),
-    }).message,
-    "pergunta",
-  );
+    });
+  assert.equal(parsed.message, "pergunta");
+  assert.deepEqual(parsed.dataAccessPreference, {
+    allowContextLookup: false,
+  });
   for (const value of [
     null,
     [],
@@ -298,6 +300,21 @@ test("schema HTTP aplica trim, limite e propriedades estritas", () => {
     { message: " ", authorizedContext: context("none") },
     { message: "x".repeat(2_001), authorizedContext: context("none") },
     { message: "pergunta", authorizedContext: context("none"), extra: true },
+    {
+      message: "pergunta",
+      authorizedContext: context("none"),
+      dataAccessPreference: { allowContextLookup: "sim" },
+    },
+    {
+      message: "pergunta",
+      authorizedContext: context("none"),
+      dataAccessPreference: { allowContextLookup: true, toolName: "get_game_context" },
+    },
+    {
+      message: "pergunta",
+      authorizedContext: context("none"),
+      tools: ["get_game_context"],
+    },
   ]) {
     assert.equal(professorContextToolRequestSchema.safeParse(value).success, false);
   }
@@ -338,6 +355,82 @@ test("política server-side deriva Tools somente do tipo autorizado", () => {
     getProfessorContextToolsForExposurePolicy("none", "all_context_tools"),
     [getGameContextOpenAITool, getPositionContextOpenAITool],
   );
+});
+
+test("política central combina contexto autorizado e consentimento", () => {
+  assert.deepEqual(
+    getOfferedProfessorContextToolNames(
+      "game",
+      "authorized_context_only",
+      true,
+    ),
+    ["get_game_context"],
+  );
+  assert.deepEqual(
+    getOfferedProfessorContextToolNames(
+      "position",
+      "authorized_context_only",
+      true,
+    ),
+    ["get_position_context"],
+  );
+  for (const type of ["game", "position", "none"] as const) {
+    assert.deepEqual(
+      getOfferedProfessorContextToolNames(
+        type,
+        "authorized_context_only",
+        false,
+      ),
+      [],
+    );
+  }
+  assert.deepEqual(
+    getOfferedProfessorContextToolNames(
+      "none",
+      "authorized_context_only",
+      true,
+    ),
+    [],
+  );
+});
+
+test("consulta bloqueada usa uma interação, sem Tool, executor, ID ou snapshot", async () => {
+  for (const authorizedContext of [context("game"), context("position"), context("none")]) {
+    const state = createDependencies();
+    const result = await runProfessorContextToolFlow(
+      {
+        message: "Confirme um fato privado.",
+        authorizedContext,
+        dataAccessPreference: { allowContextLookup: false },
+        promptVersion: "professor-ia-v3",
+        systemPrompt: "Prompt imutável.",
+      },
+      state.dependencies,
+    );
+    assert.deepEqual(state.providerCalls.map((call) => call.phase), ["parse"]);
+    assert.equal(state.gameExecutions.length, 0);
+    assert.equal(state.positionExecutions.length, 0);
+    const params = state.providerCalls[0].params as Record<string, unknown>;
+    assert.equal("tools" in params, false);
+    assert.equal("tool_choice" in params, false);
+    assert.equal("parallel_tool_calls" in params, false);
+    const serialized = JSON.stringify(params);
+    for (const privateValue of [
+      "game-context-01",
+      "position-context-01",
+      FEN,
+      PGN,
+      "opponent-private",
+    ]) {
+      assert.equal(serialized.includes(privateValue), false);
+    }
+    assert.deepEqual(result.toolDecision, {
+      status: "not_called",
+      name: null,
+      callCount: 0,
+      executionStatus: "not_executed",
+    });
+  }
 });
 
 test("modo histórico ainda oferece as duas Tools explicitamente", async () => {
