@@ -1026,3 +1026,28 @@ sanitizado não registra argumentos, snapshots, payloads ou dados privados.
 E-033 não alterou Tools, schemas, fluxo ou rota pública. É somente smoke test,
 não mede estabilidade e não autoriza ajuste dos casos. V3 continua padrão, V4
 inativa e nenhuma V5 foi criada.
+
+### Estabilidade completa — E-034
+
+Nas 72 execuções do eval independente, cada contexto game recebeu somente
+`get_game_context` e cada position somente `get_position_context`. Nenhuma
+execução recebeu ambas, ofereceu ou chamou uma Tool incompatível. Houve zero
+`wrong_tool`, zero erro técnico, 100% de conclusão e validação integral do
+schema e do relatório sanitizado.
+
+Essa estabilidade arquitetural não tornou a necessidade determinística. O
+modelo acertou 61/72: nove chamadas desnecessárias concentradas em três casos
+3/3 persistentes e duas ausências de chamada em dois casos 1/3 ocasionais. Seis
+falsos positivos vieram de ordens que nomeavam a Tool sem pedir fatos; três de
+um pedido conceitual com game apenas ilustrativo. Os falsos negativos ocorreram
+quando o texto proibia a consulta, embora exigisse confirmação de fato privado.
+
+Autorização continua sendo a barreira server-side sobre qual capacidade pode
+ser usada. Necessidade continua sendo a decisão do modelo sobre chamar ou não a
+única capacidade autorizada. A arquitetura, transporte, execução, schema e
+relatório ficaram tecnicamente estáveis; o resíduo observado pertence à
+decisão probabilística.
+
+O artefato E-034 não contém argumentos, snapshots, mensagens, payloads ou dados
+privados. Nenhuma Tool, schema, política ou rota foi alterada. V3 continua
+padrão e V4 permanece inativa.

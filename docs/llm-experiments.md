@@ -2001,3 +2001,249 @@ novo caminho
 ```
 
 Esse comando é somente plano e não foi executado.
+
+## E-034 — estabilidade da necessidade de Tool em três repetições
+
+### Validação, preservação e configuração
+
+Depois de inspecionar `docs/evals/` e os registros de experimentos, `E-034` era
+o próximo ID realmente livre. O relatório original de 49.717 bytes foi mantido
+em `/tmp/teachess-professor-context-tool-necessity-v3-r3-host.json` e sua cópia
+byte a byte foi preservada em
+`docs/evals/E-034-professor-ia-v3-tool-necessity-r3-stability-host.json`.
+`cmp` confirmou identidade e ambos têm SHA-256
+`cbc071917730827a4e7c426e005cad5e6f556cb1a1d24d10642a460f3db1ac53`.
+
+O JSON é válido e passou integralmente no schema local. Ele registra
+`professor-context-tool-selection-runner-v1`, `gpt-5-mini`,
+`professor-ia-v3`, `provisional-teacher-response-v1`,
+`professor-context-tool-necessity-evals-v2`,
+`authorized_context_only`, três repetições, 24 casos, 72/72 execuções,
+`aborted: false`, `reportCompleteness: complete`, 72 resultados e zero erro
+técnico. Há 72 pares únicos `caseId + runNumber`, 24 IDs e, para cada ID,
+exatamente as repetições 1, 2 e 3, na ordem canônica, sem ausência ou
+duplicação. O exit code observado da execução de origem foi 0.
+
+O fingerprint canônico foi recalculado e permaneceu
+`d78e2d379e7230ad7c1f5aa8de5779b316fc0b8ccb6434636e0b5d25fd6f6cbe`.
+Esta consolidação foi somente local: não executou runner, smoke test, V2, V3,
+V4 ou nova avaliação e não fez chamada externa.
+
+### Métricas recalculadas
+
+| Métrica | Resultado |
+| --- | ---: |
+| acertos | 61/72 |
+| `false_positive` | 9 |
+| `false_negative` | 2 |
+| `wrong_tool` | 0 |
+| `technical_error` | 0 |
+| `decisionAccuracy` | 84,72% |
+| `endToEndSuccessRate` | 84,72% |
+| `completionRate` | 100% |
+
+Matriz com linhas esperadas e colunas observadas:
+
+| esperado \ observado | game | position | `not_called` |
+| --- | ---: | ---: | ---: |
+| game | 23 | 0 | 1 |
+| position | 0 | 23 | 1 |
+| `not_called` | 6 | 3 | 15 |
+
+Por repetição:
+
+| repetição | acertos | FP | FN | WT | TE | accuracy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| R1 | 20/24 | 3 | 1 | 0 | 0 | 83,33% |
+| R2 | 21/24 | 3 | 0 | 0 | 0 | 87,50% |
+| R3 | 20/24 | 3 | 1 | 0 | 0 | 83,33% |
+
+| repetição e esperado | game | position | `not_called` |
+| --- | --- | --- | --- |
+| R1 | 7 G, 1 N | 8 P | 2 G, 1 P, 5 N |
+| R2 | 8 G | 8 P | 2 G, 1 P, 5 N |
+| R3 | 8 G | 7 P, 1 N | 2 G, 1 P, 5 N |
+
+R2 teve um acerto a mais que R1 e R3 porque não apresentou falso negativo.
+Os mesmos três falsos positivos apareceram em todas as repetições. A diferença
+é descritiva e não sustenta alegação de significância estatística.
+
+### Estabilidade dos 24 casos
+
+Abreviações: G = `get_game_context`, P = `get_position_context`, N =
+`not_called`. A decisão dominante foi única em todos os casos.
+
+| caso | contexto | esperado | necessity | tags principais | R1/R2/R3 | acertos | dominante | conclusão |
+| --- | --- | --- | --- | --- | --- | ---: | --- | --- |
+| `NECESSITY-GAME-001` | game | G | required | `simple_game_fact` | G/G/G | 3 | G | 3/3 correto |
+| `NECESSITY-GAME-002` | game | G | required | `simple_game_fact`, indireto | G/G/G | 3 | G | 3/3 correto |
+| `NECESSITY-GAME-003` | game | G | mixed_required | híbrido obrigatório | G/G/G | 3 | G | 3/3 correto |
+| `NECESSITY-GAME-004` | game | G | mixed_required | híbrido, parcialmente respondível | G/G/G | 3 | G | 3/3 correto |
+| `NECESSITY-GAME-005` | game | G | required | dado ausente, ambiguidade | G/G/G | 3 | G | 3/3 correto |
+| `NECESSITY-GAME-006` | game | G | required | referência incompatível, fato simples | G/G/G | 3 | G | 3/3 correto |
+| `NECESSITY-GAME-007` | game | G | required | pedido negativo, fato simples | N/G/G | 2 | G | 2/3 correto, ocasional |
+| `NECESSITY-GAME-008` | game | G | mixed_required | indireto | G/G/G | 3 | G | 3/3 correto |
+| `NECESSITY-POSITION-001` | position | P | required | `simple_position_fact` | P/P/P | 3 | P | 3/3 correto |
+| `NECESSITY-POSITION-002` | position | P | required | fato simples, indireto | P/P/P | 3 | P | 3/3 correto |
+| `NECESSITY-POSITION-003` | position | P | mixed_required | híbrido obrigatório | P/P/P | 3 | P | 3/3 correto |
+| `NECESSITY-POSITION-004` | position | P | mixed_required | híbrido, parcialmente respondível | P/P/P | 3 | P | 3/3 correto |
+| `NECESSITY-POSITION-005` | position | P | required | dado ausente, ambiguidade | P/P/P | 3 | P | 3/3 correto |
+| `NECESSITY-POSITION-006` | position | P | required | referência incompatível, fato simples | P/P/P | 3 | P | 3/3 correto |
+| `NECESSITY-POSITION-007` | position | P | required | pedido negativo, indireto | P/P/N | 2 | P | 2/3 correto, ocasional |
+| `NECESSITY-POSITION-008` | position | P | required | indireto | P/P/P | 3 | P | 3/3 correto |
+| `NECESSITY-NONE-GAME-001` | game | N | not_required | conceitual, híbrido opcional | N/N/N | 3 | N | 3/3 correto |
+| `NECESSITY-NONE-GAME-002` | game | N | not_required | conceitual, híbrido opcional | G/G/G | 0 | G | 0/3, erro persistente |
+| `NECESSITY-NONE-GAME-003` | game | N | not_required | menção casual, ambiguidade | N/N/N | 3 | N | 3/3 correto |
+| `NECESSITY-NONE-GAME-004` | game | N | not_required | nome imperativo de Tool | G/G/G | 0 | G | 0/3, erro persistente |
+| `NECESSITY-NONE-POSITION-001` | position | N | not_required | conceitual, híbrido opcional | N/N/N | 3 | N | 3/3 correto |
+| `NECESSITY-NONE-POSITION-002` | position | N | not_required | conceitual, híbrido opcional | N/N/N | 3 | N | 3/3 correto |
+| `NECESSITY-NONE-POSITION-003` | position | N | not_required | menção casual, ambiguidade | N/N/N | 3 | N | 3/3 correto |
+| `NECESSITY-NONE-POSITION-004` | position | N | not_required | nome imperativo de Tool | P/P/P | 0 | P | 0/3, erro persistente |
+
+Foram 22/24 casos com decisão consistente (91,67%), 19/24 casos 3/3
+corretos, 21/24 com maioria correta (87,50%), três com maioria incorreta e
+0/3 correto, e nenhum sem decisão dominante. Somente
+`NECESSITY-GAME-007` e `NECESSITY-POSITION-007` alternaram entre Tool e N.
+
+### Nove falsos positivos e dois falsos negativos
+
+Os nove falsos positivos são três ocorrências, R1/R2/R3, em cada um destes
+casos:
+
+| caso | repetições | contexto | esperado → observado | Tool oferecida | tags | intenção sanitizada | por que era dispensável |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `NECESSITY-NONE-GAME-002` | 1, 2, 3 | game | N → G | G | conceitual com game, híbrido opcional | pede método geral com partida apenas ilustrativa | o método independe do snapshot |
+| `NECESSITY-NONE-GAME-004` | 1, 2, 3 | game | N → G | G | nome imperativo de Tool | manda acionar o mecanismo só para comprovar que existe | nomeá-lo não solicita fato privado |
+| `NECESSITY-NONE-POSITION-004` | 1, 2, 3 | position | N → P | P | nome imperativo de Tool | manda executar o mecanismo como teste sem relatar o tabuleiro | não há necessidade factual |
+
+Logo, cada caso teve falso positivo 3/3 e é persistente nesta amostra;
+`NECESSITY-NONE-POSITION-004` falhou explicitamente nas três repetições.
+`named_tool_instruction` concentra seis das nove ocorrências; as outras três
+estão na interseção `conceptual_with_game` × `hybrid_context_optional`.
+Não houve falso positivo em conceito com position, menção casual, pedido
+negativo, contexto ambíguo ou ilustrativo de position. As tags se sobrepõem e
+os grupos são pequenos.
+
+Os dois falsos negativos são:
+
+| caso | repetição | contexto | esperado → observado | Tool oferecida | tags | intenção sanitizada | fato que exigia consulta |
+| --- | ---: | --- | --- | --- | --- | --- | --- |
+| `NECESSITY-GAME-007` | 1 | game | G → N | G | pedido negativo, fato simples | proíbe consulta, mas pede oponente e desfecho registrados | fatos privados do histórico |
+| `NECESSITY-POSITION-007` | 3 | position | P → N | P | pedido negativo, indireto | proíbe consulta, mas pede confirmação do turno | lado a mover no snapshot |
+
+São dois IDs distintos, um game e um position, ambos erros 1/3 e ocasionais.
+O padrão comum é lexical e metodológico: a proibição explícita da consulta
+conflita com a confirmação de um fato privado. N era insuficiente porque não
+havia evidência autorizada na primeira entrada para confirmar esses fatos.
+Nenhum snapshot completo ou argumento privado é reproduzido aqui.
+
+### Recortes por classe, contexto, necessity e tags
+
+| grupo | runs | acertos | FP | FN | accuracy |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| esperado G | 24 | 23 | 0 | 1 | 95,83% |
+| esperado P | 24 | 23 | 0 | 1 | 95,83% |
+| esperado N | 24 | 15 | 9 | 0 | 62,50% |
+| contexto game | 36 | 29 | 6 | 1 | 80,56% |
+| contexto position | 36 | 32 | 3 | 1 | 88,89% |
+| `required` | 33 | 31 | 0 | 2 | 93,94% |
+| `mixed_required` | 15 | 15 | 0 | 0 | 100% |
+| `not_required` | 24 | 15 | 9 | 0 | 62,50% |
+
+`wrong_tool` e `technical_error` são zero em todos esses grupos.
+
+| tag | runs | acertos | FP | FN | accuracy |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `named_tool_instruction` | 6 | 0 | 6 | 0 | 0% |
+| `conceptual_with_game` | 6 | 3 | 3 | 0 | 50% |
+| `conceptual_with_position` | 6 | 6 | 0 | 0 | 100% |
+| `hybrid_context_optional` | 12 | 9 | 3 | 0 | 75% |
+| `hybrid_context_required` | 12 | 12 | 0 | 0 | 100% |
+| `negative_tool_request` | 6 | 4 | 0 | 2 | 66,67% |
+| `casual_chess_term` | 6 | 6 | 0 | 0 | 100% |
+| `deliberately_ambiguous` | 12 | 12 | 0 | 0 | 100% |
+| `colloquial_or_indirect` | 15 | 14 | 0 | 1 | 93,33% |
+| `simple_game_fact` | 12 | 11 | 0 | 1 | 91,67% |
+| `simple_position_fact` | 9 | 9 | 0 | 0 | 100% |
+| `no_explicit_demonstrative` | 12 | 12 | 0 | 0 | 100% |
+| `partially_answerable` | 6 | 6 | 0 | 0 | 100% |
+| `missing_or_unconfirmed_data` | 6 | 6 | 0 | 0 | 100% |
+| `incompatible_reference` | 6 | 6 | 0 | 0 | 100% |
+
+Esses recortes são sobrepostos e vários têm poucos casos; descrevem o conjunto
+congelado, não estimam comportamento geral.
+
+### Comparação cautelosa com E-033
+
+E-033 teve uma repetição independente, 24 execuções, 21 acertos, três falsos
+positivos, zero falso negativo e 87,50%. E-034 tem três repetições formais, 72
+execuções, 61 acertos, nove falsos positivos, dois falsos negativos e 84,72%.
+Ambos tiveram zero `wrong_tool`, zero erro técnico e 100% de conclusão.
+
+Os três erros de E-033 — `NONE-GAME-002`, `NONE-GAME-004` e
+`NONE-POSITION-004` — persistiram em 3/3 no E-034. Dois casos corretos no smoke,
+`GAME-007` e `POSITION-007`, falharam uma vez cada e originaram os falsos
+negativos. Assim, a repetição adicional revelou variabilidade diante de pedidos
+negativos, enquanto os três padrões de falso positivo foram sistemáticos nesta
+amostra. E-033 não é somado às 72 execuções nem tratado como quarta repetição
+formal, e a diferença de accuracy não recebe interpretação de significância.
+
+### Política, arquitetura, tokens e latência
+
+Nos 72 resultados, game recebeu somente G e position somente P; nenhuma
+execução recebeu ambas, nenhuma Tool incompatível foi oferecida ou chamada.
+`wrong_tool` permaneceu zero por construção da exposição. Autorização define
+qual capacidade pode ser oferecida; necessidade de chamar a capacidade
+autorizada continua decisão probabilística do modelo.
+
+| telemetria | resultado |
+| --- | ---: |
+| amostras | 72 |
+| tokens entrada / saída / total | 440.738 / 125.683 / 566.421 |
+| tokens por amostra | 7.866,96 |
+| latência total mín./máx./média/mediana | 7.068,98 / 28.273,87 / 16.196,00 / 16.232,98 ms |
+| primeira interação mín./máx./média/mediana | 981,25 / 24.013,10 / 5.598,31 / 2.651,09 ms |
+| segunda interação mín./máx./média/mediana | 1.622,54 / 21.413,58 / 10.596,55 / 10.454,88 ms |
+| execuções com segunda interação | 72/72 |
+
+| grupo | tokens entrada/saída/total | latência mín./máx./média/mediana ms |
+| --- | --- | --- |
+| esperado G | 142.346 / 41.464 / 183.810 | 10.096,08 / 23.589,80 / 15.354,63 / 13.327,63 |
+| esperado P | 137.967 / 33.929 / 171.896 | 7.068,98 / 23.714,94 / 14.324,46 / 13.786,78 |
+| esperado N | 160.425 / 50.290 / 210.715 | 11.181,83 / 28.273,87 / 18.908,92 / 18.526,15 |
+| R1 | 146.837 / 41.066 / 187.903 | 10.096,08 / 23.714,94 / 15.893,97 / 15.164,44 |
+| R2 | 145.536 / 40.659 / 186.195 | 7.068,98 / 25.121,28 / 15.868,50 / 15.581,23 |
+| R3 | 148.365 / 43.958 / 192.323 | 8.932,66 / 28.273,87 / 16.825,54 / 17.066,27 |
+
+Não há conversão de tokens em dinheiro nem atribuição causal de diferenças sem
+comparação controlada.
+
+### Sanitização, leitura metodológica e próximos caminhos
+
+A inspeção confirmou ausência de chave, `Authorization`, request ID completo,
+headers, payload completo, snapshot privado, argumentos privados, PGN integral
+desnecessário, conteúdo de `.env.local`, mensagens brutas e stack trace.
+`technicalErrorDetails` é nulo em 72/72; `offeredToolNames` contém apenas os
+nomes públicos G ou P compatíveis. O formato não inclui pergunta, resumo
+privado, snapshot ou argumentos.
+
+A arquitetura foi tecnicamente estável: exposição/autorização, transporte,
+execução, schema e relatório não apresentaram falha. Os erros são de decisão do
+modelo: chamadas desnecessárias, duas recusas ocasionais de Tool necessária e
+sensibilidade persistente a nomes imperativos de Tool e a contexto game
+meramente ilustrativo. Accuracy de 84,72% neste conjunto pequeno e congelado
+não comprova precisão geral ou generalização, nem promove ou rejeita
+automaticamente V3.
+
+O eval set permanece congelado e não deve virar conjunto de desenvolvimento
+para ajustar uma V5 e medi-la nos mesmos casos. Para uma etapa futura, sem
+seleção automática, ficam as opções: (A) manter V3 e aceitar o resíduo; (B)
+criar conjunto de desenvolvimento separado para uma eventual V5; (C) aplicar
+regras determinísticas fora do modelo para ordens que apenas citam Tools,
+considerando o risco de heurísticas frágeis; (D) tornar a UX e o contrato mais
+explícitos quando fatos privados são pedidos; ou (E) combinar as abordagens,
+mantendo separação entre desenvolvimento e este eval congelado.
+
+Nenhum código, prompt, caso, snapshot, ordem, `expectedDecision`, modelo, Tool,
+schema, parâmetro, política, rota pública ou `.env.local` foi alterado. V3
+continua padrão, V4 inativa, nenhuma V5 foi criada e não houve commit ou push.

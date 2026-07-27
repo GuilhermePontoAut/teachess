@@ -923,3 +923,37 @@ terminal normal; não foi executada aqui.
 
 E-033 não é diretamente comparável a E-032 porque os eval sets diferem. V3
 continua padrão, V4 inativa e nenhuma V5 foi criada.
+
+## E-034 — estabilidade da decisão de necessidade
+
+A avaliação completa já produzida foi consolidada localmente, sem runner ou
+chamada externa. Em três repetições dos 24 casos congelados, V3 obteve 61/72
+acertos (84,72%), nove falsos positivos, dois falsos negativos, zero
+`wrong_tool`, zero erro técnico e 100% de conclusão. Por repetição foram 20,
+21 e 20 acertos; a oscilação veio de um falso negativo em R1 e outro em R3.
+
+Dezenove casos foram 3/3 corretos, 21 tiveram maioria correta e 22 mantiveram a
+mesma decisão nas três repetições. Os três erros do smoke persistiram 3/3:
+game ilustrativo tratado como obrigatório e as duas ordens que nomeavam a Tool
+sem pedir fato. `named_tool_instruction` ficou 0/6,
+`conceptual_with_game` 3/6 e `hybrid_context_optional` 9/12. Em contraste,
+conceito com position, híbrido obrigatório, menção casual e ambiguidade foram
+perfeitos nesta amostra.
+
+Os falsos negativos ocorreram uma vez em cada um de dois pedidos que proibiam
+consulta, mas exigiam confirmação de fato privado: um game em R1 e um position
+em R3. Esse padrão deixa `negative_tool_request` em 4/6. São erros ocasionais,
+enquanto os três casos de falso positivo são persistentes no experimento.
+
+A política garantiu somente a Tool compatível e eliminou `wrong_tool` por
+construção, mas não resolveu a fronteira probabilística Tool × nenhuma Tool.
+Os recortes são pequenos e sobrepostos; 84,72% não prova generalização. E-033
+não foi somado como uma quarta repetição.
+
+O relatório sanitizado foi preservado como
+`docs/evals/E-034-professor-ia-v3-tool-necessity-r3-stability-host.json`.
+O fingerprint
+`d78e2d379e7230ad7c1f5aa8de5779b316fc0b8ccb6434636e0b5d25fd6f6cbe`
+permanece intacto. O conjunto não será usado para desenvolver e reavaliar V5.
+V3 continua padrão, V4 inativa, nenhuma V5 foi criada e não houve promoção ou
+rejeição automática.
