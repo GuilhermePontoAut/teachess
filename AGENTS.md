@@ -23,7 +23,6 @@ Use Next.js com App Router e TypeScript. Antes de alterar código do framework, 
 ## Limites obrigatórios
 
 - Não integre OpenAI, Anthropic, Gemini ou qualquer LLM.
-- Não integre Stockfish nem outro motor de xadrez.
 - Não implemente OCR, visão computacional, backend, autenticação ou multiplayer reais.
 - Represente futuras funções de IA apenas com mocks, placeholders, dados simulados, avisos visuais ou controles desabilitados.
 - Não exponha dados sensíveis nem crie ou registre arquivos de credenciais.
@@ -43,3 +42,22 @@ Ao final de cada tarefa, informe:
 - arquivos alterados;
 - comandos e testes executados, com seus resultados;
 - limitações, mocks e recursos ainda não implementados.
+
+## Motores de xadrez
+
+É permitida a integração do Stockfish quando solicitada explicitamente pelo usuário.
+
+Na primeira implementação, devem ser respeitadas estas restrições:
+
+- executar o Stockfish localmente no navegador;
+- usar Web Worker para não bloquear a interface;
+- utilizar inicialmente uma variante single-threaded;
+- analisar somente posições FEN;
+- não analisar partidas PGN completas nesta etapa;
+- não enviar posições ou resultados do motor à OpenAI;
+- não usar CDN;
+- manter os arquivos necessários versionados no repositório;
+- implementar cancelamento, timeout e encerramento correto do Worker;
+- não criar banco de dados, RAG, LangChain, MCP ou agentes sem solicitação posterior;
+- não alterar `.env.local`;
+- não criar commit nem executar push automaticamente.
