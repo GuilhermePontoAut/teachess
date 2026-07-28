@@ -1,6 +1,6 @@
-# Arquitetura futura de IA
+# Arquitetura futura de análise e explicação pedagógica
 
-Este documento descreve uma possibilidade de produto, não uma integração ativa. A rota `/futura-ia` usa apenas React, Zustand, `localStorage`, mocks existentes e templates determinísticos locais. Não há requisição de rede, modelo, motor, OCR, visão computacional ou backend.
+Este documento descreve a direção de produto, não uma integração ativa. A rota `/futura-ia` deixou o formato de chat e agora prepara localmente um job demonstrativo de análise de partida ou posição. Não há requisição de rede, modelo, motor, OCR, visão computacional, banco ou backend de produto.
 
 ## Entradas previstas
 
@@ -8,7 +8,7 @@ Este documento descreve uma possibilidade de produto, não uma integração ativ
 - imagem privada de tabuleiro físico ou print de partida;
 - partida da plataforma autorizada para o usuário;
 - histórico pessoal e plano de treinamento com acesso permitido;
-- pergunta em linguagem natural.
+- rating do jogador como sinal pedagógico inicial, com limites provisórios e configuráveis.
 
 ## Fluxo técnico futuro
 
@@ -17,9 +17,11 @@ Este documento descreve uma possibilidade de produto, não uma integração ativ
 3. Normalizar dados da partida ou posição e pedir confirmação quando houver reconhecimento.
 4. Enviar somente a posição validada a um motor de xadrez para avaliação técnica.
 5. Recuperar histórico e padrões autorizados do jogador com indicação de origem.
-6. Fornecer os fatos técnicos e fontes a um modelo de linguagem para explicação didática.
-7. Validar formato, incerteza, atribuição e rastreabilidade da resposta.
-8. Apresentar a explicação ao jogador e oferecer revisão por professor humano.
+6. Derivar um perfil pedagógico inicial, usando rating com cautela e sem tratá-lo como classificação universal.
+7. Fornecer os fatos técnicos e fontes a um modelo de linguagem para explicação didática.
+8. Validar formato, incerteza, atribuição e rastreabilidade da resposta.
+9. Persistir resultados e reutilizar com segurança análises equivalentes por FEN e configuração do motor.
+10. Apresentar a explicação ao jogador e oferecer revisão por professor humano.
 
 ## Responsabilidades
 
@@ -29,7 +31,7 @@ A visão computacional futura será responsável por detectar o tabuleiro, ident
 
 O modelo de linguagem futuro será responsável por explicação, adaptação ao nível, organização do estudo e diálogo. Ele não deverá inventar avaliações, variantes, fontes ou fatos ausentes. Nenhum provedor está definido.
 
-O backend futuro será responsável por autenticação, autorização, privacidade, persistência, auditoria, histórico, exclusão e segurança. Regras no frontend servem apenas à demonstração.
+O backend futuro será responsável por autenticação, autorização, privacidade, persistência, auditoria, histórico, exclusão e segurança. Um banco e um cache por FEN/configuração poderão evitar processamento repetido, mas ainda não foram escolhidos nem integrados. Regras no frontend servem apenas à demonstração.
 
 ## Privacidade e rastreabilidade
 
@@ -41,4 +43,4 @@ O principal risco de um modelo de linguagem é apresentar uma inferência plaus�
 
 ## Limitações atuais
 
-A demonstração atual não interpreta perguntas semanticamente com um modelo. Ela usa correspondência simples de termos para escolher variações de templates e combina somente campos existentes. O pequeno atraso serve para demonstrar o estado de interface “Preparando demonstração local...”, não simula processamento inteligente. O histórico fica no navegador, limitado a 30 interações, e pode ser apagado sem alterar qualquer outra store.
+A demonstração atual apenas percorre estados locais de um job. Ela não chama a integração OpenAI histórica, não carrega ou executa Stockfish, não avalia posições e não produz relatório pedagógico. O `localStorage` guarda somente a seleção e resultados estruturais estáveis; estados transitórios não são restaurados. Banco, cache por FEN e processamento real permanecem futuros.

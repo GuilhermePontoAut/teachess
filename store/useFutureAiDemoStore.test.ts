@@ -1,57 +1,49 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { migrateFutureAiInteractions } from "./useFutureAiDemoStore";
+import { migrateFutureAiAnalysisState } from "./useFutureAiDemoStore";
 
-const answer = {
-  summary: "Resumo",
-  observations: [],
-  strengths: [],
-  improvements: [],
-  studyRecommendations: [],
-  evidenceUsed: [],
-  limitations: [],
-  evidenceStatus: "partial",
-};
-
-test("histórico preserva o consentimento usado em cada resposta", () => {
-  const migrated = migrateFutureAiInteractions({
-    interactions: [
-      {
-        id: "interaction-1",
-        question: "Pergunta",
-        context: {
-          type: "game-analysis",
-          id: "game-1",
-          label: "Partida",
-        },
-        answer,
-        toolDecision: {
-          status: "not_called",
-          name: null,
-          callCount: 0,
-          executionStatus: "not_executed",
-        },
-        dataAccessPreference: { allowContextLookup: false },
-        createdAt: "2026-07-27T12:00:00.000Z",
-      },
-    ],
+test("migração descarta o histórico de conversa legado", () => {
+  const migrated = migrateFutureAiAnalysisState({
+    interactions: [{ question: "Pergunta antiga", answer: { summary: "Resposta" } }],
   });
 
-  assert.deepEqual(migrated.interactions[0].dataAccessPreference, {
-    allowContextLookup: false,
-  });
+  assert.equal("interactions" in migrated, false);
+  assert.equal(migrated.currentJob, null);
+  assert.equal(migrated.lastResult, null);
 });
 
-test("histórico antigo não inventa consentimento retroativo", () => {
-  const migrated = migrateFutureAiInteractions({
-    interactions: [
-      {
-        question: "Pergunta antiga",
-        context: { type: "game-analysis", id: "game-1", label: "Partida" },
-        answer,
-        createdAt: "2026-07-27T11:00:00.000Z",
-      },
-    ],
+test("migração converte a seleção antiga sem restaurar mensagens", () => {
+  const migrated = migrateFutureAiAnalysisState({
+    context: { type: "saved-position", id: "position-1" },
+    interactions: [{ question: "Pergunta antiga" }],
   });
-  assert.equal(migrated.interactions[0].dataAccessPreference, null);
+
+  assert.equal(migrated.analysisType, "position");
+  assert.equal(migrated.selectedPositionId, "position-1");
+});
+
+test("migração não restaura jobs transitórios", () => {
+  const migrated = migrateFutureAiAnalysisState({
+    analysisType: "game",
+    selectedGameId: "game-1",
+    currentJob: {
+      id: "job-1",
+      target: { type: "game", gameId: "game-1" },
+      status: "analyzing",
+      createdAt: "2026-07-28T10:00:00.000Z",
+      updatedAt: "2026-07-28T10:00:01.000Z",
+      error: null,
+    },
+  });
+
+  assert.equal(migrated.currentJob, null);
+  assert.equal(migrated.selectedGameId, "game-1");
+});
+
+test("migração preserva somente erro sanitizado", () => {
+  const migrated = migrateFutureAiAnalysisState({
+    error: "Falha em https://provider.example/private",
+  });
+
+  assert.equal(migrated.error, "Falha em [endereço removido]");
 });

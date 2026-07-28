@@ -33,6 +33,8 @@
     "lib/ai/prompts/professor-ia-prompts.test.ts",
     "lib/ai/tools/**/*.ts",
     "lib/future-ai/data-access.test.ts",
+    "lib/analysis/**/*.ts",
+    "components/future-ai/active-interface.test.ts",
     "store/useFutureAiDemoStore.test.ts",
     "lib/types/chess.ts",
     "scripts/run-position-context-tool-selection-evals.ts",

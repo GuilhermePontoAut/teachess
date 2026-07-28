@@ -153,11 +153,11 @@ A complexidade não está apenas na quantidade de telas. Ela aparece na coordena
 
 ### Professor IA
 
-**O que funciona:** na rota histórica `/futura-ia`, o usuário pode explorar capacidades, arquitetura, roadmap e conversar com o Professor IA sobre uma partida ou posição selecionada. Perguntas livres ou sugeridas passam pela rota pública server-side, pelo fluxo de Tools e pelo Structured Output; as 30 interações mais recentes continuam persistidas localmente.
+**O que funciona:** na rota `/futura-ia`, o usuário escolhe entre análise de partida e análise de posição, seleciona um item demonstrativo e acompanha um job local pelos estados de preparação, análise, conclusão ou falha. A conclusão confirma somente que a estrutura foi preparada; não apresenta avaliação, melhor lance, variante nem relatório enxadrístico.
 
-**O que é mockado:** os dados iniciais, as análises técnicas e os FENs originados de imagem. A resposta textual usa a OpenAI, mas não há motor, OCR ou visão computacional; portanto, o Professor IA não calcula melhores lances nem valida avaliações técnicas.
+**O que é mockado:** os dados iniciais, os FENs originados de imagem e a curta transição visual do job. A interface ativa não chama OpenAI nem Stockfish, e não há motor, OCR, visão computacional ou análise real.
 
-**Futuro:** adicionar autenticação e autorização confiáveis no servidor, além de separar reconhecimento visual, avaliação por motor e explicação do modelo. A OpenAI é o primeiro provedor e o `gpt-5-mini`, o modelo inicial sujeito a avaliação.
+**Futuro:** executar a análise objetiva com Stockfish, selecionar momentos críticos e somente então gerar uma explicação pedagógica com LLM. O rating será um sinal inicial configurável do nível pedagógico; persistência em banco e cache de posições por FEN permanecem etapas posteriores.
 
 ![Demonstração do Professor IA](docs/screenshots/ai-professor-demo.png)
 
@@ -238,9 +238,9 @@ A escolha também simplificou o deploy na Vercel, favorece a responsividade e a 
 
 A OpenAI foi escolhida como provedora da primeira integração, e o `gpt-5-mini` como modelo inicial. A escolha é orientada a custo e à hipótese de suficiência para um fluxo bem delimitado; o modelo continua sujeito à avaliação no fluxo real e não é tratado como definitivo.
 
-#### Integração implementada
+#### Integração histórica preservada
 
-A integração usa o SDK oficial da OpenAI, exclusivamente no servidor, pela Responses API. `OPENAI_API_KEY` permanece em variável de ambiente não pública. A interface chama somente `POST /api/ai/professor`, que reutiliza o fluxo validado de seleção de contexto e Structured Outputs; as rotas técnicas continuam protegidas por flag e separadas da experiência pública.
+A integração acadêmica usa o SDK oficial da OpenAI, exclusivamente no servidor, pela Responses API. `OPENAI_API_KEY` permanece em variável de ambiente não pública. A rota `POST /api/ai/professor`, seus prompts e evals continuam preservados como evidência histórica, mas a interface atual de análise automática não a chama. As rotas técnicas continuam protegidas por flag e separadas da experiência pública.
 
 #### Structured Outputs
 
@@ -586,7 +586,7 @@ demonstrar seus fluxos de interface. Nesta versão:
 - partidas, adversários e jogadores iniciais são fictícios;
 - análises, precisões, erros e recomendações são simulados;
 - o ranking não utiliza um sistema Elo real;
-- o Professor IA usa LLM real, mas recebe dados de partida e posição ainda demonstrativos;
+- o fluxo atual do Professor IA prepara somente um job local estrutural, sem LLM ou análise técnica;
 - posições apresentadas após o envio de imagens não foram reconhecidas;
 - professores, avaliações, preços e horários são fictícios;
 - agendamentos não representam reservas reais;

@@ -1,103 +1,191 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type {
-  FutureAiInteraction,
-  ProfessorAnswerContent,
-  ProfessorToolDecision,
-} from "@/lib/future-ai/demo";
+  AnalysisJob,
+  AnalysisTarget,
+  StructuralAnalysisResult,
+} from "@/lib/analysis/contracts";
 import { getSafeStorage, STORAGE_KEYS } from "@/lib/storage/storage";
-import type { ProfessorDataAccessPreference } from "@/lib/future-ai/data-access";
 
-interface FutureAiDemoStore { interactions: FutureAiInteraction[]; addInteraction: (interaction: FutureAiInteraction) => void; clearConversation: () => void; }
-const timestamp = (value: string): number => { const parsed = Date.parse(value); return Number.isFinite(parsed) ? parsed : 0; };
-export const sortInteractionsNewestFirst = (items: FutureAiInteraction[]): FutureAiInteraction[] => [...items].sort((a, b) => timestamp(b.createdAt) - timestamp(a.createdAt) || b.id.localeCompare(a.id));
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
-const strings = (value: unknown): string[] => Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
-const evidenceStatus = (value: unknown): ProfessorAnswerContent["evidenceStatus"] =>
-  value === "sufficient" || value === "partial" ? value : "insufficient";
-const toolDecision = (value: unknown): ProfessorToolDecision | null => {
+export type AnalysisSelectionType = "game" | "position";
+
+type FutureAiAnalysisState = {
+  analysisType: AnalysisSelectionType;
+  selectedGameId: string | null;
+  selectedPositionId: string | null;
+  currentJob: AnalysisJob | null;
+  lastResult: StructuralAnalysisResult | null;
+  error: string | null;
+};
+
+interface FutureAiDemoStore extends FutureAiAnalysisState {
+  selectAnalysisType: (type: AnalysisSelectionType) => void;
+  selectGame: (gameId: string | null) => void;
+  selectPosition: (positionId: string | null) => void;
+  setCurrentJob: (job: AnalysisJob | null) => void;
+  setLastResult: (result: StructuralAnalysisResult | null) => void;
+  setError: (error: string | null) => void;
+}
+
+const initialState: FutureAiAnalysisState = {
+  analysisType: "game",
+  selectedGameId: null,
+  selectedPositionId: null,
+  currentJob: null,
+  lastResult: null,
+  error: null,
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const selectionType = (value: unknown): AnalysisSelectionType =>
+  value === "position" || value === "saved-position" ? "position" : "game";
+
+const safeId = (value: unknown): string | null =>
+  typeof value === "string" && value.trim() ? value : null;
+
+const safeTarget = (value: unknown): AnalysisTarget | null => {
   if (!isRecord(value)) return null;
-  if (
-    value.status === "called" &&
-    (value.name === "get_game_context" || value.name === "get_position_context") &&
-    value.callCount === 1 &&
-    value.executionStatus === "completed"
-  ) {
-    return {
-      status: "called",
-      name: value.name,
-      callCount: 1,
-      executionStatus: "completed",
-    };
+  if (value.type === "game") {
+    const gameId = safeId(value.gameId);
+    return gameId ? { type: "game", gameId } : null;
   }
-  if (
-    value.status === "not_called" &&
-    value.name === null &&
-    value.callCount === 0 &&
-    value.executionStatus === "not_executed"
-  ) {
-    return {
-      status: "not_called",
-      name: null,
-      callCount: 0,
-      executionStatus: "not_executed",
-    };
+  if (value.type === "position") {
+    const positionId = safeId(value.positionId);
+    return positionId
+      ? {
+          type: "position",
+          positionId,
+          fen: typeof value.fen === "string" ? value.fen : null,
+        }
+      : null;
   }
   return null;
 };
-const dataAccessPreference = (
-  value: unknown,
-): ProfessorDataAccessPreference | null =>
-  isRecord(value) && typeof value.allowContextLookup === "boolean"
-    ? { allowContextLookup: value.allowContextLookup }
-    : null;
-const migrateAnswer = (
-  answer: Record<string, unknown>,
-  label: string,
-): ProfessorAnswerContent => {
-  const hasStructuredFields =
-    Array.isArray(answer.studyRecommendations) &&
-    Array.isArray(answer.limitations);
-  if (hasStructuredFields) {
-    return {
-      summary: typeof answer.summary === "string" ? answer.summary : "Resposta do Professor IA.",
-      observations: strings(answer.observations),
-      strengths: strings(answer.strengths),
-      improvements: strings(answer.improvements),
-      studyRecommendations: strings(answer.studyRecommendations),
-      evidenceUsed: strings(answer.evidenceUsed),
-      limitations: strings(answer.limitations),
-      evidenceStatus: evidenceStatus(answer.evidenceStatus),
-    };
-  }
 
+const safeResult = (value: unknown): StructuralAnalysisResult | null => {
+  if (!isRecord(value) || value.status !== "completed") return null;
+  const target = safeTarget(value.target);
+  if (
+    !target ||
+    typeof value.jobId !== "string" ||
+    typeof value.message !== "string" ||
+    typeof value.completedAt !== "string" ||
+    value.isDemonstration !== true
+  ) {
+    return null;
+  }
   return {
-    summary: typeof answer.summary === "string" ? answer.summary : "Resposta antiga da demonstração.",
-    observations: strings(answer.observations),
-    strengths: [],
-    improvements: typeof answer.learning === "string" ? [answer.learning] : [],
-    studyRecommendations: strings(answer.plan),
-    evidenceUsed: [typeof answer.contextUsed === "string" ? answer.contextUsed : label],
-    limitations: ["Conteúdo preservado do histórico simulado anterior à integração."],
-    evidenceStatus: "insufficient",
+    jobId: value.jobId,
+    target,
+    status: "completed",
+    message: value.message,
+    completedAt: value.completedAt,
+    isDemonstration: true,
   };
 };
-export const migrateFutureAiInteractions = (persisted: unknown): Pick<FutureAiDemoStore, "interactions"> => {
-  if (!isRecord(persisted) || !Array.isArray(persisted.interactions)) return { interactions: [] };
-  const interactions = persisted.interactions.filter(isRecord).map((item, index): FutureAiInteraction | null => {
-    if (typeof item.question !== "string" || !isRecord(item.answer)) return null;
-    const rawContext = isRecord(item.context) ? item.context : {};
-    const rawType = typeof rawContext.type === "string" ? rawContext.type : "unknown";
-    const current = rawType === "game-analysis" || rawType === "saved-position";
-    const label = typeof rawContext.label === "string" && rawContext.label.trim() ? rawContext.label : "Contexto antigo da demonstração";
-    const answer = item.answer;
-    return { id: typeof item.id === "string" ? item.id : `legacy-${index}`, question: item.question, answer: migrateAnswer(answer, label), toolDecision: toolDecision(item.toolDecision), dataAccessPreference: dataAccessPreference(item.dataAccessPreference), createdAt: typeof item.createdAt === "string" ? item.createdAt : new Date(0).toISOString(), context: { type: rawType as FutureAiInteraction["context"]["type"], id: typeof rawContext.id === "string" ? rawContext.id : null, label: current ? label : "Contexto antigo da demonstração", legacy: !current } };
-  }).filter((item): item is FutureAiInteraction => item !== null);
-  return { interactions: sortInteractionsNewestFirst(interactions).slice(0, 30) };
+
+const sanitizedError = (value: unknown): string | null =>
+  typeof value === "string" && value.trim()
+    ? value.replace(/https?:\/\/\S+/gi, "[endereço removido]").slice(0, 240)
+    : null;
+
+export function migrateFutureAiAnalysisState(
+  persisted: unknown,
+): FutureAiAnalysisState {
+  if (!isRecord(persisted)) return { ...initialState };
+
+  const analysisType = selectionType(
+    persisted.analysisType ?? (isRecord(persisted.context) ? persisted.context.type : null),
+  );
+  const legacyContext = isRecord(persisted.context) ? persisted.context : null;
+  const selectedGameId =
+    safeId(persisted.selectedGameId) ??
+    (legacyContext?.type === "game-analysis" ? safeId(legacyContext.id) : null);
+  const selectedPositionId =
+    safeId(persisted.selectedPositionId) ??
+    (legacyContext?.type === "saved-position" ? safeId(legacyContext.id) : null);
+  const currentJob = isRecord(persisted.currentJob)
+    ? (() => {
+        const target = safeTarget(persisted.currentJob.target);
+        const status = persisted.currentJob.status;
+        if (
+          !target ||
+          (status !== "idle" && status !== "completed" && status !== "failed") ||
+          typeof persisted.currentJob.id !== "string" ||
+          typeof persisted.currentJob.createdAt !== "string" ||
+          typeof persisted.currentJob.updatedAt !== "string"
+        ) {
+          return null;
+        }
+        return {
+          id: persisted.currentJob.id,
+          target,
+          status,
+          createdAt: persisted.currentJob.createdAt,
+          updatedAt: persisted.currentJob.updatedAt,
+          error: sanitizedError(persisted.currentJob.error),
+        } satisfies AnalysisJob;
+      })()
+    : null;
+
+  return {
+    analysisType,
+    selectedGameId,
+    selectedPositionId,
+    currentJob,
+    lastResult: safeResult(persisted.lastResult),
+    error: sanitizedError(persisted.error),
+  };
+}
+
+export const useFutureAiDemoStore = create<FutureAiDemoStore>()(
+  persist(
+    (set) => ({
+      ...initialState,
+      selectAnalysisType: (analysisType) =>
+        set({ analysisType, currentJob: null, lastResult: null, error: null }),
+      selectGame: (selectedGameId) =>
+        set({ selectedGameId, currentJob: null, lastResult: null, error: null }),
+      selectPosition: (selectedPositionId) =>
+        set({ selectedPositionId, currentJob: null, lastResult: null, error: null }),
+      setCurrentJob: (currentJob) => set({ currentJob }),
+      setLastResult: (lastResult) => set({ lastResult }),
+      setError: (error) => set({ error: sanitizedError(error) }),
+    }),
+    {
+      name: STORAGE_KEYS.futureAiDemo,
+      version: 5,
+      storage: createJSONStorage(getSafeStorage),
+      skipHydration: true,
+      partialize: ({
+        analysisType,
+        selectedGameId,
+        selectedPositionId,
+        currentJob,
+        lastResult,
+        error,
+      }) => ({
+        analysisType,
+        selectedGameId,
+        selectedPositionId,
+        currentJob:
+          currentJob?.status === "preparing" || currentJob?.status === "analyzing"
+            ? null
+            : currentJob,
+        lastResult,
+        error,
+      }),
+      migrate: migrateFutureAiAnalysisState,
+      merge: (persisted, current) => ({
+        ...current,
+        ...migrateFutureAiAnalysisState(persisted),
+      }),
+    },
+  ),
+);
+
+export const hydrateFutureAiDemoStore = async (): Promise<void> => {
+  await useFutureAiDemoStore.persist.rehydrate();
 };
-export const useFutureAiDemoStore = create<FutureAiDemoStore>()(persist((set) => ({
-  interactions: [],
-  addInteraction: (interaction) => set((state) => ({ interactions: sortInteractionsNewestFirst([interaction, ...state.interactions]).slice(0, 30) })),
-  clearConversation: () => set({ interactions: [] }),
-}), { name: STORAGE_KEYS.futureAiDemo, version: 4, storage: createJSONStorage(getSafeStorage), skipHydration: true, partialize: ({ interactions }) => ({ interactions }), migrate: migrateFutureAiInteractions, merge: (persisted, current) => ({ ...current, ...migrateFutureAiInteractions(persisted) }) }));
-export const hydrateFutureAiDemoStore = async (): Promise<void> => { await useFutureAiDemoStore.persist.rehydrate(); };

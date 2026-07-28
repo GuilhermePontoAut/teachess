@@ -32,7 +32,7 @@ export type ProfessorToolDecision =
 export interface FutureAiInteraction { id: string; question: string; context: FutureAiContextRef; answer: ProfessorAnswerContent; toolDecision: ProfessorToolDecision | null; dataAccessPreference: ProfessorDataAccessPreference | null; createdAt: string; }
 export interface DemoContextData { game?: ChessGame; analysis?: GameAnalysis; position?: UploadedPosition; training?: TrainingTopic & { progress: number }; }
 
-export const contextTypeLabels: Record<FutureAiContextType, string> = { "game-analysis": "Análise de partida", "saved-position": "Posição específica" };
+export const contextTypeLabels: Record<FutureAiContextType, string> = { "game-analysis": "Análise de partida", "saved-position": "Análise de posição" };
 export const errorCategoryLabels = { opening: "Abertura", tactics: "Tática", strategy: "Estratégia", time_management: "Gestão do tempo", calculation: "Cálculo", endgame: "Final" } as const;
 
 const questions: Record<FutureAiContextType, string[]> = {
