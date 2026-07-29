@@ -9,6 +9,7 @@ export type AnalysisJobStatus =
   | "preparing"
   | "analyzing"
   | "completed"
+  | "cancelled"
   | "failed";
 
 export type ChessColor = "white" | "black";
@@ -102,3 +103,14 @@ export type StructuralAnalysisResult = {
   completedAt: string;
   isDemonstration: true;
 };
+
+export type PositionAnalysisResult = {
+  jobId: string;
+  target: Extract<AnalysisTarget, { type: "position" }>;
+  status: "completed";
+  analysis: PositionEngineAnalysis;
+  completedAt: string;
+  isDemonstration: false;
+};
+
+export type AnalysisResult = StructuralAnalysisResult | PositionAnalysisResult;

@@ -10,9 +10,10 @@ export const STRUCTURAL_ANALYSIS_MESSAGE =
 
 const allowedTransitions: Record<AnalysisJobStatus, AnalysisJobStatus[]> = {
   idle: ["preparing"],
-  preparing: ["analyzing", "failed"],
-  analyzing: ["completed", "failed"],
+  preparing: ["analyzing", "cancelled", "failed"],
+  analyzing: ["completed", "cancelled", "failed"],
   completed: ["preparing"],
+  cancelled: ["preparing"],
   failed: ["preparing"],
 };
 

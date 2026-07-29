@@ -2,8 +2,9 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type {
   AnalysisJob,
+  AnalysisResult,
   AnalysisTarget,
-  StructuralAnalysisResult,
+  PositionAnalysisResult,
 } from "@/lib/analysis/contracts";
 import { getSafeStorage, STORAGE_KEYS } from "@/lib/storage/storage";
 
@@ -14,7 +15,7 @@ type FutureAiAnalysisState = {
   selectedGameId: string | null;
   selectedPositionId: string | null;
   currentJob: AnalysisJob | null;
-  lastResult: StructuralAnalysisResult | null;
+  lastResult: AnalysisResult | null;
   error: string | null;
 };
 
@@ -23,7 +24,7 @@ interface FutureAiDemoStore extends FutureAiAnalysisState {
   selectGame: (gameId: string | null) => void;
   selectPosition: (positionId: string | null) => void;
   setCurrentJob: (job: AnalysisJob | null) => void;
-  setLastResult: (result: StructuralAnalysisResult | null) => void;
+  setLastResult: (result: AnalysisResult | null) => void;
   setError: (error: string | null) => void;
 }
 
@@ -64,9 +65,23 @@ const safeTarget = (value: unknown): AnalysisTarget | null => {
   return null;
 };
 
-const safeResult = (value: unknown): StructuralAnalysisResult | null => {
+const safeResult = (value: unknown): AnalysisResult | null => {
   if (!isRecord(value) || value.status !== "completed") return null;
   const target = safeTarget(value.target);
+  if (
+    target?.type === "position" &&
+    value.isDemonstration === false &&
+    isRecord(value.analysis) &&
+    typeof value.analysis.fen === "string" &&
+    (value.analysis.sideToMove === "white" || value.analysis.sideToMove === "black") &&
+    isRecord(value.analysis.engineSettings) &&
+    value.analysis.engineSettings.engine === "stockfish" &&
+    Array.isArray(value.analysis.principalVariations) &&
+    typeof value.jobId === "string" &&
+    typeof value.completedAt === "string"
+  ) {
+    return value as PositionAnalysisResult;
+  }
   if (
     !target ||
     typeof value.jobId !== "string" ||
@@ -112,7 +127,10 @@ export function migrateFutureAiAnalysisState(
         const status = persisted.currentJob.status;
         if (
           !target ||
-          (status !== "idle" && status !== "completed" && status !== "failed") ||
+          (status !== "idle" &&
+            status !== "completed" &&
+            status !== "cancelled" &&
+            status !== "failed") ||
           typeof persisted.currentJob.id !== "string" ||
           typeof persisted.currentJob.createdAt !== "string" ||
           typeof persisted.currentJob.updatedAt !== "string"

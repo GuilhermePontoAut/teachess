@@ -1,12 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { validateFen } from "chess.js";
 import {
-  completeDemoAnalysis,
   createDemoAnalysisJob,
   transitionAnalysisJob,
 } from "@/lib/analysis/demo-job";
-import type { AnalysisTarget } from "@/lib/analysis/contracts";
+import type { AnalysisTarget, PositionAnalysisResult } from "@/lib/analysis/contracts";
+import {
+  analyzeFenWithStockfish,
+  StockfishCancelledError,
+  type StockfishAnalysisHandle,
+} from "@/lib/analysis/stockfish-client";
 import { currentUser } from "@/lib/data/users";
 import {
   hydrateFutureAiDemoStore,
@@ -17,9 +22,8 @@ import { hydrateUploadStore, useUploadStore } from "@/store/useUploadStore";
 import { AnalysisActionPanel } from "./AnalysisActionPanel";
 import { ContextSelector } from "./ContextSelector";
 
-const DEMO_STEP_DELAY_MS = 450;
-const DEMO_ERROR_MESSAGE =
-  "Não foi possível preparar a estrutura local da análise. Tente novamente.";
+const ENGINE_ERROR_MESSAGE =
+  "Não foi possível concluir a análise local. Verifique o navegador e tente novamente.";
 
 export function AiProfessorDemo() {
   const gamesState = useGameStore((state) => state.games);
@@ -37,11 +41,10 @@ export function AiProfessorDemo() {
   const setLastResult = useFutureAiDemoStore((state) => state.setLastResult);
   const setError = useFutureAiDemoStore((state) => state.setError);
   const [hydrated, setHydrated] = useState(false);
-  const timers = useRef<number[]>([]);
+  const analysisHandle = useRef<StockfishAnalysisHandle | null>(null);
 
   useEffect(() => {
     let active = true;
-    const activeTimers = timers.current;
     void Promise.all([
       hydrateGameStore(),
       hydrateUploadStore(),
@@ -51,7 +54,8 @@ export function AiProfessorDemo() {
     });
     return () => {
       active = false;
-      activeTimers.forEach((timer) => window.clearTimeout(timer));
+      analysisHandle.current?.cancel();
+      analysisHandle.current = null;
     };
   }, []);
 
@@ -75,20 +79,21 @@ export function AiProfessorDemo() {
   const hasSelection =
     analysisType === "game"
       ? games.some((game) => game.id === selectedGameId)
-      : Boolean(selectedPosition);
+      : Boolean(
+          selectedPosition?.simulatedDetectedFen &&
+            validateFen(selectedPosition.simulatedDetectedFen).ok,
+        );
   const running =
     currentJob?.status === "preparing" || currentJob?.status === "analyzing";
 
-  const startDemoAnalysis = () => {
-    if (!hasSelection || running) return;
-    const target: AnalysisTarget =
-      analysisType === "game"
-        ? { type: "game", gameId: selectedGameId as string }
-        : {
-            type: "position",
-            positionId: selectedPositionId as string,
-            fen: selectedPosition?.simulatedDetectedFen ?? null,
-          };
+  const startPositionAnalysis = async () => {
+    const fen = selectedPosition?.simulatedDetectedFen;
+    if (analysisType !== "position" || !hasSelection || running || !fen) return;
+    const target: AnalysisTarget = {
+      type: "position",
+      positionId: selectedPositionId as string,
+      fen,
+    };
     const now = new Date().toISOString();
     let job = createDemoAnalysisJob(
       target,
@@ -100,34 +105,40 @@ export function AiProfessorDemo() {
     setLastResult(null);
     setCurrentJob(job);
 
-    // Simulação provisória de UI: não executa engine, LLM, rede ou análise.
-    const analyzingTimer = window.setTimeout(() => {
-      try {
-        job = transitionAnalysisJob(job, "analyzing", new Date().toISOString());
-        setCurrentJob(job);
-      } catch {
-        setError(DEMO_ERROR_MESSAGE);
-        setCurrentJob(
-          transitionAnalysisJob(job, "failed", new Date().toISOString(), DEMO_ERROR_MESSAGE),
-        );
-      }
-    }, DEMO_STEP_DELAY_MS);
-    const completedTimer = window.setTimeout(() => {
-      try {
-        job = transitionAnalysisJob(job, "completed", new Date().toISOString());
-        setCurrentJob(job);
-        setLastResult(completeDemoAnalysis(job));
-      } catch {
-        setError(DEMO_ERROR_MESSAGE);
+    try {
+      job = transitionAnalysisJob(job, "analyzing", new Date().toISOString());
+      setCurrentJob(job);
+      const handle = analyzeFenWithStockfish(fen);
+      analysisHandle.current = handle;
+      const analysis = await handle.result;
+      analysisHandle.current = null;
+      job = transitionAnalysisJob(job, "completed", new Date().toISOString());
+      setCurrentJob(job);
+      setLastResult({
+        jobId: job.id,
+        target,
+        status: "completed",
+        analysis,
+        completedAt: job.updatedAt,
+        isDemonstration: false,
+      });
+    } catch (caught) {
+      analysisHandle.current = null;
+      if (caught instanceof StockfishCancelledError) {
         if (job.status === "preparing" || job.status === "analyzing") {
-          setCurrentJob(
-            transitionAnalysisJob(job, "failed", new Date().toISOString(), DEMO_ERROR_MESSAGE),
-          );
+          setCurrentJob(transitionAnalysisJob(job, "cancelled", new Date().toISOString()));
         }
+        return;
       }
-    }, DEMO_STEP_DELAY_MS * 2);
-    timers.current.push(analyzingTimer, completedTimer);
+      const message = caught instanceof Error ? caught.message : ENGINE_ERROR_MESSAGE;
+      setError(message);
+      if (job.status === "preparing" || job.status === "analyzing") {
+        setCurrentJob(transitionAnalysisJob(job, "failed", new Date().toISOString(), message));
+      }
+    }
   };
+
+  const cancelAnalysis = () => analysisHandle.current?.cancel();
 
   if (!hydrated) {
     return (
@@ -156,9 +167,16 @@ export function AiProfessorDemo() {
         analysisType={analysisType}
         status={currentJob?.status ?? "idle"}
         hasSelection={hasSelection}
-        result={lastResult}
+        result={
+          lastResult && lastResult.isDemonstration === false
+            ? (lastResult as PositionAnalysisResult)
+            : null
+        }
         error={error}
-        onAnalyze={startDemoAnalysis}
+        onAnalyze={() => {
+          void startPositionAnalysis();
+        }}
+        onCancel={cancelAnalysis}
       />
     </div>
   );

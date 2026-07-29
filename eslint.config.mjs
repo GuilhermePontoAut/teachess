@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Third-party, minified Stockfish.js asset served verbatim from public/.
+    "public/stockfish/stockfish-*.js",
   ]),
 ]);
 

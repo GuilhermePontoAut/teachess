@@ -23,20 +23,20 @@ export function FutureAiContent() {
         />
         <span className="inline-flex w-fit items-center gap-2 rounded-full bg-neutral-950 px-3 py-1.5 text-xs font-bold text-white">
           <Bot size={14} aria-hidden="true" />
-          Estrutura demonstrativa
+          Stockfish local
         </span>
       </div>
       <MockNotice>
-        Este fluxo apenas demonstra a preparação de uma análise. Os dados são
-        locais e demonstrativos; Stockfish, Professor IA e banco de dados ainda
-        não participam do processamento.
+        O Stockfish executa no seu navegador e analisa somente a posição FEN
+        selecionada. Partidas completas e explicações pedagógicas não fazem
+        parte desta etapa.
       </MockNotice>
       <div className="flex gap-3 rounded-2xl border border-line bg-white p-4 text-sm leading-6">
         <ShieldAlert className="mt-0.5 shrink-0" size={19} aria-hidden="true" />
         <p>
-          <strong>Separação planejada.</strong> O Stockfish fará futuramente a
-          análise técnica objetiva. Somente depois, o Professor IA poderá criar
-          uma explicação pedagógica baseada nesses fatos validados.
+          <strong>Processamento isolado.</strong> O Worker e o arquivo WASM são
+          servidos pela própria aplicação. Nenhuma posição ou avaliação é
+          enviada à OpenAI ou a outro serviço durante a análise.
         </p>
       </div>
       <FutureAiNavigation active={tab} onChange={setTab} />
